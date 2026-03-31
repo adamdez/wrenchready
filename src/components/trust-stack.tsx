@@ -1,48 +1,64 @@
-const trustSignals = [
+"use client";
+
+import { Shield, Star, Clock, BadgeCheck, Wrench, FileCheck } from "lucide-react";
+import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
+
+const trustItems = [
   {
-    label: "Response Time",
-    title: "< 15 min first response window",
-    copy: "Requests are acknowledged fast so you know someone is actually working on your scheduling, not ignoring the message.",
+    icon: <Shield className="h-6 w-6" />,
+    title: "Licensed & Insured",
+    copy: "Full liability coverage on every visit.",
   },
   {
-    label: "Service Area",
-    title: "Spokane County coverage with focused routes",
-    copy: "Tight route density means arrival windows stay realistic instead of vague, and your appointment stays on schedule.",
+    icon: <Star className="h-6 w-6" />,
+    title: "5-Star Service",
+    copy: "Built to earn repeat business through honest work.",
   },
   {
-    label: "Licensed & Insured",
-    title: "Fully insured mobile auto service",
-    copy: "Liability coverage and professional standards protect both the vehicle and the property where service happens.",
+    icon: <Clock className="h-6 w-6" />,
+    title: "On-Time Arrival",
+    copy: "Route discipline protects your time window.",
   },
   {
-    label: "Transparent Pricing",
-    title: "Upfront quotes before any work begins",
-    copy: "You see the price and scope before anything starts. No surprise line items after the hood is already open.",
+    icon: <BadgeCheck className="h-6 w-6" />,
+    title: "Transparent Pricing",
+    copy: "No surprise fees. The quote is the price.",
   },
   {
-    label: "Customer Satisfaction",
-    title: "Photo-backed findings and written recommendations",
-    copy: "Every visit produces clear documentation so you can make informed decisions now and revisit the findings later.",
+    icon: <Wrench className="h-6 w-6" />,
+    title: "Quality Parts",
+    copy: "OEM-equivalent parts with clear documentation.",
   },
   {
-    label: "Warranty",
-    title: "Parts and labor backed by service commitment",
-    copy: "Work is performed with quality parts and careful procedure, backed by a commitment to make it right.",
+    icon: <FileCheck className="h-6 w-6" />,
+    title: "Photo Reports",
+    copy: "Photo-backed findings you can revisit later.",
   },
-] as const;
+];
 
 export function TrustStack() {
   return (
     <section className="shell section-space">
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        {trustSignals.map((signal) => (
-          <article key={signal.label} className="panel rounded-[1.8rem] p-6">
-            <p className="eyebrow">{signal.label}</p>
-            <h3 className="mt-3 text-2xl text-[var(--foreground)]">{signal.title}</h3>
-            <p className="mt-3 text-base leading-7 text-muted">{signal.copy}</p>
-          </article>
+      <FadeIn>
+        <p className="eyebrow text-center">Why Customers Trust Us</p>
+        <h2 className="mt-3 text-center text-3xl font-bold tracking-tight sm:text-4xl">
+          Mobile service that feels premium, not improvised.
+        </h2>
+      </FadeIn>
+
+      <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" staggerDelay={0.08}>
+        {trustItems.map((item) => (
+          <StaggerItem key={item.title}>
+            <div className="rounded-2xl border border-border bg-card/50 p-6 transition-colors hover:border-primary/20">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                {item.icon}
+              </span>
+              <h3 className="mt-4 text-lg font-semibold text-foreground">{item.title}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{item.copy}</p>
+            </div>
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
     </section>
   );
 }

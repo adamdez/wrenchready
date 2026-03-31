@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
-import { Chakra_Petch, IBM_Plex_Sans, Geist } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import { SiteShell } from "@/components/site-shell";
 import { Analytics } from "@/components/analytics";
 import { siteConfig } from "@/data/site";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
-const displayFont = Chakra_Petch({
+const displayFont = Space_Grotesk({
   variable: "--font-display",
   weight: ["500", "600", "700"],
   subsets: ["latin"],
 });
 
-const bodyFont = IBM_Plex_Sans({
+const bodyFont = Inter({
   variable: "--font-body",
   weight: ["400", "500", "600"],
   subsets: ["latin"],
@@ -58,8 +56,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn(displayFont.variable, bodyFont.variable, "font-sans", geist.variable)}>
-      <body>
+    <html lang="en" className={cn(displayFont.variable, bodyFont.variable, "dark")}>
+      <body className="noise-bg">
         <Analytics />
         <SiteShell>{children}</SiteShell>
       </body>

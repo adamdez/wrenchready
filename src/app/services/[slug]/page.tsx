@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { CtaBand, FaqList, LinkButton, PageHero, SectionHeading } from "@/components/marketing";
+import { CtaBand, FaqList, LinkButton, SectionHeading } from "@/components/marketing";
 import { StructuredData } from "@/components/structured-data";
+import { ServicePageClient } from "@/components/service-page-client";
 import { getLocationBySlug, getServiceBySlug, locations, services, siteConfig } from "@/data/site";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
@@ -141,152 +142,12 @@ export default async function ServicePage({ params }: ServicePageProps) {
   return (
     <>
       <StructuredData data={[serviceStructuredData, breadcrumbData, faqStructuredData]} />
-      <div className="pb-16">
-        <PageHero
-          eyebrow={service.priceFrom}
-          title={service.headline}
-          copy={service.teaser}
-          primaryLink={{ href: "/contact", label: "Schedule your appointment" }}
-          secondaryLink={{ href: "/services", label: "Back to services" }}
-          panelTitle="Why this page matters"
-          panelItems={service.whyItWins}
-          highlights={service.keywords.slice(0, 4)}
-        />
-
-        <section className="shell section-space">
-          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="panel rounded-[2.5rem] p-8">
-              <SectionHeading
-                eyebrow="What Is Included"
-                title={`What ${service.name.toLowerCase()} looks like with Wrench Ready`}
-                copy="These are the details that help the customer understand what they are paying for and help search engines understand the real scope of the page."
-              />
-              <ul className="mt-8 space-y-4 text-base leading-7 text-[var(--muted)]">
-                {service.includes.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="space-y-5">
-              <article className="panel rounded-[2rem] p-7">
-                <p className="eyebrow">Best Fit</p>
-                <h2 className="mt-3 text-3xl">This service is ideal for</h2>
-                <ul className="mt-6 space-y-4 text-base leading-7 text-[var(--muted)]">
-                  {service.idealFor.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </article>
-              <article className="panel rounded-[2rem] p-7">
-                <p className="eyebrow">Trust Signals</p>
-                <h2 className="mt-3 text-3xl">How the page earns the next visit</h2>
-                <ul className="mt-6 space-y-4 text-base leading-7 text-[var(--muted)]">
-                  {service.trustPoints.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section className="shell section-space">
-          <SectionHeading
-            eyebrow="Service Areas"
-            title={`${service.name} pages linked to the right local routes`}
-            copy="These location links strengthen internal relevance and give future ads a cleaner way to split geographic intent without rebuilding the whole site."
-          />
-          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {relevantLocations.map((location) => (
-              <article key={location.slug} className="panel rounded-[2rem] p-6">
-                <p className="eyebrow">{location.name}</p>
-                <h2 className="mt-3 text-3xl">{service.name}</h2>
-                <p className="mt-3 text-base leading-7 text-[var(--muted)]">
-                  {location.teaser}
-                </p>
-                <div className="mt-8">
-                  <LinkButton href={`/locations/${location.slug}`}>
-                    Open {location.name}
-                  </LinkButton>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {neighborhoodLocations.length > 0 && (
-          <section className="shell section-space">
-            <SectionHeading
-              eyebrow="Neighborhood Coverage"
-              title={`${service.name} across Spokane neighborhoods`}
-              copy="These neighborhood pages help match hyper-local search intent to the exact area where the service is needed."
-            />
-            <div className="mt-10 flex flex-wrap gap-3">
-              {neighborhoodLocations.map((loc) => (
-                <LinkButton key={loc.slug} href={`/locations/${loc.slug}`} variant="secondary">
-                  {service.name} in {loc.name}
-                </LinkButton>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {relatedServices.length > 0 && (
-          <section className="shell section-space">
-            <SectionHeading
-              eyebrow="Related Services"
-              title="Other mobile service lanes that pair well"
-              copy="Customers booking one service often need another. These links help both users and search engines understand service relationships."
-            />
-            <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-              {relatedServices.map((rs) => (
-                <article key={rs.slug} className="panel rounded-[2rem] p-6">
-                  <p className="eyebrow">{rs.priceFrom}</p>
-                  <h2 className="mt-3 text-2xl">{rs.name}</h2>
-                  <div className="mt-6">
-                    <LinkButton href={`/services/${rs.slug}`}>Learn more</LinkButton>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="shell section-space">
-          <SectionHeading
-            eyebrow="FAQ"
-            title={`Questions people ask before booking ${service.name.toLowerCase()}`}
-            copy="The answers below qualify leads faster and give the page stronger topical depth for organic search."
-          />
-          <div className="mt-10">
-            <FaqList faqs={service.faqs} />
-          </div>
-        </section>
-
-        <section className="shell">
-          <div className="panel rounded-[2.5rem] p-8 sm:p-10">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="eyebrow">Related Searches</p>
-                <h2 className="mt-3 text-4xl">Built to serve urgent local intent.</h2>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {service.keywords.map((term) => (
-                  <span key={term} className="chip">
-                    {term}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <CtaBand
-          title={`Need ${service.name.toLowerCase()} in Spokane?`}
-          copy="Use the appointment page to send the vehicle, the address, and the symptom or known repair. That is enough to qualify the job and steer you to the right next step."
-        />
-      </div>
+      <ServicePageClient
+        service={service}
+        relevantLocations={relevantLocations}
+        neighborhoodLocations={neighborhoodLocations}
+        relatedServices={relatedServices}
+      />
     </>
   );
 }

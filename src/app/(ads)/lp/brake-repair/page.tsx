@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { buildMetadata } from "@/lib/seo";
 import { siteConfig } from "@/data/site";
 import { LaunchRequestForm } from "@/components/launch-request-form";
+import { CheckCircle2, Phone, ArrowRight, AlertTriangle } from "lucide-react";
 
 export function generateMetadata(): Metadata {
   return {
@@ -10,12 +11,7 @@ export function generateMetadata(): Metadata {
       description:
         "Squealing or grinding? Wrench Ready Mobile handles brake pad and rotor service at your home or workplace in Spokane. From $280 per axle.",
       path: "/lp/brake-repair",
-      keywords: [
-        "mobile brake repair Spokane",
-        "brake pads at home Spokane",
-        "mobile mechanic brakes Spokane",
-        "brake service Spokane WA",
-      ],
+      keywords: ["mobile brake repair Spokane", "brake pads at home Spokane", "mobile mechanic brakes Spokane", "brake service Spokane WA"],
     }),
     robots: { index: false, follow: false },
   };
@@ -38,135 +34,82 @@ const urgencySigns = [
 export default function BrakeRepairLandingPage() {
   return (
     <>
-      {/* Hero */}
       <section className="shell section-space">
-        <div className="hero-shell rounded-[2rem] px-6 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-14">
+        <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-card p-8 sm:p-12 lg:p-14">
+          <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-primary/10 blur-3xl" />
           <div className="relative z-10 max-w-3xl space-y-6">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="chip chip-accent">Mobile Brake Repair</span>
-              <span className="chip">Spokane County, WA</span>
+              <span className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">Mobile Brake Repair</span>
+              <span className="inline-flex rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">Spokane County, WA</span>
             </div>
-            <h1 className="text-4xl leading-tight sm:text-5xl lg:text-6xl">
+            <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
               Brakes squealing?{" "}
-              <span className="text-[var(--accent-strong)]">
-                We come to you. From $280/axle.
-              </span>
+              <span className="text-primary">We come to you. From $280/axle.</span>
             </h1>
-            <p className="max-w-2xl text-lg leading-8 text-muted">
-              Stop driving on worn brakes and stop losing half a day at a shop. Wrench
-              Ready Mobile handles brake service at your driveway or workplace across
-              Spokane County.
+            <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">
+              Stop driving on worn brakes and stop losing half a day at a shop. Wrench Ready Mobile handles brake service at your driveway or workplace.
             </p>
             <div className="flex flex-wrap gap-3">
-              <a href="#request-form" className="button-primary">
-                Book Brake Service
+              <a href="#request-form" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110">
+                Book Brake Service <ArrowRight className="h-4 w-4" />
               </a>
-              <a href={siteConfig.contact.phoneHref} className="button-secondary">
-                Call {siteConfig.contact.phoneDisplay}
+              <a href={siteConfig.contact.phoneHref} className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary">
+                <Phone className="h-4 w-4" /> {siteConfig.contact.phoneDisplay}
               </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Warning Signs */}
       <section className="shell section-space">
-        <div className="max-w-3xl space-y-4">
-          <p className="eyebrow">Warning Signs</p>
-          <h2 className="text-3xl sm:text-4xl">
-            Do not ignore what the brakes are telling you
-          </h2>
-        </div>
+        <p className="eyebrow">Warning Signs</p>
+        <h2 className="mt-3 text-3xl font-bold sm:text-4xl">Do not ignore what the brakes are telling you</h2>
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {urgencySigns.map((item) => (
-            <div
-              key={item.sign}
-              className="panel rounded-[1.8rem] p-6"
-            >
-              <h3 className="text-lg font-semibold text-[var(--accent-strong)]">
-                {item.sign}
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-muted">{item.meaning}</p>
+            <div key={item.sign} className="rounded-2xl border border-border bg-card/50 p-6">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-400" />
+                <h3 className="text-base font-bold text-foreground">{item.sign}</h3>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.meaning}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* What's Included */}
       <section className="shell section-space">
-        <div className="max-w-3xl space-y-4">
-          <p className="eyebrow">What&apos;s Included</p>
-          <h2 className="text-3xl sm:text-4xl">
-            Brake service with inspection and clear next steps
-          </h2>
-          <p className="text-base leading-8 text-muted">
-            Every brake appointment starts with a proper inspection, not a blind parts
-            swap. If the car needs a different first step, the visit will surface it.
-          </p>
-        </div>
+        <p className="eyebrow">What&apos;s Included</p>
+        <h2 className="mt-3 text-3xl font-bold sm:text-4xl">Brake service with inspection and clear next steps</h2>
         <ul className="mt-8 grid gap-4 sm:grid-cols-2">
           {includes.map((item) => (
-            <li
-              key={item}
-              className="panel flex items-start gap-4 rounded-[1.8rem] p-5"
-            >
-              <svg className="mt-1 h-5 w-5 shrink-0 text-[var(--accent-strong)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              <span className="text-base leading-7 text-muted">{item}</span>
+            <li key={item} className="flex items-start gap-4 rounded-2xl border border-border bg-card/50 p-5">
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <span className="text-sm leading-relaxed text-muted-foreground">{item}</span>
             </li>
           ))}
         </ul>
       </section>
 
-      {/* Pricing note */}
       <section className="shell section-space">
-        <div className="panel rounded-[1.8rem] p-6 text-center sm:p-8">
+        <div className="rounded-2xl border border-border bg-card/50 p-8 text-center">
           <p className="eyebrow">Pricing</p>
-          <p className="mt-3 text-5xl font-bold text-[var(--accent-strong)] sm:text-6xl">
+          <p className="mt-3 text-5xl font-bold text-primary sm:text-6xl">
             From $280<span className="text-2xl sm:text-3xl"> / axle</span>
           </p>
-          <p className="mx-auto mt-4 max-w-lg text-base leading-7 text-muted">
-            Final price depends on the vehicle, pad and rotor requirements, and
-            location access. You will know the cost before any work begins.
+          <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground">
+            Final price depends on the vehicle, pad and rotor requirements, and location access. You will know the cost before any work begins.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <a href="#request-form" className="button-primary">
-              Get a Quote
-            </a>
-            <a href={siteConfig.contact.phoneHref} className="button-secondary">
-              Call {siteConfig.contact.phoneDisplay}
+            <a href="#request-form" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:brightness-110">Get a Quote</a>
+            <a href={siteConfig.contact.phoneHref} className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground hover:bg-secondary">
+              <Phone className="h-4 w-4" /> {siteConfig.contact.phoneDisplay}
             </a>
           </div>
         </div>
       </section>
 
-      {/* Form */}
       <section id="request-form" className="shell section-space scroll-mt-24">
         <LaunchRequestForm />
-      </section>
-
-      {/* Final CTA */}
-      <section className="shell section-space">
-        <div className="hero-shell rounded-[2rem] px-6 py-8 text-center sm:px-8 sm:py-10">
-          <div className="relative z-10 mx-auto max-w-2xl space-y-4">
-            <h2 className="text-3xl sm:text-4xl">
-              Do not wait until the grinding gets worse
-            </h2>
-            <p className="text-base leading-7 text-muted">
-              Send the vehicle, the symptom, and where the car is parked. We will
-              screen the job and confirm pricing fast.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <a href={siteConfig.contact.phoneHref} className="button-primary">
-                Call {siteConfig.contact.phoneDisplay}
-              </a>
-              <a href="#request-form" className="button-secondary">
-                Book Now
-              </a>
-            </div>
-          </div>
-        </div>
       </section>
     </>
   );

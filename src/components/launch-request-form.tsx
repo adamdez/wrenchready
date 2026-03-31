@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { siteConfig } from "@/data/site";
+import { CheckCircle2, Phone, Send, RotateCcw } from "lucide-react";
 
 type RequestFormState = {
   fullName: string;
@@ -83,31 +84,34 @@ export function LaunchRequestForm() {
 
   if (status === "success") {
     return (
-      <section className="panel rounded-[1.9rem] p-6 sm:p-8">
+      <section className="rounded-2xl border border-border bg-card/50 p-8">
         <div className="space-y-6 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(255,122,26,0.15)]">
-            <svg className="h-8 w-8 text-[var(--accent-strong)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <CheckCircle2 className="h-8 w-8 text-primary" />
           </div>
-          <h2 className="text-3xl sm:text-4xl">Request received.</h2>
-          <p className="mx-auto max-w-lg text-base leading-7 text-muted">
-            We will screen the job and follow up within the next business window.
+          <h2 className="text-3xl font-bold">Request received.</h2>
+          <p className="mx-auto max-w-lg text-sm leading-relaxed text-muted-foreground">
+            We&apos;ll screen the job and follow up within the next business window.
             For anything urgent, call or text directly.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <a className="button-primary" href={siteConfig.contact.phoneHref}>
-              Call / Text {siteConfig.contact.phoneDisplay}
+            <a
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
+              href={siteConfig.contact.phoneHref}
+            >
+              <Phone className="h-4 w-4" />
+              {siteConfig.contact.phoneDisplay}
             </a>
             <button
-              className="button-secondary"
+              className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
               onClick={() => {
                 setFormState(initialState);
                 setStatus("idle");
               }}
               type="button"
             >
-              Send another request
+              <RotateCcw className="h-4 w-4" />
+              Send another
             </button>
           </div>
         </div>
@@ -116,23 +120,24 @@ export function LaunchRequestForm() {
   }
 
   return (
-    <section className="panel rounded-[1.9rem] p-6 sm:p-8">
+    <section className="rounded-2xl border border-border bg-card/50 p-8">
       <p className="eyebrow">Appointment Request</p>
-      <h2 className="mt-3 text-4xl">Send one clean message and we can screen the job faster.</h2>
-      <p className="mt-4 max-w-2xl text-base leading-7 text-muted">
-        Fill out the details below and we will get back to you within the next business
-        window. For urgent requests, call or text directly.
+      <h2 className="mt-3 text-2xl font-bold">
+        One clean message, faster screening.
+      </h2>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        Fill out the details below and we&apos;ll get back to you within the next business window.
       </p>
 
       {status === "error" && errorMessage && (
-        <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
       )}
 
       <form className="mt-8 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
-        <label className="space-y-2 md:col-span-1">
-          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+        <label className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
             Full name
           </span>
           <input
@@ -144,8 +149,8 @@ export function LaunchRequestForm() {
           />
         </label>
 
-        <label className="space-y-2 md:col-span-1">
-          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+        <label className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
             Phone or text line
           </span>
           <input
@@ -158,8 +163,8 @@ export function LaunchRequestForm() {
           />
         </label>
 
-        <label className="space-y-2 md:col-span-1">
-          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+        <label className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
             Email
           </span>
           <input
@@ -172,9 +177,9 @@ export function LaunchRequestForm() {
           />
         </label>
 
-        <label className="space-y-2 md:col-span-1">
-          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
-            Vehicle <span className="text-red-400">*</span>
+        <label className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+            Vehicle <span className="text-destructive">*</span>
           </span>
           <input
             className="form-input"
@@ -187,46 +192,46 @@ export function LaunchRequestForm() {
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
             Service or symptom
           </span>
           <input
             className="form-input"
             name="serviceNeeded"
             onChange={updateField}
-            placeholder="Oil change, front brakes, no-start, check-engine light, pre-purchase inspection..."
+            placeholder="Oil change, front brakes, no-start, check-engine light..."
             value={formState.serviceNeeded}
           />
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
             Address and parking notes
           </span>
           <input
             className="form-input"
             name="address"
             onChange={updateField}
-            placeholder="Street, business lot, apartment gate, or driveway details"
+            placeholder="Street, lot, apartment gate, or driveway details"
             value={formState.address}
           />
         </label>
 
-        <label className="space-y-2 md:col-span-1">
-          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+        <label className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
             Preferred timing
           </span>
           <input
             className="form-input"
             name="timing"
             onChange={updateField}
-            placeholder="After work this week, Saturday morning, ASAP"
+            placeholder="After work, Saturday morning, ASAP"
             value={formState.timing}
           />
         </label>
 
-        <label className="space-y-2 md:col-span-1">
-          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+        <label className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
             Extra notes
           </span>
           <textarea
@@ -240,14 +245,19 @@ export function LaunchRequestForm() {
 
         <div className="flex flex-wrap gap-3 md:col-span-2">
           <button
-            className="button-primary"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
             disabled={status === "submitting"}
             type="submit"
           >
-            {status === "submitting" ? "Sending..." : "Submit request"}
+            <Send className="h-4 w-4" />
+            {status === "submitting" ? "Sending..." : "Submit Request"}
           </button>
-          <a className="button-secondary" href={siteConfig.contact.phoneHref}>
-            Call / Text {siteConfig.contact.phoneDisplay}
+          <a
+            className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+            href={siteConfig.contact.phoneHref}
+          >
+            <Phone className="h-4 w-4" />
+            {siteConfig.contact.phoneDisplay}
           </a>
         </div>
       </form>

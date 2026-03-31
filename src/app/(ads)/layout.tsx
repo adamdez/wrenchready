@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { Chakra_Petch, IBM_Plex_Sans } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import { Analytics } from "@/components/analytics";
 import { siteConfig } from "@/data/site";
+import { cn } from "@/lib/utils";
 import "../globals.css";
 
-const displayFont = Chakra_Petch({
+const displayFont = Space_Grotesk({
   variable: "--font-display",
   weight: ["500", "600", "700"],
   subsets: ["latin"],
 });
 
-const bodyFont = IBM_Plex_Sans({
+const bodyFont = Inter({
   variable: "--font-body",
   weight: ["400", "500", "600"],
   subsets: ["latin"],
@@ -28,22 +29,19 @@ export default function AdsLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${displayFont.variable} ${bodyFont.variable}`}>
-      <body>
+    <html lang="en" className={cn(displayFont.variable, bodyFont.variable, "dark")}>
+      <body className="noise-bg">
         <Analytics />
 
-        <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--background)]/95 backdrop-blur-sm">
+        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
           <div className="shell flex items-center justify-between py-3">
-            <span className="font-display text-lg font-bold tracking-wide text-[var(--foreground)]">
-              Wrench Ready<span className="text-[var(--accent-strong)]">.</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">
+              Wrench Ready<span className="text-primary">.</span>
             </span>
             <a
               href={siteConfig.contact.phoneHref}
-              className="flex items-center gap-2 text-sm font-semibold text-[var(--accent-strong)] transition-colors hover:text-[var(--accent-soft)]"
+              className="flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:brightness-110"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
               {siteConfig.contact.phoneDisplay}
             </a>
           </div>
@@ -51,21 +49,20 @@ export default function AdsLayout({
 
         <main>{children}</main>
 
-        {/* Spacer so content isn't hidden behind sticky bar */}
         <div className="h-20" />
 
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[var(--background)]/95 backdrop-blur-sm">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
           <div className="shell flex items-center justify-center gap-3 py-3">
             <a
               href={siteConfig.contact.phoneHref}
-              className="button-primary flex items-center gap-2"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
               Call Now
             </a>
-            <a href="#request-form" className="button-secondary">
+            <a
+              href="#request-form"
+              className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+            >
               Book Now
             </a>
           </div>
