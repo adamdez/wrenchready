@@ -7,37 +7,48 @@
 :root {
   --radius: 0.75rem;
 
-  --background: oklch(0.07 0.01 250);
-  --foreground: oklch(0.96 0.005 80);
-  --card: oklch(0.12 0.01 250);
-  --card-foreground: oklch(0.96 0.005 80);
-  --popover: oklch(0.12 0.01 250);
-  --popover-foreground: oklch(0.96 0.005 80);
-  --primary: oklch(0.72 0.19 55);
-  --primary-foreground: oklch(0.13 0.01 250);
-  --secondary: oklch(0.16 0.01 250);
-  --secondary-foreground: oklch(0.90 0.01 80);
-  --muted: oklch(0.16 0.01 250);
-  --muted-foreground: oklch(0.60 0.01 250);
-  --accent: oklch(0.16 0.02 55);
-  --accent-foreground: oklch(0.90 0.01 80);
+  /* Deep navy-black background with blue industrial undertone */
+  --background: oklch(0.08 0.02 255);
+  --foreground: oklch(0.95 0.008 240);
+  --card: oklch(0.12 0.02 255);
+  --card-foreground: oklch(0.95 0.008 240);
+  --popover: oklch(0.12 0.02 255);
+  --popover-foreground: oklch(0.95 0.008 240);
+
+  /* Electric cobalt — the primary. Bold, trustworthy, tech-forward */
+  --primary: oklch(0.62 0.19 255);
+  --primary-foreground: oklch(0.98 0.005 255);
+
+  /* Steel slate surfaces */
+  --secondary: oklch(0.16 0.02 255);
+  --secondary-foreground: oklch(0.88 0.01 240);
+  --muted: oklch(0.16 0.015 255);
+  --muted-foreground: oklch(0.55 0.02 250);
+
+  /* Accent = warm brass/gold — premium feel, used sparingly on top CTAs */
+  --accent: oklch(0.75 0.13 85);
+  --accent-foreground: oklch(0.13 0.02 85);
+
   --destructive: oklch(0.60 0.22 25);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.72 0.19 55);
+  --border: oklch(1 0 0 / 7%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.62 0.19 255);
 
-  --chart-1: oklch(0.72 0.19 55);
-  --chart-2: oklch(0.60 0.15 200);
-  --chart-3: oklch(0.50 0.10 150);
-  --chart-4: oklch(0.40 0.08 250);
-  --chart-5: oklch(0.30 0.05 300);
+  --chart-1: oklch(0.62 0.19 255);
+  --chart-2: oklch(0.55 0.12 200);
+  --chart-3: oklch(0.70 0.12 160);
+  --chart-4: oklch(0.45 0.08 280);
+  --chart-5: oklch(0.75 0.13 85);
 
-  --wr-orange: oklch(0.72 0.19 55);
-  --wr-orange-soft: oklch(0.82 0.12 60);
-  --wr-orange-strong: oklch(0.65 0.22 50);
-  --wr-surface: oklch(0.12 0.01 250);
-  --wr-surface-raised: oklch(0.15 0.015 250);
-  --wr-glow: oklch(0.72 0.19 55 / 15%);
+  /* Brand tokens */
+  --wr-blue: oklch(0.62 0.19 255);
+  --wr-blue-soft: oklch(0.72 0.12 255);
+  --wr-blue-strong: oklch(0.52 0.22 255);
+  --wr-gold: oklch(0.75 0.13 85);
+  --wr-gold-soft: oklch(0.82 0.08 85);
+  --wr-surface: oklch(0.12 0.02 255);
+  --wr-surface-raised: oklch(0.15 0.025 255);
+  --wr-glow: oklch(0.62 0.19 255 / 12%);
 }
 
 @theme inline {
@@ -94,7 +105,7 @@ a {
 }
 
 ::selection {
-  background: oklch(0.72 0.19 55 / 30%);
+  background: oklch(0.62 0.19 255 / 30%);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -127,12 +138,19 @@ p, li {
 
   .eyebrow {
     @apply text-xs font-semibold uppercase tracking-[0.2em];
-    color: var(--wr-orange);
+    color: var(--wr-blue-soft);
   }
 }
 
+/* Gradient text: white → electric blue → soft blue */
 .gradient-text {
-  background: linear-gradient(135deg, oklch(0.96 0.005 80) 0%, oklch(0.72 0.19 55) 50%, oklch(0.82 0.12 60) 100%);
+  background: linear-gradient(
+    135deg,
+    oklch(0.97 0.005 240) 0%,
+    oklch(0.62 0.19 255) 45%,
+    oklch(0.72 0.12 255) 80%,
+    oklch(0.75 0.13 85) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -140,16 +158,18 @@ p, li {
 
 .glass-card {
   border: 1px solid var(--border);
-  background: oklch(0.12 0.01 250 / 60%);
+  background: oklch(0.12 0.02 255 / 60%);
   backdrop-filter: blur(24px) saturate(1.4);
   border-radius: var(--radius-2xl);
   transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
 }
 
 .glass-card:hover {
-  border-color: oklch(0.72 0.19 55 / 20%);
+  border-color: oklch(0.62 0.19 255 / 20%);
   transform: translateY(-2px);
-  box-shadow: 0 20px 60px -20px oklch(0 0 0 / 40%), 0 0 40px -10px oklch(0.72 0.19 55 / 8%);
+  box-shadow:
+    0 20px 60px -20px oklch(0 0 0 / 40%),
+    0 0 40px -10px oklch(0.62 0.19 255 / 8%);
 }
 
 .glow-border {
@@ -161,7 +181,7 @@ p, li {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, oklch(0.72 0.19 55 / 20%), transparent 40%, oklch(0.72 0.19 55 / 10%));
+  background: linear-gradient(135deg, oklch(0.62 0.19 255 / 20%), transparent 40%, oklch(0.62 0.19 255 / 10%));
   z-index: -1;
   opacity: 0;
   transition: opacity 300ms ease;
@@ -180,7 +200,7 @@ p, li {
   position: fixed;
   inset: 0;
   z-index: -1;
-  opacity: 0.03;
+  opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 256px 256px;
@@ -189,7 +209,7 @@ p, li {
 
 .mobile-cta-bar {
   border-top: 1px solid var(--border);
-  background: oklch(0.07 0.01 250 / 95%);
+  background: oklch(0.08 0.02 255 / 95%);
   backdrop-filter: blur(20px);
 }
 
@@ -217,9 +237,9 @@ p, li {
 
 .form-input:focus,
 .form-textarea:focus {
-  border-color: var(--wr-orange);
+  border-color: var(--wr-blue);
   background: oklch(1 0 0 / 6%);
-  box-shadow: 0 0 0 3px oklch(0.72 0.19 55 / 10%);
+  box-shadow: 0 0 0 3px oklch(0.62 0.19 255 / 10%);
 }
 
 @media (max-width: 767px) {

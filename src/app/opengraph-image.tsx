@@ -15,7 +15,7 @@ export default function OgImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "linear-gradient(145deg, #080c11 0%, #0d1520 40%, #111a28 100%)",
+          background: "linear-gradient(145deg, #060d1a 0%, #0a1628 40%, #0e1d35 100%)",
           padding: "60px 72px",
           fontFamily: "system-ui, sans-serif",
         }}
@@ -29,9 +29,9 @@ export default function OgImage() {
               width: "72px",
               height: "72px",
               borderRadius: "20px",
-              border: "2px solid rgba(255,122,26,0.35)",
-              background: "rgba(255,122,26,0.08)",
-              color: "#ff7a1a",
+              border: "2px solid rgba(59,124,245,0.35)",
+              background: "rgba(59,124,245,0.08)",
+              color: "#3b7cf5",
               fontSize: "22px",
               fontWeight: 700,
               letterSpacing: "0.18em",
@@ -46,12 +46,12 @@ export default function OgImage() {
                 fontWeight: 700,
                 letterSpacing: "0.3em",
                 textTransform: "uppercase" as const,
-                color: "#ff7a1a",
+                color: "#3b7cf5",
               }}
             >
               Wrench Ready
             </span>
-            <span style={{ fontSize: "24px", fontWeight: 600, color: "#f0f0f0" }}>
+            <span style={{ fontSize: "24px", fontWeight: 600, color: "#e8ecf2" }}>
               Mobile Auto Service
             </span>
           </div>
@@ -74,7 +74,7 @@ export default function OgImage() {
             style={{
               fontSize: "22px",
               lineHeight: 1.5,
-              color: "rgba(255,255,255,0.6)",
+              color: "rgba(232,236,242,0.6)",
               margin: 0,
               maxWidth: "800px",
             }}
@@ -94,11 +94,11 @@ export default function OgImage() {
                   fontWeight: 600,
                   letterSpacing: "0.15em",
                   textTransform: "uppercase" as const,
-                  color: "rgba(255,122,26,0.8)",
+                  color: "rgba(59,124,245,0.85)",
                   padding: "8px 16px",
                   borderRadius: "999px",
-                  border: "1px solid rgba(255,122,26,0.25)",
-                  background: "rgba(255,122,26,0.06)",
+                  border: "1px solid rgba(59,124,245,0.25)",
+                  background: "rgba(59,124,245,0.06)",
                 }}
               >
                 {s}
