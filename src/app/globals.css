@@ -7,7 +7,6 @@
 :root {
   --radius: 0.75rem;
 
-  /* Deep navy-black background with blue industrial undertone */
   --background: oklch(0.08 0.02 255);
   --foreground: oklch(0.95 0.008 240);
   --card: oklch(0.12 0.02 255);
@@ -15,17 +14,14 @@
   --popover: oklch(0.12 0.02 255);
   --popover-foreground: oklch(0.95 0.008 240);
 
-  /* Electric cobalt — the primary. Bold, trustworthy, tech-forward */
   --primary: oklch(0.62 0.19 255);
   --primary-foreground: oklch(0.98 0.005 255);
 
-  /* Steel slate surfaces */
   --secondary: oklch(0.16 0.02 255);
   --secondary-foreground: oklch(0.88 0.01 240);
   --muted: oklch(0.16 0.015 255);
   --muted-foreground: oklch(0.55 0.02 250);
 
-  /* Accent = warm brass/gold — premium feel, used sparingly on top CTAs */
   --accent: oklch(0.75 0.13 85);
   --accent-foreground: oklch(0.13 0.02 85);
 
@@ -40,14 +36,17 @@
   --chart-4: oklch(0.45 0.08 280);
   --chart-5: oklch(0.75 0.13 85);
 
-  /* Brand tokens */
   --wr-blue: oklch(0.62 0.19 255);
   --wr-blue-soft: oklch(0.72 0.12 255);
   --wr-blue-strong: oklch(0.52 0.22 255);
-  --wr-gold: oklch(0.75 0.13 85);
-  --wr-gold-soft: oklch(0.82 0.08 85);
+  --wr-teal: oklch(0.72 0.14 195);
+  --wr-teal-soft: oklch(0.80 0.08 195);
+  --wr-gold: oklch(0.78 0.14 85);
+  --wr-gold-soft: oklch(0.85 0.08 85);
+  --wr-purple: oklch(0.55 0.16 290);
   --wr-surface: oklch(0.12 0.02 255);
   --wr-surface-raised: oklch(0.15 0.025 255);
+  --wr-surface-bright: oklch(0.18 0.03 255);
   --wr-glow: oklch(0.62 0.19 255 / 12%);
 }
 
@@ -138,18 +137,29 @@ p, li {
 
   .eyebrow {
     @apply text-xs font-semibold uppercase tracking-[0.2em];
-    color: var(--wr-blue-soft);
+    color: var(--wr-teal);
   }
 }
 
-/* Gradient text: white → electric blue → soft blue */
 .gradient-text {
   background: linear-gradient(
     135deg,
     oklch(0.97 0.005 240) 0%,
-    oklch(0.62 0.19 255) 45%,
-    oklch(0.72 0.12 255) 80%,
-    oklch(0.75 0.13 85) 100%
+    oklch(0.62 0.19 255) 40%,
+    oklch(0.72 0.14 195) 70%,
+    oklch(0.78 0.14 85) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-gold {
+  background: linear-gradient(
+    135deg,
+    oklch(0.95 0.02 85) 0%,
+    oklch(0.78 0.14 85) 50%,
+    oklch(0.72 0.14 195) 100%
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -161,15 +171,29 @@ p, li {
   background: oklch(0.12 0.02 255 / 60%);
   backdrop-filter: blur(24px) saturate(1.4);
   border-radius: var(--radius-2xl);
-  transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+  transition: border-color 300ms ease, transform 300ms ease, box-shadow 300ms ease;
 }
 
 .glass-card:hover {
-  border-color: oklch(0.62 0.19 255 / 20%);
-  transform: translateY(-2px);
+  border-color: oklch(0.62 0.19 255 / 25%);
+  transform: translateY(-4px);
   box-shadow:
-    0 20px 60px -20px oklch(0 0 0 / 40%),
-    0 0 40px -10px oklch(0.62 0.19 255 / 8%);
+    0 24px 80px -16px oklch(0 0 0 / 50%),
+    0 0 60px -20px oklch(0.62 0.19 255 / 12%);
+}
+
+.glass-card-teal:hover {
+  border-color: oklch(0.72 0.14 195 / 25%);
+  box-shadow:
+    0 24px 80px -16px oklch(0 0 0 / 50%),
+    0 0 60px -20px oklch(0.72 0.14 195 / 12%);
+}
+
+.glass-card-gold:hover {
+  border-color: oklch(0.78 0.14 85 / 25%);
+  box-shadow:
+    0 24px 80px -16px oklch(0 0 0 / 50%),
+    0 0 60px -20px oklch(0.78 0.14 85 / 12%);
 }
 
 .glow-border {
@@ -181,7 +205,7 @@ p, li {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, oklch(0.62 0.19 255 / 20%), transparent 40%, oklch(0.62 0.19 255 / 10%));
+  background: linear-gradient(135deg, oklch(0.62 0.19 255 / 25%), transparent 40%, oklch(0.72 0.14 195 / 15%));
   z-index: -1;
   opacity: 0;
   transition: opacity 300ms ease;
@@ -189,6 +213,102 @@ p, li {
 
 .glow-border:hover::before {
   opacity: 1;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    oklch(1 0 0 / 12%) 40%,
+    oklch(1 0 0 / 20%) 50%,
+    oklch(1 0 0 / 12%) 60%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animated-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-12px) rotate(1deg); }
+  66% { transform: translateY(6px) rotate(-1deg); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -20px) scale(1.05); }
+  50% { transform: translate(-10px, -40px) scale(0.98); }
+  75% { transform: translate(-30px, -10px) scale(1.02); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.float-slow {
+  animation: float-slow 20s ease-in-out infinite;
+}
+
+.pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+@keyframes border-rotate {
+  0% { --border-angle: 0deg; }
+  100% { --border-angle: 360deg; }
+}
+
+.mesh-section-blue {
+  position: relative;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 80%, oklch(0.62 0.19 255 / 6%) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, oklch(0.72 0.14 195 / 5%) 0%, transparent 70%),
+    var(--background);
+}
+
+.mesh-section-teal {
+  position: relative;
+  background:
+    radial-gradient(ellipse 70% 50% at 10% 50%, oklch(0.72 0.14 195 / 7%) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 90% 80%, oklch(0.55 0.16 290 / 4%) 0%, transparent 70%),
+    oklch(0.10 0.02 255);
+}
+
+.mesh-section-gold {
+  position: relative;
+  background:
+    radial-gradient(ellipse 60% 50% at 70% 30%, oklch(0.78 0.14 85 / 6%) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 20% 70%, oklch(0.62 0.19 255 / 4%) 0%, transparent 70%),
+    oklch(0.10 0.02 255);
 }
 
 .noise-bg {
@@ -200,7 +320,7 @@ p, li {
   position: fixed;
   inset: 0;
   z-index: -1;
-  opacity: 0.025;
+  opacity: 0.022;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 256px 256px;
