@@ -1,26 +1,144 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5ede1;
+  --foreground: #17120f;
+  --surface: #fff8f0;
+  --surface-strong: #ead9c4;
+  --card: rgba(255, 250, 244, 0.92);
+  --card-strong: #201714;
+  --muted: #6d6055;
+  --accent: #c55c2b;
+  --accent-strong: #8f2d10;
+  --accent-soft: #efc09e;
+  --line: rgba(86, 57, 38, 0.14);
+  --shadow: 0 40px 80px -48px rgba(32, 23, 20, 0.5);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(197, 92, 43, 0.18), transparent 28%),
+    radial-gradient(circle at top left, rgba(32, 23, 20, 0.08), transparent 24%),
+    linear-gradient(180deg, #f7f0e6 0%, #f5ede1 42%, #f2e7d8 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(197, 92, 43, 0.24);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.03em;
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+@layer components {
+  .shell {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8 lg:px-10;
+  }
+
+  .section-space {
+    @apply py-16 sm:py-20;
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.34em];
+    color: var(--accent-strong);
+  }
+}
+
+.panel {
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+}
+
+.button-primary,
+.button-secondary {
+  display: inline-flex;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.8rem 1.3rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.button-primary:hover,
+.button-secondary:hover {
+  transform: translateY(-1px);
+}
+
+.button-primary {
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  color: white;
+}
+
+.button-secondary {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--foreground);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(143, 45, 16, 0.12);
+  background: rgba(255, 244, 235, 0.82);
+  padding: 0.55rem 0.95rem;
+  font-size: 0.9rem;
+  color: var(--foreground);
+}
+
+.grid-lines {
+  background-image:
+    linear-gradient(rgba(23, 18, 15, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 18, 15, 0.05) 1px, transparent 1px);
+  background-position: center;
+  background-size: 32px 32px;
 }
