@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { Chakra_Petch, IBM_Plex_Sans } from "next/font/google";
+import { Chakra_Petch, IBM_Plex_Sans, Geist } from "next/font/google";
 import { SiteShell } from "@/components/site-shell";
 import { Analytics } from "@/components/analytics";
 import { siteConfig } from "@/data/site";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const displayFont = Chakra_Petch({
   variable: "--font-display",
@@ -55,7 +58,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${displayFont.variable} ${bodyFont.variable}`}>
+    <html lang="en" className={cn(displayFont.variable, bodyFont.variable, "font-sans", geist.variable)}>
       <body>
         <Analytics />
         <SiteShell>{children}</SiteShell>
