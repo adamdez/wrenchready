@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Phone, MessageSquare, Calendar, Wrench, MapPin, ArrowRight } from "lucide-react";
 import { locations, services, siteConfig } from "@/data/site";
 
@@ -11,12 +12,16 @@ type SiteShellProps = {
 
 function BrandMark() {
   return (
-    <Link className="group flex items-center gap-3" href="/">
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground transition-transform group-hover:scale-105">
-        WR
-      </span>
+    <Link className="group flex items-center gap-3 transition-transform hover:scale-[1.02]" href="/">
+      <Image
+        src="/wr-logo.png"
+        alt="Wrench Ready"
+        width={40}
+        height={40}
+        className="rounded-lg"
+      />
       <span className="hidden sm:block">
-        <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-primary">
+        <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--wr-teal)" }}>
           Wrench Ready
         </span>
         <span className="block text-sm font-semibold text-foreground">
