@@ -72,12 +72,12 @@ export function LaunchRequestForm() {
   }
 
   return (
-    <section className="panel rounded-[2.5rem] p-8">
-      <p className="eyebrow">Launch Request Form</p>
-      <h2 className="mt-3 text-4xl">Package the appointment request into one clean message.</h2>
-      <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--muted)]">
-        This version opens your default email app with the request already filled in.
-        It keeps the launch site functional while the live booking stack is being wired.
+    <section className="panel rounded-[1.9rem] p-6 sm:p-8">
+      <p className="eyebrow">Appointment Request</p>
+      <h2 className="mt-3 text-4xl">Send one clean message and we can screen the job faster.</h2>
+      <p className="mt-4 max-w-2xl text-base leading-7 text-muted">
+        This launch form opens your default email app with the request already filled in.
+        It keeps the site functional now while a full booking stack is being wired in.
       </p>
 
       <form className="mt-8 grid gap-4 md:grid-cols-2" onSubmit={openEmail}>
@@ -86,7 +86,7 @@ export function LaunchRequestForm() {
             Full name
           </span>
           <input
-            className="w-full rounded-[1.4rem] border border-[var(--line)] bg-white px-4 py-3 text-base outline-none transition focus:border-[var(--accent)]"
+            className="form-input"
             name="fullName"
             onChange={updateField}
             placeholder="Your name"
@@ -99,7 +99,7 @@ export function LaunchRequestForm() {
             Email
           </span>
           <input
-            className="w-full rounded-[1.4rem] border border-[var(--line)] bg-white px-4 py-3 text-base outline-none transition focus:border-[var(--accent)]"
+            className="form-input"
             name="email"
             onChange={updateField}
             placeholder="you@example.com"
@@ -113,7 +113,7 @@ export function LaunchRequestForm() {
             Phone or text line
           </span>
           <input
-            className="w-full rounded-[1.4rem] border border-[var(--line)] bg-white px-4 py-3 text-base outline-none transition focus:border-[var(--accent)]"
+            className="form-input"
             name="phone"
             onChange={updateField}
             placeholder="Best number for replies"
@@ -126,7 +126,7 @@ export function LaunchRequestForm() {
             Vehicle
           </span>
           <input
-            className="w-full rounded-[1.4rem] border border-[var(--line)] bg-white px-4 py-3 text-base outline-none transition focus:border-[var(--accent)]"
+            className="form-input"
             name="vehicle"
             onChange={updateField}
             placeholder="2018 Honda CR-V 1.5T"
@@ -139,7 +139,7 @@ export function LaunchRequestForm() {
             Service or symptom
           </span>
           <input
-            className="w-full rounded-[1.4rem] border border-[var(--line)] bg-white px-4 py-3 text-base outline-none transition focus:border-[var(--accent)]"
+            className="form-input"
             name="serviceNeeded"
             onChange={updateField}
             placeholder="Oil change, front brakes, no-start, check-engine light, pre-purchase inspection..."
@@ -152,7 +152,7 @@ export function LaunchRequestForm() {
             Address and parking notes
           </span>
           <input
-            className="w-full rounded-[1.4rem] border border-[var(--line)] bg-white px-4 py-3 text-base outline-none transition focus:border-[var(--accent)]"
+            className="form-input"
             name="address"
             onChange={updateField}
             placeholder="Street, business lot, apartment gate, or driveway details"
@@ -165,7 +165,7 @@ export function LaunchRequestForm() {
             Preferred timing
           </span>
           <input
-            className="w-full rounded-[1.4rem] border border-[var(--line)] bg-white px-4 py-3 text-base outline-none transition focus:border-[var(--accent)]"
+            className="form-input"
             name="timing"
             onChange={updateField}
             placeholder="After work this week, Saturday morning, ASAP"
@@ -178,7 +178,7 @@ export function LaunchRequestForm() {
             Extra notes
           </span>
           <textarea
-            className="min-h-28 w-full rounded-[1.4rem] border border-[var(--line)] bg-white px-4 py-3 text-base outline-none transition focus:border-[var(--accent)]"
+            className="form-textarea"
             name="notes"
             onChange={updateField}
             placeholder="Anything else that helps screen the job"

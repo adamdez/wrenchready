@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
-import { Barlow_Condensed, Source_Sans_3 } from "next/font/google";
+import { Chakra_Petch, IBM_Plex_Sans } from "next/font/google";
 import { SiteShell } from "@/components/site-shell";
 import { siteConfig } from "@/data/site";
 import "./globals.css";
 
-const displayFont = Barlow_Condensed({
+const displayFont = Chakra_Petch({
   variable: "--font-display",
-  weight: ["400", "600", "700"],
+  weight: ["500", "600", "700"],
   subsets: ["latin"],
 });
 
-const bodyFont = Source_Sans_3({
+const bodyFont = IBM_Plex_Sans({
   variable: "--font-body",
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
 });
 
