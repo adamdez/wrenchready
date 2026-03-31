@@ -52,7 +52,7 @@ export default function ContactPage() {
                 </a>
               </p>
               <p>
-                Email inbox:{" "}
+                Email:{" "}
                 <a
                   className="font-semibold text-[var(--accent-soft)]"
                   href={`mailto:${siteConfig.contact.email}`}
@@ -62,9 +62,8 @@ export default function ContactPage() {
               </p>
               <p>Scheduling window: {siteConfig.contact.schedule}</p>
               <p>
-                This launch version opens your default email app with the request already
-                packaged. It is a practical interim step until the live booking stack is
-                fully connected.
+                Submit the form on the right, or call and text directly.
+                We will screen the job and follow up within the next business window.
               </p>
             </div>
           </article>

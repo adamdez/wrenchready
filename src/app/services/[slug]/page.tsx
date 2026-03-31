@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { CtaBand, FaqList, LinkButton, PageHero, SectionHeading } from "@/components/marketing";
 import { StructuredData } from "@/components/structured-data";
-import { getLocationBySlug, getServiceBySlug, services, siteConfig } from "@/data/site";
+import { getLocationBySlug, getServiceBySlug, locations, services, siteConfig } from "@/data/site";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
 type ServicePageProps = {
@@ -53,6 +53,12 @@ export default async function ServicePage({ params }: ServicePageProps) {
     .map((locationSlug) => getLocationBySlug(locationSlug))
     .filter((location) => location !== undefined);
 
+  const neighborhoodLocations = locations.filter(
+    (loc) => loc.parentSlug && loc.serviceSlugs.includes(service.slug),
+  );
+
+  const relatedServices = services.filter((s) => s.slug !== service.slug);
+
   const serviceStructuredData = {
     "@context": "https://schema.org",
     "@type": "Service",
@@ -64,6 +70,19 @@ export default async function ServicePage({ params }: ServicePageProps) {
       "@type": "AutomotiveBusiness",
       name: siteConfig.name,
       url: siteConfig.domain,
+      telephone: siteConfig.contact.phoneDisplay,
+      priceRange: "$$",
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: 47.6588,
+        longitude: -117.426,
+      },
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: siteConfig.city,
+        addressRegion: siteConfig.stateCode,
+        addressCountry: "US",
+      },
     },
     areaServed: relevantLocations.map((location) => ({
       "@type": "City",
@@ -73,6 +92,37 @@ export default async function ServicePage({ params }: ServicePageProps) {
         name: siteConfig.state,
       },
     })),
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "USD",
+      price: service.priceFrom.replace(/[^0-9]/g, ""),
+      availability: "https://schema.org/InStock",
+    },
+  };
+
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: siteConfig.domain,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Services",
+        item: absoluteUrl("/services"),
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: service.name,
+        item: absoluteUrl(`/services/${service.slug}`),
+      },
+    ],
   };
 
   const faqStructuredData = {
@@ -90,7 +140,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
 
   return (
     <>
-      <StructuredData data={[serviceStructuredData, faqStructuredData]} />
+      <StructuredData data={[serviceStructuredData, breadcrumbData, faqStructuredData]} />
       <div className="pb-16">
         <PageHero
           eyebrow={service.priceFrom}
@@ -164,6 +214,44 @@ export default async function ServicePage({ params }: ServicePageProps) {
             ))}
           </div>
         </section>
+
+        {neighborhoodLocations.length > 0 && (
+          <section className="shell section-space">
+            <SectionHeading
+              eyebrow="Neighborhood Coverage"
+              title={`${service.name} across Spokane neighborhoods`}
+              copy="These neighborhood pages help match hyper-local search intent to the exact area where the service is needed."
+            />
+            <div className="mt-10 flex flex-wrap gap-3">
+              {neighborhoodLocations.map((loc) => (
+                <LinkButton key={loc.slug} href={`/locations/${loc.slug}`} variant="secondary">
+                  {service.name} in {loc.name}
+                </LinkButton>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {relatedServices.length > 0 && (
+          <section className="shell section-space">
+            <SectionHeading
+              eyebrow="Related Services"
+              title="Other mobile service lanes that pair well"
+              copy="Customers booking one service often need another. These links help both users and search engines understand service relationships."
+            />
+            <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {relatedServices.map((rs) => (
+                <article key={rs.slug} className="panel rounded-[2rem] p-6">
+                  <p className="eyebrow">{rs.priceFrom}</p>
+                  <h2 className="mt-3 text-2xl">{rs.name}</h2>
+                  <div className="mt-6">
+                    <LinkButton href={`/services/${rs.slug}`}>Learn more</LinkButton>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="shell section-space">
           <SectionHeading

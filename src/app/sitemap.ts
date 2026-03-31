@@ -5,7 +5,7 @@ import { absoluteUrl } from "@/lib/seo";
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
-  const staticRoutes = ["/", "/services", "/locations", "/contact"].map((path) => ({
+  const staticRoutes = ["/", "/services", "/locations", "/contact", "/tools/symptom-checker"].map((path) => ({
     url: absoluteUrl(path),
     lastModified: now,
     changeFrequency: "weekly" as const,
@@ -19,12 +19,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.76,
   }));
 
-  const locationRoutes = locations.map((location) => ({
+  const cityLocations = locations.filter((l) => !l.parentSlug);
+  const neighborhoodLocations = locations.filter((l) => l.parentSlug);
+
+  const cityRoutes = cityLocations.map((location) => ({
     url: absoluteUrl(`/locations/${location.slug}`),
     lastModified: now,
     changeFrequency: "weekly" as const,
     priority: 0.74,
   }));
 
-  return [...staticRoutes, ...serviceRoutes, ...locationRoutes];
+  const neighborhoodRoutes = neighborhoodLocations.map((location) => ({
+    url: absoluteUrl(`/locations/${location.slug}`),
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.68,
+  }));
+
+  return [...staticRoutes, ...serviceRoutes, ...cityRoutes, ...neighborhoodRoutes];
 }

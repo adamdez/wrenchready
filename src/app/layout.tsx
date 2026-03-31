@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, IBM_Plex_Sans } from "next/font/google";
 import { SiteShell } from "@/components/site-shell";
+import { Analytics } from "@/components/analytics";
 import { siteConfig } from "@/data/site";
 import "./globals.css";
 
@@ -56,6 +57,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${displayFont.variable} ${bodyFont.variable}`}>
       <body>
+        <Analytics />
         <SiteShell>{children}</SiteShell>
       </body>
     </html>

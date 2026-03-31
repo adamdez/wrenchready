@@ -58,20 +58,78 @@ export default async function LocationPage({ params }: LocationPageProps) {
     .map((serviceSlug) => getServiceBySlug(serviceSlug))
     .filter((service) => service !== undefined);
 
+  const parentLocation = location.parentSlug
+    ? getLocationBySlug(location.parentSlug)
+    : undefined;
+
+  const childNeighborhoods = locations.filter(
+    (l) => l.parentSlug === location.slug,
+  );
+
+  const siblingNeighborhoods = location.parentSlug
+    ? locations.filter(
+        (l) => l.parentSlug === location.parentSlug && l.slug !== location.slug,
+      )
+    : [];
+
   const locationStructuredData = {
     "@context": "https://schema.org",
-    "@type": "WebPage",
-    name: location.seoTitle,
+    "@type": "AutomotiveBusiness",
+    name: `${siteConfig.name} — ${location.name}`,
     url: absoluteUrl(`/locations/${location.slug}`),
     description: location.metaDescription,
-    about: {
-      "@type": "AutomotiveBusiness",
-      name: siteConfig.name,
-      areaServed: {
-        "@type": "City",
-        name: location.name,
+    telephone: siteConfig.contact.phoneDisplay,
+    email: siteConfig.contact.email,
+    priceRange: "$$",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: location.name,
+      addressRegion: siteConfig.stateCode,
+      addressCountry: "US",
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: location.geo?.lat ?? 47.6588,
+      longitude: location.geo?.lng ?? -117.426,
+    },
+    areaServed: {
+      "@type": "City",
+      name: location.name,
+      containedInPlace: {
+        "@type": "State",
+        name: siteConfig.state,
       },
     },
+    availableService: featuredServices.map((s) => ({
+      "@type": "Service",
+      name: s.name,
+      url: absoluteUrl(`/services/${s.slug}`),
+    })),
+  };
+
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: siteConfig.domain,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Service Areas",
+        item: absoluteUrl("/locations"),
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: location.name,
+        item: absoluteUrl(`/locations/${location.slug}`),
+      },
+    ],
   };
 
   const faqStructuredData = {
@@ -89,7 +147,7 @@ export default async function LocationPage({ params }: LocationPageProps) {
 
   return (
     <>
-      <StructuredData data={[locationStructuredData, faqStructuredData]} />
+      <StructuredData data={[locationStructuredData, breadcrumbData, faqStructuredData]} />
       <div className="pb-16">
         <PageHero
           eyebrow="Local Coverage"
@@ -158,6 +216,56 @@ export default async function LocationPage({ params }: LocationPageProps) {
             ))}
           </div>
         </section>
+
+        {(parentLocation || childNeighborhoods.length > 0 || siblingNeighborhoods.length > 0) && (
+          <section className="shell section-space">
+            <SectionHeading
+              eyebrow="Nearby Areas"
+              title={parentLocation ? `${location.name} is part of the ${parentLocation.name} service zone` : `Neighborhoods within ${location.name}`}
+              copy="Explore other areas we cover to find the closest match for your address and route."
+            />
+            <div className="mt-10 space-y-6">
+              {parentLocation && (
+                <div>
+                  <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+                    Parent Area
+                  </p>
+                  <LinkButton href={`/locations/${parentLocation.slug}`}>
+                    {parentLocation.name} — Full Coverage
+                  </LinkButton>
+                </div>
+              )}
+              {childNeighborhoods.length > 0 && (
+                <div>
+                  <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+                    Neighborhoods
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {childNeighborhoods.map((n) => (
+                      <LinkButton key={n.slug} href={`/locations/${n.slug}`} variant="secondary">
+                        {n.name}
+                      </LinkButton>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {siblingNeighborhoods.length > 0 && (
+                <div>
+                  <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+                    Nearby Neighborhoods
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {siblingNeighborhoods.map((n) => (
+                      <LinkButton key={n.slug} href={`/locations/${n.slug}`} variant="secondary">
+                        {n.name}
+                      </LinkButton>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         <section className="shell section-space">
           <SectionHeading

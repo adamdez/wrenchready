@@ -1,5 +1,6 @@
 import { CtaBand, FaqList, LinkButton, PageHero, SectionHeading } from "@/components/marketing";
 import { StructuredData } from "@/components/structured-data";
+import { TrustStack } from "@/components/trust-stack";
 import {
   customerBenefits,
   homeFaqs,
@@ -37,6 +38,19 @@ const businessStructuredData = {
   description: siteConfig.description,
   email: siteConfig.contact.email,
   telephone: siteConfig.contact.phoneDisplay,
+  priceRange: "$$",
+  image: absoluteUrl("/opengraph-image"),
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: 47.6588,
+    longitude: -117.426,
+  },
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: siteConfig.city,
+    addressRegion: siteConfig.stateCode,
+    addressCountry: "US",
+  },
   areaServed: siteConfig.areaServed.map((city) => ({
     "@type": "City",
     name: city,
@@ -50,7 +64,25 @@ const businessStructuredData = {
     name: service.name,
     url: absoluteUrl(`/services/${service.slug}`),
     description: service.teaser,
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "USD",
+      price: service.priceFrom.replace(/[^0-9]/g, ""),
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        priceCurrency: "USD",
+        price: service.priceFrom.replace(/[^0-9]/g, ""),
+        unitText: "starting price",
+      },
+    },
   })),
+  aggregateRating: {
+    "@type": "AggregateRating",
+    ratingValue: "5.0",
+    reviewCount: "1",
+    bestRating: "5",
+    worstRating: "1",
+  },
 };
 
 const faqStructuredData = {
@@ -249,6 +281,8 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+        <TrustStack />
 
         <section className="shell section-space">
           <SectionHeading

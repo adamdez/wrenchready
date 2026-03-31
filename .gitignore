@@ -32,9 +32,18 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# dev screenshots and logs
+mobile-*.png
+mobile-*.log
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
 .vercel
+
+# tools and plugins
+/.tools/
+.firecrawl/

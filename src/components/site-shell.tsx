@@ -80,11 +80,15 @@ export function SiteShell({ children }: SiteShellProps) {
           <div>
             <p className="eyebrow">Service Area</p>
             <ul className="mt-4 space-y-3 text-base text-muted">
-              {locations.map((location) => (
+              {locations.filter((l) => !l.parentSlug).map((location) => (
                 <li key={location.slug}>
                   <Link href={`/locations/${location.slug}`}>{location.name}</Link>
                 </li>
               ))}
+            </ul>
+            <p className="eyebrow mt-6">Tools</p>
+            <ul className="mt-4 space-y-3 text-base text-muted">
+              <li><Link href="/tools/symptom-checker">Symptom Checker</Link></li>
             </ul>
           </div>
 
@@ -107,14 +111,16 @@ export function SiteShell({ children }: SiteShellProps) {
       </footer>
 
       <div className="mobile-cta-bar fixed inset-x-0 bottom-0 z-40 md:hidden">
-        <div className="shell flex items-center gap-3 py-3">
-          <a
-            className="button-secondary !min-h-12 !flex-1 !px-4"
-            href={siteConfig.contact.phoneHref}
-          >
-            Call / Text
+        <div className="shell grid grid-cols-3 gap-2 py-3">
+          <a className="button-primary !min-h-12 !px-2 text-center" href={siteConfig.contact.phoneHref}>
+            Call Now
           </a>
-          <LinkButton href="/contact">Schedule</LinkButton>
+          <a className="button-secondary !min-h-12 !px-2 text-center" href={siteConfig.contact.smsHref}>
+            Text Us
+          </a>
+          <a className="button-ghost !min-h-12 !px-2 text-center" href="/contact">
+            Book
+          </a>
         </div>
       </div>
     </div>

@@ -14,6 +14,8 @@ type RequestFormState = {
   notes: string;
 };
 
+type SubmitStatus = "idle" | "submitting" | "success" | "error";
+
 const initialState: RequestFormState = {
   fullName: "",
   email: "",
@@ -27,48 +29,90 @@ const initialState: RequestFormState = {
 
 export function LaunchRequestForm() {
   const [formState, setFormState] = useState(initialState);
-  const [copied, setCopied] = useState(false);
-
-  const requestBody = [
-    `Name: ${formState.fullName || "Not provided"}`,
-    `Email: ${formState.email || "Not provided"}`,
-    `Phone/Text: ${formState.phone || "Not provided"}`,
-    `Vehicle: ${formState.vehicle || "Not provided"}`,
-    `Service or symptom: ${formState.serviceNeeded || "Not provided"}`,
-    `Address / parking notes: ${formState.address || "Not provided"}`,
-    `Preferred timing: ${formState.timing || "Not provided"}`,
-    "",
-    "Extra notes:",
-    formState.notes || "None yet",
-  ].join("\n");
-
-  const subject = `Appointment request for ${formState.vehicle || "mobile auto service"}`;
-  const mailtoHref = `mailto:${siteConfig.contact.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(requestBody)}`;
+  const [status, setStatus] = useState<SubmitStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   function updateField(
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) {
     const { name, value } = event.target;
-
-    setFormState((current) => ({
-      ...current,
-      [name]: value,
-    }));
+    setFormState((current) => ({ ...current, [name]: value }));
   }
 
-  async function copyRequest() {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!formState.vehicle.trim()) {
+      setErrorMessage("Please enter the vehicle information so we can screen the job.");
+      setStatus("error");
+      return;
+    }
+
+    setStatus("submitting");
+    setErrorMessage("");
+
     try {
-      await navigator.clipboard.writeText(requestBody);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formState),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Submission failed");
+      }
+
+      setStatus("success");
+      if (typeof window !== "undefined" && "gtag" in window) {
+        (window as unknown as { gtag: (...a: unknown[]) => void }).gtag(
+          "event",
+          "generate_lead",
+          { event_category: "conversion", event_label: "appointment_form" },
+        );
+      }
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please call or text us instead.",
+      );
+      setStatus("error");
     }
   }
 
-  function openEmail(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    window.location.href = mailtoHref;
+  if (status === "success") {
+    return (
+      <section className="panel rounded-[1.9rem] p-6 sm:p-8">
+        <div className="space-y-6 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(255,122,26,0.15)]">
+            <svg className="h-8 w-8 text-[var(--accent-strong)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-3xl sm:text-4xl">Request received.</h2>
+          <p className="mx-auto max-w-lg text-base leading-7 text-muted">
+            We will screen the job and follow up within the next business window.
+            For anything urgent, call or text directly.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <a className="button-primary" href={siteConfig.contact.phoneHref}>
+              Call / Text {siteConfig.contact.phoneDisplay}
+            </a>
+            <button
+              className="button-secondary"
+              onClick={() => {
+                setFormState(initialState);
+                setStatus("idle");
+              }}
+              type="button"
+            >
+              Send another request
+            </button>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -76,11 +120,17 @@ export function LaunchRequestForm() {
       <p className="eyebrow">Appointment Request</p>
       <h2 className="mt-3 text-4xl">Send one clean message and we can screen the job faster.</h2>
       <p className="mt-4 max-w-2xl text-base leading-7 text-muted">
-        This launch form opens your default email app with the request already filled in.
-        It keeps the site functional now while a full booking stack is being wired in.
+        Fill out the details below and we will get back to you within the next business
+        window. For urgent requests, call or text directly.
       </p>
 
-      <form className="mt-8 grid gap-4 md:grid-cols-2" onSubmit={openEmail}>
+      {status === "error" && errorMessage && (
+        <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {errorMessage}
+        </div>
+      )}
+
+      <form className="mt-8 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
         <label className="space-y-2 md:col-span-1">
           <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
             Full name
@@ -91,6 +141,20 @@ export function LaunchRequestForm() {
             onChange={updateField}
             placeholder="Your name"
             value={formState.fullName}
+          />
+        </label>
+
+        <label className="space-y-2 md:col-span-1">
+          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
+            Phone or text line
+          </span>
+          <input
+            className="form-input"
+            name="phone"
+            onChange={updateField}
+            placeholder="Best number for replies"
+            type="tel"
+            value={formState.phone}
           />
         </label>
 
@@ -110,26 +174,14 @@ export function LaunchRequestForm() {
 
         <label className="space-y-2 md:col-span-1">
           <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
-            Phone or text line
-          </span>
-          <input
-            className="form-input"
-            name="phone"
-            onChange={updateField}
-            placeholder="Best number for replies"
-            value={formState.phone}
-          />
-        </label>
-
-        <label className="space-y-2 md:col-span-1">
-          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--accent-strong)]">
-            Vehicle
+            Vehicle <span className="text-red-400">*</span>
           </span>
           <input
             className="form-input"
             name="vehicle"
             onChange={updateField}
             placeholder="2018 Honda CR-V 1.5T"
+            required
             value={formState.vehicle}
           />
         </label>
@@ -187,12 +239,16 @@ export function LaunchRequestForm() {
         </label>
 
         <div className="flex flex-wrap gap-3 md:col-span-2">
-          <button className="button-primary" type="submit">
-            Open in email
+          <button
+            className="button-primary"
+            disabled={status === "submitting"}
+            type="submit"
+          >
+            {status === "submitting" ? "Sending..." : "Submit request"}
           </button>
-          <button className="button-secondary" onClick={copyRequest} type="button">
-            {copied ? "Copied" : "Copy request"}
-          </button>
+          <a className="button-secondary" href={siteConfig.contact.phoneHref}>
+            Call / Text {siteConfig.contact.phoneDisplay}
+          </a>
         </div>
       </form>
     </section>
