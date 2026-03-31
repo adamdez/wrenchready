@@ -13,13 +13,14 @@ type SiteShellProps = {
 function BrandMark() {
   return (
     <Link className="group flex items-center gap-3 transition-transform hover:scale-[1.02]" href="/">
-      <Image
-        src="/wr-logo.png"
-        alt="Wrench Ready"
-        width={40}
-        height={40}
-        className="rounded-lg"
-      />
+      <span
+        className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-extrabold tracking-tight text-white transition-shadow group-hover:shadow-lg group-hover:shadow-[--wr-blue]/20"
+        style={{
+          background: "linear-gradient(135deg, var(--wr-blue), var(--wr-teal))",
+        }}
+      >
+        WR
+      </span>
       <span className="hidden sm:block">
         <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--wr-teal)" }}>
           Wrench Ready
@@ -93,7 +94,15 @@ export function SiteShell({ children }: SiteShellProps) {
       <footer className="border-t border-border bg-card">
         <div className="shell grid gap-10 py-16 md:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-5">
-            <BrandMark />
+            <Link href="/" className="block w-fit">
+              <Image
+                src="/wr-logo-full.png"
+                alt="Wrench Ready Mobile"
+                width={200}
+                height={80}
+                className="h-12 w-auto"
+              />
+            </Link>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
               {siteConfig.shortDescription}
             </p>
