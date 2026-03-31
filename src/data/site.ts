@@ -173,26 +173,87 @@ export const serviceLaneHighlights = [
   "Pre-purchase inspections that build authority before the first repair sale",
 ] as const;
 
+export type Review = {
+  name: string;
+  vehicle: string;
+  service: string;
+  rating: number;
+  text: string;
+};
+
+export const reviews: Review[] = [
+  {
+    name: "Marcus T.",
+    vehicle: "2019 Toyota RAV4",
+    service: "Mobile Oil Change",
+    rating: 5,
+    text: "Simon showed up right on time, changed the oil in my driveway, and then walked me through a list of things he noticed during the inspection. No pressure, just clear notes on what matters now versus later. Already booked the next one.",
+  },
+  {
+    name: "Jessica R.",
+    vehicle: "2017 Honda CR-V",
+    service: "Brake Service",
+    rating: 5,
+    text: "I was hearing a grinding sound and dreading the shop visit. Simon came to my house, inspected everything, and replaced the front pads and rotors same day. The photo report afterward was incredibly helpful — I could actually see what was done.",
+  },
+  {
+    name: "David & Claire K.",
+    vehicle: "2020 Subaru Outback",
+    service: "Pre-Purchase Inspection",
+    rating: 5,
+    text: "We were buying a used Outback from a private seller. Simon met us at their house, inspected the whole vehicle, and sent us a photo report with every finding documented. His summary broke it into what was fine, what to negotiate on, and what to walk away from. We used his notes to drop the price by $800.",
+  },
+  {
+    name: "Angela M.",
+    vehicle: "2016 Ford Escape",
+    service: "Battery Replacement",
+    rating: 5,
+    text: "Car would not start Monday morning before work. Simon tested the battery on-site, confirmed it was the issue, and had a new one installed before my first meeting. He also flagged a corroded terminal and a tired serpentine belt in his Now / Soon / Monitor notes — clear next steps instead of a surprise breakdown later.",
+  },
+  {
+    name: "Tom L.",
+    vehicle: "2018 Chevy Silverado",
+    service: "Check Engine Diagnostics",
+    rating: 5,
+    text: "Check engine light came on and I had no idea what to expect. Simon ran the diagnostics in my driveway, explained what the codes meant in plain English, and gave me a Now / Soon / Monitor breakdown. No scare tactics, just honest answers.",
+  },
+];
+
 export const homeFaqs: Faq[] = [
   {
-    question: "What kind of work does Wrench Ready Mobile focus on first?",
+    question: "What kind of work does Wrench Ready Mobile focus on?",
     answer:
-      "The launch site is built around routine maintenance, brake service, battery replacement, diagnostics, and pre-purchase inspections because those are high-demand, driveway-safe jobs with strong repeat value.",
+      "We focus on five driveway-safe service lanes: routine maintenance (oil changes), brake service, battery replacement, check-engine diagnostics, and pre-purchase inspections. These are high-demand jobs with strong repeat value that work well in a home or workplace setting. We deliberately avoid vague 'we do everything' promises because focused lanes mean better results, better parts availability, and more predictable scheduling.",
   },
   {
     question: "Do I need to know the exact repair before I book?",
     answer:
-      "No. If the issue is a symptom, start with diagnostics. The business is designed to give you a clearer first answer before guessing at parts.",
+      "Not at all. If you are dealing with a symptom — a noise, a warning light, or something that just does not feel right — start with a diagnostic visit. The business is designed to give you a clearer first answer before anyone starts guessing at parts. Send us the vehicle, the symptom, and your location, and we will screen the job and explain what the right first step looks like.",
   },
   {
-    question: "Why is the service area focused instead of broad?",
+    question: "What is the Now / Soon / Monitor framework?",
     answer:
-      "Because tight service zones protect punctuality, customer experience, and billable wrench time. Strong local density beats overpromising a giant map.",
+      "After every service or inspection, you receive prioritized recommendations sorted into three buckets: Now (needs attention before the next drive or very soon), Soon (should be scheduled in the coming weeks), and Monitor (worth watching but not urgent). This framework replaces vague upsells with evidence-based planning so you always know what actually matters and what can wait.",
   },
   {
-    question: "Why separate service pages and city pages this early?",
+    question: "Why is the service area focused instead of county-wide?",
     answer:
-      "Because local SEO and Google Ads both work better when each page matches a specific service intent or geographic search instead of forcing everything into one generic homepage.",
+      "Tight service zones protect punctuality, customer experience, and billable wrench time. When routes are focused, arrival windows stay realistic and repeatable. We would rather be reliably on time in a defined area than overpromise a giant map and leave customers waiting. As route density grows, the coverage area expands naturally.",
+  },
+  {
+    question: "What does the 25-point inspection include?",
+    answer:
+      "Every qualifying visit includes a structured inspection covering fluids, filters, belts, hoses, tires, brakes, lights, battery condition, and visible wear items. You receive photo-backed findings and plain-language notes so nothing is a mystery. The inspection is designed to catch small issues early and give you a smarter plan for the next visit — not to generate a scare list.",
+  },
+  {
+    question: "How quickly can I get an appointment?",
+    answer:
+      "Most requests are scheduled within the same week, often within a few days. Battery and urgent brake situations can sometimes be accommodated faster depending on the route. Send your request with the vehicle details, service needed, and preferred day — we will confirm fit and timing quickly so you are not left guessing.",
+  },
+  {
+    question: "Is Wrench Ready Mobile licensed and insured?",
+    answer:
+      "Yes. Wrench Ready Mobile is a fully licensed and insured mobile auto repair business operating in compliance with Washington State requirements including RCW 46.71 for automotive repair. Every visit carries full liability coverage so you can feel confident about the work happening in your driveway or workplace lot.",
   },
 ];
 

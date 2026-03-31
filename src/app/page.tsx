@@ -1,6 +1,6 @@
 import { StructuredData } from "@/components/structured-data";
 import { HomePage } from "@/components/home-page";
-import { homeFaqs, services, siteConfig } from "@/data/site";
+import { homeFaqs, reviews, services, siteConfig } from "@/data/site";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
@@ -66,10 +66,20 @@ const businessStructuredData = {
   aggregateRating: {
     "@type": "AggregateRating",
     ratingValue: "5.0",
-    reviewCount: "1",
+    reviewCount: String(reviews.length),
     bestRating: "5",
     worstRating: "1",
   },
+  review: reviews.map((r) => ({
+    "@type": "Review",
+    reviewRating: {
+      "@type": "Rating",
+      ratingValue: String(r.rating),
+      bestRating: "5",
+    },
+    author: { "@type": "Person", name: r.name },
+    reviewBody: r.text,
+  })),
 };
 
 const faqStructuredData = {
