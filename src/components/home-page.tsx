@@ -89,7 +89,7 @@ const serviceGradients: Record<string, { border: string; icon: string; glow: str
 
 const trustFeatures = [
   { icon: <Shield className="h-5 w-5" />, label: "Licensed & Insured", color: "text-[--wr-blue-soft]" },
-  { icon: <Star className="h-5 w-5" />, label: "5-Star Rated", color: "text-[--wr-gold]" },
+  { icon: <Star className="h-5 w-5" />, label: "New in Spokane", color: "text-[--wr-gold]" },
   { icon: <Clock className="h-5 w-5" />, label: "Same-Week Scheduling", color: "text-[--wr-teal]" },
   { icon: <Route className="h-5 w-5" />, label: "Focused Routes", color: "text-[--wr-blue-soft]" },
   { icon: <Eye className="h-5 w-5" />, label: "Photo Reports", color: "text-[--wr-teal]" },
@@ -181,6 +181,32 @@ function FloatingBookFab() {
 function ReviewCarousel() {
   const [current, setCurrent] = useState(0);
   const count = reviews.length;
+
+  if (count === 0) {
+    return (
+      <div className="relative">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card/40 backdrop-blur-sm p-8 sm:p-10 text-center">
+          <h3 className="text-2xl font-bold text-foreground">
+            We just launched. Reviews are coming.
+          </h3>
+          <p className="mt-4 text-base leading-relaxed text-muted-foreground max-w-md mx-auto">
+            We opened this week in Spokane. Book a service and you'll see why the reviews will speak for themselves.
+          </p>
+          <div className="mt-6">
+            <a
+              href="https://www.google.com/maps/place/Wrench+Ready+Mobile"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+            >
+              See Us on Google Maps
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   function next() { setCurrent((c) => (c + 1) % count); }
   function prev() { setCurrent((c) => (c - 1 + count) % count); }
@@ -396,8 +422,8 @@ export function HomePage() {
             priority
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-black/40" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/20" />
         </div>
 
         <HeroGradientBg />
@@ -405,6 +431,17 @@ export function HomePage() {
         <div className="shell relative flex min-h-[90vh] flex-col justify-center pt-20 pb-24 sm:pt-28 sm:pb-32 lg:pt-32 lg:pb-36">
           <div className="max-w-3xl space-y-8">
             <FadeIn>
+              <Image
+                src="/wr-logo-full.png"
+                alt="Wrench Ready Mobile"
+                width={200}
+                height={133}
+                className="mb-4 drop-shadow-2xl"
+                priority
+              />
+            </FadeIn>
+
+            <FadeIn delay={0.1}>
               <motion.span
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/90 backdrop-blur-sm"
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -491,11 +528,8 @@ export function HomePage() {
           <FadeIn delay={0.75}>
             <div className="mt-12 flex flex-wrap items-center gap-3">
               <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
-                <div className="flex items-center gap-1.5">
-                  <Star className="h-4 w-4 fill-[--wr-gold] text-[--wr-gold]" />
-                  <span className="text-xl font-bold text-white">5.0</span>
-                </div>
-                <p className="text-[10px] uppercase tracking-wider text-white/50">Google Rating</p>
+                <span className="text-lg font-bold text-[--wr-teal]">Now Booking</span>
+                <p className="text-[10px] uppercase tracking-wider text-white/50">Same-week appointments</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
                 <span className="text-xl font-bold text-white">0</span>
@@ -703,7 +737,7 @@ export function HomePage() {
           >
             {[
               { value: 0, suffix: "", label: "Shop drop-offs", color: "--wr-teal" },
-              { value: 5.0, suffix: "", label: "Customer rating", color: "--wr-gold" },
+              { value: 25, suffix: "-pt", label: "Inspection included", color: "--wr-gold" },
               { value: 5, suffix: "", label: "Service lanes", color: "--wr-blue-soft" },
               { value: 4, suffix: "+", label: "Coverage areas", color: "--wr-purple" },
             ].map((stat) => (
@@ -751,16 +785,7 @@ export function HomePage() {
               />
 
               <FadeIn delay={0.3}>
-                <div className="mt-8 flex items-center gap-4">
-                  <div className="rounded-2xl border border-[--wr-gold]/20 bg-[--wr-gold]/5 px-5 py-4 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className="h-4 w-4 fill-[--wr-gold] text-[--wr-gold]" />
-                      ))}
-                    </div>
-                    <p className="mt-1.5 text-2xl font-bold text-foreground">5.0</p>
-                    <p className="text-xs text-muted-foreground">on Google</p>
-                  </div>
+                <div className="mt-8 flex flex-col gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">
                       Every visit is designed to earn the next one — through honest findings, clear communication, and work you can verify yourself.

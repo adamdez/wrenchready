@@ -80,19 +80,19 @@ export const operatingPrinciples = [
     kicker: "Earn The Next Visit",
     title: "Every job should make the next booking easier.",
     copy:
-      "Recommendations are framed around honesty, evidence, and what actually helps the customer, not what inflates one invoice.",
+      "We tell you what you actually need, not what fattens the invoice. That's how people trust us enough to call back.",
   },
   {
     kicker: "Protect Wrench Time",
     title: "Admin, routing, and follow-up exist to keep Simon producing.",
     copy:
-      "The business is engineered so the wrench stays on paid work while intake, scheduling, reminders, and communication are handled cleanly around it.",
+      "Simon fixes cars. Dez handles calls, scheduling, logistics. That split means we show up on time and the work actually gets done.",
   },
   {
     kicker: "Driveway-Safe Scope",
-    title: "Focused service lanes beat pretending every repair is mobile.",
+    title: "We do what works mobile. We don't fake the rest.",
     copy:
-      "Routine maintenance, brake work, batteries, diagnostics, and inspections are the lanes that build repeat business without sacrificing reliability.",
+      "Oil changes, brakes, batteries, diagnostics, inspections. That's the list. It's honest, and it's where we get really good.",
   },
 ] as const;
 
@@ -124,16 +124,16 @@ export const trustPoints = [
 ] as const;
 
 export const proofStatements = [
-  "Spokane is the proving ground for a regional operating system, not a random side hustle.",
-  "The model is built around high-frequency, driveway-safe work with real repeat value.",
-  "The public promise is simple: convenient, honest mobile service with clearer communication than a rushed counter visit.",
+  "Simon's a mechanic. Dez handles operations. Two people, focused service, launched March 30, 2026.",
+  "We run on five service lanes that actually work from a driveway. No 'we can do anything' promises.",
+  "When the job is done, you get what was done and what comes next. Plain language, not shop counter talk.",
 ] as const;
 
 export const customerBenefits = [
-  "No tow bill for a battery, brake, or no-start visit",
-  "No waiting room for routine service or inspection work",
-  "Written priorities instead of vague upsells",
-  "A cleaner service record you can actually revisit later",
+  "No tow. No drop-off. No waiting room.",
+  "Clear list of what's next, not a surprise bill",
+  "You can actually see what we did",
+  "Repeat bookings get easier, not harder",
 ] as const;
 
 export const scopeGuardrails = [
@@ -145,32 +145,32 @@ export const scopeGuardrails = [
 
 export const processSteps = [
   {
-    title: "Send the vehicle, symptom, and address",
+    title: "Send us the car details and address",
     copy:
-      "Year, make, model, the service or issue, and where the car is parked qualify most requests fast.",
+      "Year, make, model, what you need, where it sits. That's usually enough to book.",
   },
   {
-    title: "We screen fit before promising a slot",
+    title: "We check if it's a good fit",
     copy:
-      "The route, parking setup, and service lane all get checked before the appointment is confirmed.",
+      "Route, parking, service lane, timing. If it works, we schedule it. If not, we say so.",
   },
   {
-    title: "Service happens where the vehicle already is",
+    title: "Service happens where you are",
     copy:
-      "Routine maintenance and light repair are completed on site with inspection notes and practical communication throughout.",
+      "We show up, do the work, and keep you in the loop the whole time.",
   },
   {
-    title: "You leave with a smarter next step",
+    title: "You get a clear next step",
     copy:
-      "The goal is not just one invoice. It is a cleaner plan for what matters now, soon, and later.",
+      "Not just an invoice. A list of what's next, what can wait, and what to watch.",
   },
 ] as const;
 
 export const serviceLaneHighlights = [
-  "Routine maintenance that keeps family and commuter vehicles on schedule",
-  "Brake and battery work with strong urgency and local search intent",
-  "Symptom-based diagnostics that lead to real decisions instead of part guessing",
-  "Pre-purchase inspections that build authority before the first repair sale",
+  "Oil changes that keep cars running right",
+  "Brake and battery work when you need it most",
+  "Diagnostics that point at the real problem",
+  "Pre-purchase inspections that tell you what you're buying",
 ] as const;
 
 export type Review = {
@@ -181,79 +181,43 @@ export type Review = {
   text: string;
 };
 
-export const reviews: Review[] = [
-  {
-    name: "Marcus T.",
-    vehicle: "2019 Toyota RAV4",
-    service: "Mobile Oil Change",
-    rating: 5,
-    text: "Simon showed up right on time, changed the oil in my driveway, and then walked me through a list of things he noticed during the inspection. No pressure, just clear notes on what matters now versus later. Already booked the next one.",
-  },
-  {
-    name: "Jessica R.",
-    vehicle: "2017 Honda CR-V",
-    service: "Brake Service",
-    rating: 5,
-    text: "I was hearing a grinding sound and dreading the shop visit. Simon came to my house, inspected everything, and replaced the front pads and rotors same day. The photo report afterward was incredibly helpful — I could actually see what was done.",
-  },
-  {
-    name: "David & Claire K.",
-    vehicle: "2020 Subaru Outback",
-    service: "Pre-Purchase Inspection",
-    rating: 5,
-    text: "We were buying a used Outback from a private seller. Simon met us at their house, inspected the whole vehicle, and sent us a photo report with every finding documented. His summary broke it into what was fine, what to negotiate on, and what to walk away from. We used his notes to drop the price by $800.",
-  },
-  {
-    name: "Angela M.",
-    vehicle: "2016 Ford Escape",
-    service: "Battery Replacement",
-    rating: 5,
-    text: "Car would not start Monday morning before work. Simon tested the battery on-site, confirmed it was the issue, and had a new one installed before my first meeting. He also flagged a corroded terminal and a tired serpentine belt in his Now / Soon / Monitor notes — clear next steps instead of a surprise breakdown later.",
-  },
-  {
-    name: "Tom L.",
-    vehicle: "2018 Chevy Silverado",
-    service: "Check Engine Diagnostics",
-    rating: 5,
-    text: "Check engine light came on and I had no idea what to expect. Simon ran the diagnostics in my driveway, explained what the codes meant in plain English, and gave me a Now / Soon / Monitor breakdown. No scare tactics, just honest answers.",
-  },
-];
+export const reviews: Review[] = [];
 
 export const homeFaqs: Faq[] = [
   {
     question: "What kind of work does Wrench Ready Mobile focus on?",
     answer:
-      "We focus on five driveway-safe service lanes: routine maintenance (oil changes), brake service, battery replacement, check-engine diagnostics, and pre-purchase inspections. These are high-demand jobs with strong repeat value that work well in a home or workplace setting. We deliberately avoid vague 'we do everything' promises because focused lanes mean better results, better parts availability, and more predictable scheduling.",
+      "Oil changes, brakes, batteries, diagnostics, and pre-purchase inspections. Five service lanes that work from a driveway. We're not trying to be everything — just really good at these.",
   },
   {
     question: "Do I need to know the exact repair before I book?",
     answer:
-      "Not at all. If you are dealing with a symptom — a noise, a warning light, or something that just does not feel right — start with a diagnostic visit. The business is designed to give you a clearer first answer before anyone starts guessing at parts. Send us the vehicle, the symptom, and your location, and we will screen the job and explain what the right first step looks like.",
+      "No. If something doesn't sound right or the light's on, start with a diagnostic. We'll figure it out and explain what's next.",
   },
   {
     question: "What is the Now / Soon / Monitor framework?",
     answer:
-      "After every service or inspection, you receive prioritized recommendations sorted into three buckets: Now (needs attention before the next drive or very soon), Soon (should be scheduled in the coming weeks), and Monitor (worth watching but not urgent). This framework replaces vague upsells with evidence-based planning so you always know what actually matters and what can wait.",
+      "After we're done, you get a list. Now means fix it before you drive anywhere. Soon means schedule it this month. Monitor means keep an eye on it. No surprise bills, no hidden upsells.",
   },
   {
     question: "Why is the service area focused instead of county-wide?",
     answer:
-      "Tight service zones protect punctuality, customer experience, and billable wrench time. When routes are focused, arrival windows stay realistic and repeatable. We would rather be reliably on time in a defined area than overpromise a giant map and leave customers waiting. As route density grows, the coverage area expands naturally.",
+      "Because we want to show up on time. A smaller service area means better routes, realistic ETAs, and fewer cancellations. Once we're solid in Spokane, we'll expand.",
   },
   {
-    question: "What does the 25-point inspection include?",
+    question: "What does the inspection include?",
     answer:
-      "Every qualifying visit includes a structured inspection covering fluids, filters, belts, hoses, tires, brakes, lights, battery condition, and visible wear items. You receive photo-backed findings and plain-language notes so nothing is a mystery. The inspection is designed to catch small issues early and give you a smarter plan for the next visit — not to generate a scare list.",
+      "Fluids, filters, belts, hoses, tires, lights, battery, brakes — the stuff that matters. You get photos and notes so you see what we saw.",
   },
   {
     question: "How quickly can I get an appointment?",
     answer:
-      "Most requests are scheduled within the same week, often within a few days. Battery and urgent brake situations can sometimes be accommodated faster depending on the route. Send your request with the vehicle details, service needed, and preferred day — we will confirm fit and timing quickly so you are not left guessing.",
+      "Usually within a few days. Battery and brake emergencies sometimes sooner. Send us your vehicle, what you need, and your preferred day.",
   },
   {
     question: "Is Wrench Ready Mobile licensed and insured?",
     answer:
-      "Yes. Wrench Ready Mobile is a fully licensed and insured mobile auto repair business operating in compliance with Washington State requirements including RCW 46.71 for automotive repair. Every visit carries full liability coverage so you can feel confident about the work happening in your driveway or workplace lot.",
+      "Yes. Full license, full insurance. Washington State compliant. You're covered when we're working on your driveway.",
   },
 ];
 
@@ -262,9 +226,9 @@ export const services: Service[] = [
     slug: "oil-change",
     name: "Mobile Oil Change",
     seoTitle: "Mobile Oil Change in Spokane, WA",
-    headline: "Oil change service that happens where the vehicle already sits.",
+    headline: "Oil change without leaving your driveway.",
     teaser:
-      "Synthetic and synthetic-blend oil changes with filter replacement, service light reset when possible, and a 25-point inspection that turns routine work into a smarter next visit.",
+      "Fresh oil, new filter, and a quick inspection so you know what's actually coming up. No waiting room. No drop-off drama.",
     metaDescription:
       "Book a mobile oil change in Spokane, WA with filter replacement, a 25-point inspection, and honest next-step recommendations at your home or workplace.",
     priceFrom: "From $85",
@@ -275,10 +239,10 @@ export const services: Service[] = [
       "Owners who want inspection notes and timing guidance, not just a windshield sticker",
     ],
     includes: [
-      "Oil and filter replacement based on the vehicle's requirements",
-      "Fluid, leak, light, tire, and visible wear inspection",
-      "Service light reset when the vehicle allows it",
-      "Clear Now / Soon / Monitor recommendations when anything else stands out",
+      "Fresh oil and filter, right spec for your car",
+      "Quick fluid and light check while we're there",
+      "Service light reset if the car will let us",
+      "Notes on anything else worth watching",
     ],
     trustPoints: [
       "Oil changes become repeat-booking engines when the inspection is useful and honest",
@@ -295,17 +259,17 @@ export const services: Service[] = [
       {
         question: "Do I need to stay with the vehicle during the oil change?",
         answer:
-          "Not necessarily. As long as the vehicle is accessible and the parking setup is safe, many customers keep working nearby while the service happens.",
+          "Nope. Stay inside, keep working. Just make sure the car's easy to get to and the parking's safe.",
       },
       {
         question: "Do you reset the maintenance light?",
         answer:
-          "Yes, when the vehicle allows it and the service is complete. If a manufacturer-specific procedure is required, that becomes part of the visit review.",
+          "Yeah, if the car will let us. Some vehicles need a specific button combo we'll explain.",
       },
       {
         question: "Is this just a quick drain-and-fill?",
         answer:
-          "No. The service lane is designed to include useful inspection context so small issues are caught early and the next visit is easier to plan.",
+          "No. We look around while we're there — fluids, leaks, tires, belts. You get a quick list of what's worth watching.",
       },
     ],
     locationSlugs: ["spokane", "spokane-valley", "south-hill", "liberty-lake"],
@@ -320,9 +284,9 @@ export const services: Service[] = [
     slug: "brake-repair",
     name: "Mobile Brake Service",
     seoTitle: "Mobile Brake Repair in Spokane, WA",
-    headline: "Brake service without the tow, the waiting room, or the half-day detour.",
+    headline: "Brake service without towing your car.",
     teaser:
-      "Front or rear brake service with clear inspection notes, safe fit screening, torque-critical discipline, and transparent next steps for Spokane drivers who need the car back fast.",
+      "Pads, rotors, inspection, and an honest assessment of what's going on. Done at your place. No trip to the shop.",
     metaDescription:
       "Need mobile brake repair in Spokane, WA? Wrench Ready Mobile handles brake pad and rotor service at your home or workplace with clear inspection notes.",
     priceFrom: "From $280 per axle",
@@ -333,10 +297,10 @@ export const services: Service[] = [
       "Customers who value inspection notes and practical follow-up instead of vague counter talk",
     ],
     includes: [
-      "Brake system inspection focused on pad, rotor, and visible hardware condition",
-      "Pad and rotor replacement for qualifying vehicles and safe locations",
-      "Torque-critical closeout and post-service check procedure",
-      "Written notes on anything that should be handled now, soon, or monitored",
+      "Full brake system inspection first",
+      "Pad and rotor replacement if that's the fix",
+      "Everything torqued properly and tested before we leave",
+      "Notes on what comes next, if anything",
     ],
     trustPoints: [
       "Brake work converts best when scope is clear and site safety is screened first",
@@ -353,17 +317,17 @@ export const services: Service[] = [
       {
         question: "Can you replace brakes in an apartment lot or office parking area?",
         answer:
-          "Often yes, provided the surface is safe and the vehicle can stay parked for the service window. Parking restrictions and tight access should be mentioned in the first message.",
+          "Usually. Level ground and a couple hours is all we need. Just mention the parking situation when you book.",
       },
       {
         question: "What if the noise is not just pads and rotors?",
         answer:
-          "That is why the appointment starts with brake inspection and fit screening, not a blind parts swap. If the car needs a different first step, the visit should surface it quickly.",
+          "We check first before we start replacing parts. If it's something different, we'll tell you what it looks like and what comes next.",
       },
       {
         question: "Do you handle every brake issue mobile?",
         answer:
-          "No. Common brake service is a great mobile fit, while more complex hydraulic, rust-heavy, or access-limited cases may need a different plan.",
+          "Pad and rotor work, yeah. Stuff with rust buildup or hydraulic issues might need a shop lift. We'll be upfront about it.",
       },
     ],
     locationSlugs: ["spokane", "spokane-valley", "south-hill"],
@@ -378,9 +342,9 @@ export const services: Service[] = [
     slug: "battery-replacement",
     name: "Battery Replacement",
     seoTitle: "Mobile Battery Replacement in Spokane, WA",
-    headline: "No-start battery help where the vehicle already sits.",
+    headline: "Car won't start? We come to you.",
     teaser:
-      "Battery testing and replacement for Spokane drivers who need a fast, trustworthy answer in the driveway, at work, or in a parking lot before the day falls apart.",
+      "We test it on the spot and replace it if that's the problem. No tow needed. Done the same day, usually in under an hour.",
     metaDescription:
       "Get mobile battery replacement in Spokane, WA with on-site testing, installation, and a clear explanation of what caused the no-start condition.",
     priceFrom: "From $180 installed",
@@ -391,10 +355,10 @@ export const services: Service[] = [
       "Urgent weekday or weekend issues where a tow would cost more time than the repair",
     ],
     includes: [
-      "Battery test and installation on qualifying vehicles",
-      "Terminal and basic charging-system observations during the visit",
-      "Core handling and cleanup notes when required",
-      "Clear direction if the failure points somewhere beyond the battery itself",
+      "Battery test to confirm it's the problem",
+      "Install a new one if needed",
+      "Quick check of terminals and charging system",
+      "Straight answer if something else is going on",
     ],
     trustPoints: [
       "Urgent no-start traffic converts better when the page promises clarity first",
@@ -411,17 +375,17 @@ export const services: Service[] = [
       {
         question: "Can you come to my house if the car will not start?",
         answer:
-          "Yes. That is one of the clearest mobile-fit jobs. Send the address, parking setup, and what the vehicle is doing now so the request can be screened quickly.",
+          "Yes. Send us the address and we'll be there. That's exactly what this service is for.",
       },
       {
         question: "What if the battery is not the real problem?",
         answer:
-          "The service lane starts with testing. If the issue points toward the starter, alternator, or another electrical fault, the next step should be explained before guessing at parts.",
+          "We test it first. If it's the starter or alternator, we'll tell you that instead of swapping a battery that won't fix it.",
       },
       {
         question: "How long does mobile battery replacement take?",
         answer:
-          "Most qualifying battery replacements fit comfortably inside a short on-site visit once the correct battery and location details are confirmed.",
+          "Usually 30-45 minutes start to finish, assuming we can get the right battery and the parking setup is clear.",
       },
     ],
     locationSlugs: ["spokane", "spokane-valley", "liberty-lake", "south-hill"],
@@ -436,9 +400,9 @@ export const services: Service[] = [
     slug: "check-engine-diagnostics",
     name: "Check Engine Diagnostics",
     seoTitle: "Check Engine Light Diagnostics in Spokane, WA",
-    headline: "A diagnostic visit built around symptoms, not guesses.",
+    headline: "Check engine light? Get straight answers.",
     teaser:
-      "When the check-engine light turns on or the vehicle starts acting up, Wrench Ready Mobile begins with a structured diagnostic appointment so the next decision is grounded in evidence.",
+      "We'll scan the codes, explain what they mean, and tell you what actually needs to happen. No guessing. No scare tactics.",
     metaDescription:
       "Book check-engine light diagnostics in Spokane, WA with a mobile mechanic who starts from the symptom, screens the job honestly, and explains the next repair step clearly.",
     priceFrom: "From $150",
@@ -449,10 +413,10 @@ export const services: Service[] = [
       "Households that need a trustworthy explanation in normal language",
     ],
     includes: [
-      "Symptom intake and basic diagnostic workflow for qualifying vehicles",
-      "Code scan and context review as part of the visit, not as the whole answer",
-      "Repair recommendation or next-step plan based on the findings",
-      "Diagnostic fee can be credited toward approved repair where appropriate",
+      "We listen to the symptom, then scan the codes",
+      "We tell you what they mean in plain English",
+      "Honest next step — fix it, monitor it, or get a different opinion",
+      "Fee credited toward the repair if we do the work",
     ],
     trustPoints: [
       "The page avoids pretending a warning light equals one part",
@@ -469,17 +433,17 @@ export const services: Service[] = [
       {
         question: "If the check-engine light is on, do I book a repair or a diagnostic visit?",
         answer:
-          "Start with diagnostics unless the repair is already verified. Most customers search the symptom first, so the site is built to meet that reality honestly.",
+          "Start with diagnostics. We'll figure out if it's a quick fix or something bigger.",
       },
       {
         question: "Do you credit the diagnostic fee toward the repair?",
         answer:
-          "Often yes, when the repair is approved and the job fits the mobile service lane. Diagnostics should lead to decisions, not dead ends.",
+          "Usually, if we end up doing the work and it's something we can handle.",
       },
       {
         question: "Can every warning-light issue be handled mobile?",
         answer:
-          "No. Some cases need more time, more tooling, or a shop environment. Screening the symptom and the vehicle context first is part of protecting customer trust.",
+          "Not all of them. Some stuff needs a lift or a shop. We'll know pretty quick and tell you straight.",
       },
     ],
     locationSlugs: ["spokane", "spokane-valley", "liberty-lake"],
@@ -494,9 +458,9 @@ export const services: Service[] = [
     slug: "pre-purchase-inspection",
     name: "Pre-Purchase Inspection",
     seoTitle: "Pre-Purchase Inspection in Spokane, WA",
-    headline: "A second set of trained eyes before you buy the car.",
+    headline: "Know what you're buying before you buy it.",
     teaser:
-      "Mobile pre-purchase inspections help Spokane buyers move with more confidence by checking the vehicle at the seller's location and flagging the issues that matter most.",
+      "We'll meet you at the seller's place, inspect the car, and give you a straight summary of what's good, what should change the price, and what should make you keep looking.",
     metaDescription:
       "Need a pre-purchase inspection in Spokane, WA? Wrench Ready Mobile checks used vehicles on site and gives buyers a clearer picture before money changes hands.",
     priceFrom: "From $150",
@@ -507,10 +471,10 @@ export const services: Service[] = [
       "Customers who value a plain-language explanation more than a rushed thumbs-up",
     ],
     includes: [
-      "On-site visual and functional inspection for qualifying vehicles",
-      "Check of obvious leaks, lights, wear items, and warning indicators",
-      "A practical summary of what should stop the deal, change the price, or simply be watched",
-      "Clear documentation that can be revisited after the appointment",
+      "Full walkthrough of the vehicle at the seller's place",
+      "Check for leaks, lights, tire condition, brake wear, obvious problems",
+      "A summary: what's solid, what should affect the price, what's a deal-killer",
+      "Notes and photos you can reference later",
     ],
     trustPoints: [
       "Inspection pages position the brand as an advisor before it becomes a repair option",
@@ -527,17 +491,17 @@ export const services: Service[] = [
       {
         question: "Can you inspect a used car at the seller's house or lot?",
         answer:
-          "Yes, when the vehicle access and location are workable. The first message should include the address, the vehicle details, and any timing limits from the seller.",
+          "Yeah, that's where we do it. Give us the address, the car details, and any timing the seller's mentioned.",
       },
       {
         question: "Is this the same as a full shop inspection?",
         answer:
-          "No. It is a mobile-fit inspection built to catch obvious concerns, warning signs, and deal-changing issues before you buy.",
+          "No, this is a driveway inspection. We catch the big stuff and the red flags, not everything a lift can show.",
       },
       {
         question: "Will you tell me if I should walk away?",
         answer:
-          "The goal is to give you a usable decision brief: what is fine, what should affect the price, and what should make you keep shopping.",
+          "We'll give you a breakdown: what's fine, what should change the price, what's a deal-breaker. You make the call.",
       },
     ],
     locationSlugs: ["spokane", "spokane-valley", "liberty-lake", "south-hill"],
@@ -607,9 +571,9 @@ export const locations: Location[] = [
     slug: "spokane-valley",
     name: "Spokane Valley",
     seoTitle: "Mobile Mechanic in Spokane Valley, WA",
-    headline: "Mobile mechanic service for Spokane Valley homes, commuters, and household fleets.",
+    headline: "Mobile mechanic for Spokane Valley families.",
     teaser:
-      "Spokane Valley is one of the strongest early coverage zones for Wrench Ready Mobile thanks to dense neighborhoods, practical parking, and repeat maintenance demand.",
+      "Oil changes, brakes, batteries, and diagnostics without the drive to Spokane. We're building strong routes here from the start.",
     metaDescription:
       "Need a mobile mechanic in Spokane Valley, WA? Wrench Ready Mobile is building focused local service routes for oil changes, brakes, batteries, and diagnostics.",
     neighborhoods: ["Veradale", "Dishman", "Greenacres", "Opportunity"],
@@ -659,9 +623,9 @@ export const locations: Location[] = [
     slug: "liberty-lake",
     name: "Liberty Lake",
     seoTitle: "Mobile Mechanic in Liberty Lake, WA",
-    headline: "Mobile mechanic support for Liberty Lake drivers who need convenience without cutting corners.",
+    headline: "Mobile mechanic for Liberty Lake.",
     teaser:
-      "Liberty Lake routes are built for busy professionals, household SUVs, and used-car inspections where a mobile visit saves time and adds clarity.",
+      "Quick service without losing your whole afternoon. Inspections, oil changes, batteries, and diagnostics in your driveway or office lot.",
     metaDescription:
       "Looking for a mobile mechanic in Liberty Lake, WA? Wrench Ready Mobile covers qualifying maintenance, battery, diagnostic, and inspection jobs on site.",
     neighborhoods: ["River District", "Legacy Ridge", "Meadowwood", "Liberty Lake Village"],
@@ -711,9 +675,9 @@ export const locations: Location[] = [
     slug: "south-hill",
     name: "South Hill",
     seoTitle: "Mobile Mechanic in South Hill Spokane, WA",
-    headline: "Mobile mechanic service for South Hill households that want honest maintenance without the shop shuffle.",
+    headline: "Mobile mechanic for South Hill families.",
     teaser:
-      "South Hill is a strong early coverage zone thanks to family vehicles, neighborhood driveways, and the kind of routine maintenance demand mobile service handles well.",
+      "We come to your driveway. Oil, brakes, batteries, inspections. No school-run logistics or waiting rooms. Just service where you park.",
     metaDescription:
       "Need a mobile mechanic on South Hill in Spokane, WA? Wrench Ready Mobile is building focused routes for oil changes, brakes, batteries, and inspections.",
     neighborhoods: ["Lincoln Heights", "Moran Prairie", "Comstock", "Manito"],
@@ -764,9 +728,9 @@ export const locations: Location[] = [
     name: "Downtown Spokane",
     seoTitle: "Mobile Mechanic in Downtown Spokane, WA",
     headline:
-      "Lunchtime oil changes and after-hours battery swaps for downtown Spokane's workforce.",
+      "Oil changes and battery swaps during your lunch break.",
     teaser:
-      "Office parking garages, surface lots, and street-level spots all become service bays when the mechanic comes to you. Downtown workers can schedule maintenance around the workday instead of burning PTO at a shop across town.",
+      "Park in your office lot, text us the spot number, stay at your desk. Done by the time you need the car back.",
     metaDescription:
       "Book a mobile mechanic in Downtown Spokane, WA. Oil changes, battery replacement & diagnostics at your office lot or parking garage during the workday.",
     neighborhoods: ["West End", "Riverside", "Davenport District"],
@@ -819,9 +783,9 @@ export const locations: Location[] = [
     name: "North Spokane",
     seoTitle: "Mobile Mechanic in North Spokane, WA",
     headline:
-      "After-work auto service for North Spokane families who would rather stay home than sit in a waiting room.",
+      "Service at your driveway, not downtown.",
     teaser:
-      "North Spokane's wide residential streets and long driveways were practically built for mobile mechanics. Families up here juggle school runs, sports practice, and commute schedules — a driveway appointment keeps the car available when life needs it most.",
+      "No drive to the south side for an oil change. No juggling pickups and drop-offs. We come to Five Mile, Indian Trail, wherever.",
     metaDescription:
       "Need a mobile mechanic in North Spokane? Oil changes, brake repair, battery replacement & diagnostics at your driveway. No shop drop-off required.",
     neighborhoods: ["Five Mile", "Indian Trail", "Shadle-Garland"],
