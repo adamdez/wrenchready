@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { siteConfig } from "@/data/site";
+import { trackFormSubmit } from "@/components/analytics";
 import { CheckCircle2, Phone, Send, RotateCcw } from "lucide-react";
 
 type RequestFormState = {
@@ -65,13 +66,7 @@ export function LaunchRequestForm() {
       }
 
       setStatus("success");
-      if (typeof window !== "undefined" && "gtag" in window) {
-        (window as unknown as { gtag: (...a: unknown[]) => void }).gtag(
-          "event",
-          "generate_lead",
-          { event_category: "conversion", event_label: "appointment_form" },
-        );
-      }
+      trackFormSubmit();
     } catch (err) {
       setErrorMessage(
         err instanceof Error
