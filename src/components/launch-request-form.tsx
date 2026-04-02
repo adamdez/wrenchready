@@ -4,6 +4,7 @@ import { useState } from "react";
 import { siteConfig } from "@/data/site";
 import { trackFormSubmit } from "@/components/analytics";
 import { CheckCircle2, Phone, Send, RotateCcw } from "lucide-react";
+import Link from "next/link";
 
 type RequestFormState = {
   fullName: string;
@@ -31,6 +32,7 @@ const initialState: RequestFormState = {
 
 export function LaunchRequestForm() {
   const [formState, setFormState] = useState(initialState);
+  const [smsConsent, setSmsConsent] = useState(false);
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -57,7 +59,7 @@ export function LaunchRequestForm() {
       const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formState),
+        body: JSON.stringify({ ...formState, smsConsent }),
       });
 
       if (!res.ok) {
@@ -236,6 +238,30 @@ export function LaunchRequestForm() {
             placeholder="Anything else that helps screen the job"
             value={formState.notes}
           />
+        </label>
+
+        <label className="flex items-start gap-3 md:col-span-2 cursor-pointer">
+          <input
+            checked={smsConsent}
+            className="mt-1 h-4 w-4 shrink-0 rounded border-border accent-primary"
+            onChange={(e) => setSmsConsent(e.target.checked)}
+            type="checkbox"
+          />
+          <span className="text-xs leading-relaxed text-muted-foreground">
+            I agree to receive text messages from Wrench Ready Mobile Mechanic
+            regarding my service request. Message and data rates may apply.
+            Message frequency varies. Reply <strong className="text-foreground">STOP</strong> to
+            opt out, <strong className="text-foreground">HELP</strong> for help. See
+            our{" "}
+            <Link href="/privacy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>{" "}
+            and{" "}
+            <Link href="/terms" className="text-primary hover:underline">
+              Terms &amp; Conditions
+            </Link>
+            .
+          </span>
         </label>
 
         <div className="flex flex-wrap gap-3 md:col-span-2">

@@ -51,7 +51,7 @@ function buildUnavailableResponse() {
 function buildForwardingResponse(forwardTo: string, callerId: string, timeout: number) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Dial answerOnBridge="true" callerId="${xmlEscape(callerId)}" timeout="${timeout}">
+  <Dial answerOnBridge="true" callerId="${xmlEscape(callerId)}" timeout="${timeout}" action="/api/twilio/voicemail">
     <Number>${xmlEscape(forwardTo)}</Number>
   </Dial>
 </Response>`;

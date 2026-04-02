@@ -352,9 +352,13 @@ export function SiteShell({ children }: SiteShellProps) {
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="transition-colors hover:text-foreground cursor-default">
+              <Link href="/privacy" className="transition-colors hover:text-foreground">
                 Privacy Policy
-              </span>
+              </Link>
+              <span className="h-3 w-px bg-border" />
+              <Link href="/terms" className="transition-colors hover:text-foreground">
+                Terms
+              </Link>
               <span className="h-3 w-px bg-border" />
               <Link href="/tools/symptom-checker" className="transition-colors hover:text-foreground">
                 Symptom Checker
