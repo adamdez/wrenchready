@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { BrandWordmark } from "@/components/brand-wordmark";
 import { Phone, MessageSquare, Calendar, Wrench, MapPin, ArrowRight, Menu, X, ExternalLink, Mail, Shield } from "lucide-react";
 import { locations, services, siteConfig } from "@/data/site";
 import { motion, AnimatePresence } from "framer-motion";
@@ -189,13 +189,7 @@ export function SiteShell({ children }: SiteShellProps) {
         <div className="shell grid gap-10 py-16 md:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-5">
             <Link href="/" className="block w-fit">
-              <Image
-                src="/wr-logo-full.png"
-                alt="Wrench Ready Mobile"
-                width={200}
-                height={80}
-                className="h-12 w-auto"
-              />
+              <BrandWordmark variant="footer" />
             </Link>
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
               {siteConfig.shortDescription}

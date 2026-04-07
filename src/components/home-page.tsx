@@ -3,10 +3,13 @@
 
 "use client";
 
+import { BrandWordmark } from "@/components/brand-wordmark";
+import { HeroVideoBackground } from "@/components/hero-video-background";
 import { FaqList, SectionHeading } from "@/components/marketing";
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
 import { SectionOrbs, HeroGradientBg } from "@/components/motion/gradient-orbs";
 import { AnimatedHeading, CountUp } from "@/components/motion/animated-text";
+import { storyMedia } from "@/data/media-production";
 import {
   homeFaqs,
   locations,
@@ -104,9 +107,9 @@ const processIcons = [
 ];
 
 const heroTrustItems = [
-  { icon: <ClipboardCheck className="h-4 w-4" />, label: "25-Point Inspection" },
-  { icon: <Camera className="h-4 w-4" />, label: "Photo Reports" },
-  { icon: <CircleCheck className="h-4 w-4" />, label: "Honest Recommendations" },
+  { icon: <ClipboardCheck className="h-4 w-4" />, label: "25-point inspection on every visit" },
+  { icon: <Camera className="h-4 w-4" />, label: "Photo-backed findings" },
+  { icon: <CircleCheck className="h-4 w-4" />, label: "Straight answers, no upsell theater" },
 ];
 
 function scrollToBook() {
@@ -190,7 +193,7 @@ function ReviewCarousel() {
             We just launched. Reviews are coming.
           </h3>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground max-w-md mx-auto">
-            We opened this week in Spokane. Book a service and you'll see why the reviews will speak for themselves.
+            We opened this week in Spokane. Book a service and you will see why the reviews will speak for themselves.
           </p>
           <div className="mt-6">
             <a
@@ -411,136 +414,177 @@ export function HomePage() {
       {/* Floating mobile-only "Book" FAB — appears after scrolling past hero */}
       <FloatingBookFab />
 
-      {/* ── Hero — Full-bleed Photo Background ── */}
-      <section id="home" className="relative min-h-[90vh] overflow-hidden">
-        <div className="absolute inset-0 -z-20">
-          <Image
-            src="/hero-main.png"
-            alt="Wrench Ready Mobile van in a Spokane residential driveway at golden hour with tools visible and technician performing a 25-point inspection"
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-black/60" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/20" />
-        </div>
+      {/* ── Hero — short loop + poster (video loads desktop / motion-OK only) ── */}
+      <section id="home" className="relative min-h-[min(100dvh,920px)] overflow-hidden">
+        <HeroVideoBackground
+          posterAlt="Wrench Ready Mobile van in a Spokane residential driveway — hero still while video loads"
+          overlayClassName="bg-black/60"
+        />
 
         <HeroGradientBg />
 
-        <div className="shell relative flex min-h-[90vh] flex-col justify-center pt-20 pb-24 sm:pt-28 sm:pb-32 lg:pt-32 lg:pb-36">
-          <div className="max-w-3xl space-y-8">
-            <FadeIn>
-              <Image
-                src="/wr-logo-full.png"
-                alt="Wrench Ready Mobile"
-                width={200}
-                height={133}
-                className="mb-4 drop-shadow-2xl"
-                priority
+        <div className="shell relative flex min-h-[min(100dvh,920px)] flex-col justify-center pt-24 pb-28 sm:pt-32 sm:pb-36 lg:pt-36 lg:pb-44">
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-end lg:gap-16">
+            <div className="max-w-2xl space-y-9">
+              <FadeIn>
+                <BrandWordmark variant="hero" className="mb-1" />
+              </FadeIn>
+
+              <FadeIn delay={0.08}>
+                <p className="text-sm font-medium uppercase tracking-[0.28em] text-[--wr-teal]">
+                  Simon · lead mechanic · Spokane
+                </p>
+              </FadeIn>
+
+              <FadeIn delay={0.1}>
+                <motion.span
+                  className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/85 backdrop-blur-md"
+                  initial={{ scale: 0.96, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.45 }}
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--wr-teal] opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[--wr-teal]" />
+                  </span>
+                  Mobile mechanic · licensed & insured
+                </motion.span>
+              </FadeIn>
+
+              <AnimatedHeading
+                text="Premium mobile service. Driveway-smart work."
+                gradient
+                className="text-[2.35rem] font-bold leading-[1.02] tracking-[-0.03em] sm:text-5xl lg:text-[3.25rem]"
+                delay={0.14}
               />
-            </FadeIn>
 
-            <FadeIn delay={0.1}>
-              <motion.span
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/90 backdrop-blur-sm"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--wr-teal] opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[--wr-teal]" />
-                </span>
-                Mobile Mechanic — Spokane, WA
-              </motion.span>
-            </FadeIn>
+              <FadeIn delay={0.32}>
+                <p className="max-w-xl text-xl font-medium leading-snug text-white/88 sm:text-2xl">
+                  Your mechanic comes to you. Simon fixes the car; Dez runs the schedule. Every visit is built to earn the next one.
+                </p>
+              </FadeIn>
 
-            <AnimatedHeading
-              text="Your mechanic comes to you."
-              gradient
-              className="text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
-              delay={0.15}
-            />
+              <FadeIn delay={0.42}>
+                <p className="max-w-xl text-base leading-relaxed text-white/58 sm:text-lg">
+                  Oil changes, brakes, batteries, diagnostics, and inspections — the five lanes we stay sharp on. No shop drop-off. No waiting room.
+                </p>
+              </FadeIn>
 
-            <FadeIn delay={0.35}>
-              <p className="max-w-xl text-xl font-medium leading-snug text-white/80 sm:text-2xl">
-                Every job is built to earn the next visit — not the biggest invoice.
-              </p>
-            </FadeIn>
+              <FadeIn delay={0.52}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <button
+                    type="button"
+                    onClick={scrollToBook}
+                    className="btn-shimmer inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-primary px-9 py-4 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:brightness-110 hover:shadow-xl hover:shadow-primary/30"
+                  >
+                    <Calendar className="h-5 w-5 shrink-0" />
+                    Book a same-week slot
+                  </button>
+                  <a
+                    href={siteConfig.contact.phoneHref}
+                    className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full border border-white/18 bg-white/[0.07] px-8 py-4 text-base font-medium text-white backdrop-blur-md transition-all hover:bg-white/12"
+                  >
+                    <Phone className="h-5 w-5 shrink-0" />
+                    Call {siteConfig.contact.phoneDisplay}
+                  </a>
+                </div>
+              </FadeIn>
 
-            <FadeIn delay={0.45}>
-              <p className="max-w-xl text-lg leading-relaxed text-white/60">
-                Oil changes, brakes, batteries, diagnostics, and inspections at your home or workplace. No shop drop-off. No waiting room.
-              </p>
-            </FadeIn>
+              <FadeIn delay={0.6}>
+                <motion.div
+                  className="flex flex-col gap-3 border-t border-white/10 pt-8 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-8 sm:gap-y-2"
+                  initial="hidden"
+                  animate="visible"
+                  transition={{ staggerChildren: 0.12, delayChildren: 0.65 }}
+                >
+                  {heroTrustItems.map((item) => (
+                    <motion.span
+                      key={item.label}
+                      className="flex items-center gap-2.5 text-sm font-medium text-white/72"
+                      variants={{
+                        hidden: { opacity: 0, x: -8 },
+                        visible: { opacity: 1, x: 0, transition: { duration: 0.35 } },
+                      }}
+                    >
+                      <span className="text-[--wr-teal]">{item.icon}</span>
+                      {item.label}
+                    </motion.span>
+                  ))}
+                </motion.div>
+              </FadeIn>
+            </div>
 
             <FadeIn delay={0.55}>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={scrollToBook}
-                  className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.02]"
-                >
-                  <Calendar className="h-5 w-5" />
-                  Book Now — Same-Week Slots
-                </button>
-                <a
-                  href={siteConfig.contact.phoneHref}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-7 py-4 text-base font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:scale-[1.02]"
-                >
-                  <Phone className="h-5 w-5" />
-                  Call {siteConfig.contact.phoneDisplay}
-                </a>
+              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
+                <div className="flex flex-1 flex-col justify-center rounded-2xl border border-white/12 bg-black/35 px-6 py-5 backdrop-blur-xl">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Availability</span>
+                  <span className="mt-2 text-2xl font-semibold tracking-tight text-[--wr-teal]">Now booking</span>
+                  <p className="mt-1 text-sm text-white/55">Same-week windows when routes allow</p>
+                </div>
+                <div className="flex flex-1 flex-col justify-center rounded-2xl border border-white/12 bg-black/35 px-6 py-5 backdrop-blur-xl">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Shop trips</span>
+                  <span className="mt-2 text-2xl font-semibold tracking-tight text-white">0</span>
+                  <p className="mt-1 text-sm text-white/55">We come to the vehicle</p>
+                </div>
+                <div className="flex flex-1 flex-col justify-center rounded-2xl border border-white/12 bg-black/35 px-6 py-5 backdrop-blur-xl">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Every visit</span>
+                  <span className="mt-2 text-2xl font-semibold tracking-tight text-white">25</span>
+                  <p className="mt-1 text-sm text-white/55">Point inspection + clear next steps</p>
+                </div>
               </div>
-            </FadeIn>
-
-            <FadeIn delay={0.65}>
-              <motion.div
-                className="flex flex-wrap items-center gap-x-5 gap-y-2"
-                initial="hidden"
-                animate="visible"
-                transition={{ staggerChildren: 0.15, delayChildren: 0.8 }}
-              >
-                {heroTrustItems.map((item) => (
-                  <motion.span
-                    key={item.label}
-                    className="flex items-center gap-2 text-sm font-medium text-white/70"
-                    variants={{
-                      hidden: { opacity: 0, x: -10 },
-                      visible: { opacity: 1, x: 0, transition: { duration: 0.4 } },
-                    }}
-                  >
-                    <motion.span
-                      className="text-[--wr-teal]"
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ delay: 1.2, duration: 0.5, ease: "backOut" }}
-                    >
-                      {item.icon}
-                    </motion.span>
-                    {item.label}
-                  </motion.span>
-                ))}
-              </motion.div>
             </FadeIn>
           </div>
 
-          <FadeIn delay={0.75}>
-            <div className="mt-12 flex flex-wrap items-center gap-3">
-              <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
-                <span className="text-lg font-bold text-[--wr-teal]">Now Booking</span>
-                <p className="text-[10px] uppercase tracking-wider text-white/50">Same-week appointments</p>
+        </div>
+      </section>
+
+      {/* ── Meet Simon (swap image in media-production when approved stills land) ── */}
+      <section className="relative border-b border-border bg-[oklch(0.09_0.02_255)]">
+        <div className="shell py-16 sm:py-20 lg:py-24">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16">
+            <FadeIn>
+              <div className="relative aspect-[4/5] max-h-[420px] overflow-hidden rounded-[1.75rem] border border-white/8 shadow-2xl shadow-black/40 sm:aspect-[3/4] lg:max-h-[480px]">
+                <Image
+                  src={storyMedia.simonPortrait}
+                  alt="Simon, lead mechanic for Wrench Ready Mobile — placeholder until media_production delivers final portrait"
+                  fill
+                  className="object-cover object-top"
+                  sizes="(max-width: 1024px) 100vw, 42vw"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/15 to-transparent" />
+                <div className="absolute bottom-5 left-5 right-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[--wr-teal]">Lead mechanic</p>
+                  <p className="mt-1 font-[family-name:var(--font-display)] text-2xl font-semibold text-white">Simon</p>
+                </div>
               </div>
-              <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
-                <span className="text-xl font-bold text-white">0</span>
-                <p className="text-[10px] uppercase tracking-wider text-white/50">Shop trips needed</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
-                <span className="text-xl font-bold text-white">25</span>
-                <p className="text-[10px] uppercase tracking-wider text-white/50">Point inspection</p>
-              </div>
+            </FadeIn>
+            <div>
+              <SectionHeading
+                eyebrow="The face of the brand"
+                title="Calm hands. Clear explanations. No shop counter attitude."
+                copy="You are not a ticket number. Simon walks you through what he sees, what can wait, and what should not — with photos so you can see it too."
+                tint="teal"
+              />
+              <FadeIn delay={0.15}>
+                <ul className="mt-10 space-y-4 text-base leading-relaxed text-muted-foreground">
+                  <li className="flex gap-3">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[--wr-teal]" />
+                    Five focused service lanes — we do not pretend to rebuild engines in a driveway.
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[--wr-teal]" />
+                    Dez handles scheduling and follow-up so Simon stays on the tools.
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[--wr-teal]" />
+                    When final stills land from media production, swap the image path in one place — see{" "}
+                    <code className="rounded bg-secondary px-1.5 py-0.5 font-mono text-xs">storyMedia</code> in the media config file.
+                  </li>
+                </ul>
+              </FadeIn>
             </div>
-          </FadeIn>
+          </div>
         </div>
       </section>
 
