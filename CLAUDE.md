@@ -35,7 +35,7 @@ wrenchreadymobile.com — a Next.js 16 site on Vercel for a mobile mechanic in S
 - `src/data/site.ts` — All content: services, locations, reviews, FAQs, config
 - `src/components/home-page.tsx` — Full homepage (~1020 lines)
 - `src/components/marketing.tsx` — Reusable section components
-- `public/` — Images, logos (wr-logo-full.png, wr-logo.png)
+- `public/` — Images; transparent mark `wr-logo.png` (see `docs/brand-assets.md`; avoid misnamed JPEG-as-PNG “full” logos)
 - `src/app/(ads)/lp/` — Google Ads landing pages (noindex)
 
 ## Deployment
