@@ -4,8 +4,10 @@
 "use client";
 
 import { FaqList, SectionHeading } from "@/components/marketing";
+import { BrandLockup } from "@/components/brand-logo";
+import { HeroBackground } from "@/components/hero-background";
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
-import { SectionOrbs, HeroGradientBg } from "@/components/motion/gradient-orbs";
+import { SectionOrbs } from "@/components/motion/gradient-orbs";
 import { AnimatedHeading, CountUp } from "@/components/motion/animated-text";
 import {
   homeFaqs,
@@ -120,12 +122,32 @@ function TiltCard({ children, className }: { children: React.ReactNode; classNam
   const y = useMotionValue(0);
   const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [5, -5]), { stiffness: 300, damping: 30 });
   const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-5, 5]), { stiffness: 300, damping: 30 });
+  const [tiltEnabled, setTiltEnabled] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const red = window.matchMedia("(prefers-reduced-motion: reduce)");
+    function sync() {
+      setTiltEnabled(mq.matches && !red.matches);
+    }
+    sync();
+    mq.addEventListener("change", sync);
+    red.addEventListener("change", sync);
+    return () => {
+      mq.removeEventListener("change", sync);
+      red.removeEventListener("change", sync);
+    };
+  }, []);
 
   function handleMouse(e: ReactMouseEvent<HTMLDivElement>) {
     const rect = ref.current?.getBoundingClientRect();
     if (!rect) return;
     x.set((e.clientX - rect.left) / rect.width - 0.5);
     y.set((e.clientY - rect.top) / rect.height - 0.5);
+  }
+
+  if (!tiltEnabled) {
+    return <div className={className}>{children}</div>;
   }
 
   return (
@@ -143,6 +165,7 @@ function TiltCard({ children, className }: { children: React.ReactNode; classNam
 
 function FloatingBookFab() {
   const [visible, setVisible] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
     function onScroll() {
@@ -152,26 +175,40 @@ function FloatingBookFab() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    function sync() {
+      setReduceMotion(mq.matches);
+    }
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   return (
     <AnimatePresence>
       {visible && (
         <motion.button
           onClick={scrollToBook}
-          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          initial={{ opacity: 0, scale: 0.98, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: 20 }}
-          transition={{ duration: 0.3, ease: "backOut" }}
-          className="fixed bottom-24 right-4 z-50 inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-sm font-bold text-white shadow-2xl md:hidden"
+          exit={{ opacity: 0, scale: 0.98, y: 12 }}
+          transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+          className="fixed bottom-24 right-4 z-50 inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-sm font-semibold text-white shadow-[0_12px_40px_rgba(0,0,0,0.35)] md:hidden"
           style={{ background: "linear-gradient(135deg, var(--wr-teal), var(--wr-blue))" }}
           aria-label="Book same-week slot"
         >
-          <motion.span
-            animate={{ scale: [1, 1.15, 1] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Calendar className="h-4 w-4" />
-          </motion.span>
-          Book Same-Week Slot
+          {reduceMotion ? (
+            <Calendar className="h-4 w-4 shrink-0" />
+          ) : (
+            <motion.span
+              animate={{ scale: [1, 1.08, 1] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Calendar className="h-4 w-4" />
+            </motion.span>
+          )}
+          Book
         </motion.button>
       )}
     </AnimatePresence>
@@ -190,7 +227,7 @@ function ReviewCarousel() {
             We just launched. Reviews are coming.
           </h3>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground max-w-md mx-auto">
-            We opened this week in Spokane. Book a service and you'll see why the reviews will speak for themselves.
+            We opened this week in Spokane. Book a service and you&apos;ll see why the reviews will speak for themselves.
           </p>
           <div className="mt-6">
             <a
@@ -411,164 +448,116 @@ export function HomePage() {
       {/* Floating mobile-only "Book" FAB — appears after scrolling past hero */}
       <FloatingBookFab />
 
-      {/* ── Hero — Full-bleed Photo Background ── */}
-      <section id="home" className="relative min-h-[90vh] overflow-hidden">
-        <div className="absolute inset-0 -z-20">
-          <Image
-            src="/hero-main.png"
-            alt="Wrench Ready Mobile van in a Spokane residential driveway at golden hour with tools visible and technician performing a 25-point inspection"
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-black/60" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/20" />
-        </div>
+      {/* ── Hero — poster + optional loop (see src/data/hero-media.ts) ── */}
+      <section id="home" className="relative min-h-[88vh] overflow-hidden">
+        <HeroBackground />
 
-        <HeroGradientBg />
+        <div className="shell relative flex min-h-[88vh] flex-col justify-end gap-12 pt-24 pb-16 sm:justify-center sm:pt-28 sm:pb-20 lg:pt-32 lg:pb-24">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-end lg:gap-16">
+            <div className="max-w-2xl space-y-7">
+              <FadeIn>
+                <BrandLockup variant="hero" priority />
+              </FadeIn>
 
-        <div className="shell relative flex min-h-[90vh] flex-col justify-center pt-20 pb-24 sm:pt-28 sm:pb-32 lg:pt-32 lg:pb-36">
-          <div className="max-w-3xl space-y-8">
-            <FadeIn>
-              <Image
-                src="/wr-logo-full.png"
-                alt="Wrench Ready Mobile"
-                width={200}
-                height={133}
-                className="mb-4 drop-shadow-2xl"
-                priority
-              />
-            </FadeIn>
-
-            <FadeIn delay={0.1}>
-              <motion.span
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/90 backdrop-blur-sm"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--wr-teal] opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[--wr-teal]" />
+              <FadeIn delay={0.08}>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85 backdrop-blur-md sm:text-xs">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--wr-teal] opacity-60" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[--wr-teal]" />
+                  </span>
+                  Mobile mechanic · Spokane County
                 </span>
-                Mobile Mechanic — Spokane, WA
-              </motion.span>
-            </FadeIn>
+              </FadeIn>
 
-            <AnimatedHeading
-              text="Your mechanic comes to you."
-              gradient
-              className="text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
-              delay={0.15}
-            />
+              <AnimatedHeading
+                text="Your mechanic comes to you."
+                gradient
+                className="text-4xl font-semibold leading-[1.08] tracking-[-0.03em] sm:text-5xl sm:leading-[1.06] lg:text-6xl lg:leading-[1.05]"
+                delay={0.12}
+              />
 
-            <FadeIn delay={0.35}>
-              <p className="max-w-xl text-xl font-medium leading-snug text-white/80 sm:text-2xl">
-                Every job is built to earn the next visit — not the biggest invoice.
-              </p>
-            </FadeIn>
+              <FadeIn delay={0.28}>
+                <p className="max-w-lg text-lg font-medium leading-snug text-white/85 sm:text-xl">
+                  Every job is built to earn the next visit — not the biggest invoice.
+                </p>
+              </FadeIn>
 
-            <FadeIn delay={0.45}>
-              <p className="max-w-xl text-lg leading-relaxed text-white/60">
-                Oil changes, brakes, batteries, diagnostics, and inspections at your home or workplace. No shop drop-off. No waiting room.
-              </p>
-            </FadeIn>
+              <FadeIn delay={0.36}>
+                <p className="max-w-lg text-[15px] leading-relaxed text-white/58 sm:text-base">
+                  Oil changes, brakes, batteries, diagnostics, and inspections at your home or workplace. No shop drop-off. No waiting room.
+                </p>
+              </FadeIn>
 
-            <FadeIn delay={0.55}>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={scrollToBook}
-                  className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.02]"
-                >
-                  <Calendar className="h-5 w-5" />
-                  Book Now — Same-Week Slots
-                </button>
-                <a
-                  href={siteConfig.contact.phoneHref}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-7 py-4 text-base font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:scale-[1.02]"
-                >
-                  <Phone className="h-5 w-5" />
-                  Call {siteConfig.contact.phoneDisplay}
-                </a>
-              </div>
-            </FadeIn>
-
-            <FadeIn delay={0.65}>
-              <motion.div
-                className="flex flex-wrap items-center gap-x-5 gap-y-2"
-                initial="hidden"
-                animate="visible"
-                transition={{ staggerChildren: 0.15, delayChildren: 0.8 }}
-              >
-                {heroTrustItems.map((item) => (
-                  <motion.span
-                    key={item.label}
-                    className="flex items-center gap-2 text-sm font-medium text-white/70"
-                    variants={{
-                      hidden: { opacity: 0, x: -10 },
-                      visible: { opacity: 1, x: 0, transition: { duration: 0.4 } },
-                    }}
+              <FadeIn delay={0.44}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <button
+                    type="button"
+                    onClick={scrollToBook}
+                    className="btn-shimmer inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 text-[15px] font-semibold text-primary-foreground shadow-[0_8px_32px_oklch(0.62_0.19_255_/_25%)] transition-all hover:brightness-110 sm:w-auto"
                   >
-                    <motion.span
-                      className="text-[--wr-teal]"
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ delay: 1.2, duration: 0.5, ease: "backOut" }}
-                    >
-                      {item.icon}
-                    </motion.span>
-                    {item.label}
-                  </motion.span>
-                ))}
-              </motion.div>
+                    <Calendar className="h-5 w-5 shrink-0" />
+                    Book a visit
+                  </button>
+                  <a
+                    href={siteConfig.contact.phoneHref}
+                    className="inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-full border border-white/18 bg-white/[0.07] px-7 py-3.5 text-[15px] font-medium text-white backdrop-blur-md transition-colors hover:bg-white/12 sm:w-auto"
+                  >
+                    <Phone className="h-5 w-5 shrink-0" />
+                    Call {siteConfig.contact.phoneDisplay}
+                  </a>
+                </div>
+                <p className="mt-3 text-xs text-white/45">
+                  Same-week slots when routing allows. Dez confirms every booking.
+                </p>
+              </FadeIn>
+
+              <FadeIn delay={0.52}>
+                <ul className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
+                  {heroTrustItems.map((item) => (
+                    <li key={item.label} className="flex items-center gap-2 text-sm font-medium text-white/72">
+                      <span className="text-[--wr-teal]">{item.icon}</span>
+                      {item.label}
+                    </li>
+                  ))}
+                </ul>
+              </FadeIn>
+            </div>
+
+            <FadeIn delay={0.2} direction="none" className="lg:pb-1">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:max-w-md lg:ml-auto">
+                <div className="rounded-2xl border border-white/10 bg-black/35 px-3 py-4 text-center backdrop-blur-md sm:px-4">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Status</span>
+                  <span className="mt-2 block text-sm font-semibold text-[--wr-teal] sm:text-base">Now booking</span>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/35 px-3 py-4 text-center backdrop-blur-md sm:px-4">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Shop trips</span>
+                  <span className="mt-2 block text-2xl font-semibold tabular-nums text-white sm:text-3xl">0</span>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/35 px-3 py-4 text-center backdrop-blur-md sm:px-4">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Inspection</span>
+                  <span className="mt-2 block text-2xl font-semibold tabular-nums text-white sm:text-3xl">25</span>
+                </div>
+              </div>
             </FadeIn>
           </div>
-
-          <FadeIn delay={0.75}>
-            <div className="mt-12 flex flex-wrap items-center gap-3">
-              <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
-                <span className="text-lg font-bold text-[--wr-teal]">Now Booking</span>
-                <p className="text-[10px] uppercase tracking-wider text-white/50">Same-week appointments</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
-                <span className="text-xl font-bold text-white">0</span>
-                <p className="text-[10px] uppercase tracking-wider text-white/50">Shop trips needed</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
-                <span className="text-xl font-bold text-white">25</span>
-                <p className="text-[10px] uppercase tracking-wider text-white/50">Point inspection</p>
-              </div>
-            </div>
-          </FadeIn>
         </div>
       </section>
 
-      {/* ── Trust Strip ── */}
-      <section className="relative border-y border-border">
-        <div className="absolute inset-0 bg-gradient-to-r from-[--wr-blue]/3 via-[--wr-teal]/3 to-[--wr-gold]/3" />
-        <div className="shell relative py-6">
-          <motion.div
-            className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            transition={{ staggerChildren: 0.08 }}
-          >
+      {/* ── Trust strip ── */}
+      <section className="relative border-y border-border/80 bg-[--wr-surface-raised]/50">
+        <div className="absolute inset-0 bg-gradient-to-r from-[--wr-blue]/[0.04] via-transparent to-[--wr-teal]/[0.05]" />
+        <div className="shell relative py-5 sm:py-6">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-6">
             {trustFeatures.map((feature) => (
-              <motion.div
+              <div
                 key={feature.label}
-                className="flex items-center gap-2.5 text-sm font-medium text-muted-foreground"
-                variants={{
-                  hidden: { opacity: 0, y: 10 },
-                  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-                }}
+                className="flex items-center gap-2.5 text-[13px] font-medium leading-tight text-muted-foreground sm:text-sm"
               >
-                <span className={feature.color}>{feature.icon}</span>
-                {feature.label}
-              </motion.div>
+                <span className={`shrink-0 ${feature.color}`}>{feature.icon}</span>
+                <span>{feature.label}</span>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -577,81 +566,85 @@ export function HomePage() {
         <div className="shell section-space">
           <SectionHeading
             eyebrow="Services"
-            title="Focused service lanes, not a vague everything-menu."
-            copy="We handle the jobs that make the most sense mobile — maintenance, brakes, batteries, diagnostics, and inspections. Every visit includes a 25-point inspection and Now / Soon / Monitor recommendations."
+            title="Five lanes. No vague everything-menu."
+            copy="Maintenance, brakes, batteries, diagnostics, and inspections — the work that fits mobile. Every visit includes a 25-point inspection and Now / Soon / Monitor notes."
             tint="blue"
           />
 
-          <Stagger className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3" staggerDelay={0.1}>
+          <Stagger className="mt-12 grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3" staggerDelay={0.08}>
             {services.map((service, i) => {
               const gradient = serviceGradients[service.slug] ?? serviceGradients["oil-change"];
               const image = serviceImages[service.slug];
+              const featured = i === 0;
               return (
                 <StaggerItem
                   key={service.slug}
-                  className={i === 0 ? "lg:col-span-2 lg:row-span-2" : ""}
+                  className={featured ? "md:col-span-2" : ""}
                 >
                   <TiltCard className="h-full">
                     <div
-                      className={`glass-card group relative flex h-full flex-col overflow-hidden ${gradient.glow} hover:shadow-2xl`}
+                      className={`glass-card group relative flex h-full flex-col overflow-hidden rounded-2xl ${gradient.glow} hover:shadow-2xl`}
                     >
-                      <div className={`absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r ${gradient.border}`} />
+                      <div className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${gradient.border}`} />
 
                       <Link href={`/services/${service.slug}`} className="block">
-                        <div className={`relative w-full overflow-hidden ${i === 0 ? "aspect-[16/9]" : "aspect-[16/10]"}`}>
+                        <div
+                          className={`relative w-full overflow-hidden ${featured ? "aspect-[21/9] sm:aspect-[2.4/1]" : "aspect-[16/10]"}`}
+                        >
                           <Image
                             src={image}
                             alt={`${service.name} — professional mobile mechanic service in Spokane, WA`}
                             fill
                             loading="lazy"
-                            className="object-cover transition-transform duration-500 group-hover:scale-105"
-                            sizes={i === 0 ? "(max-width: 1024px) 100vw, 66vw" : "(max-width: 1024px) 100vw, 33vw"}
+                            className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                            sizes={featured ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 1024px) 100vw, 33vw"}
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[--wr-surface] via-[--wr-surface]/40 to-transparent" />
-                          <div className="absolute bottom-3 left-4">
-                            <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${gradient.icon}`}>
+                          <div className="absolute inset-0 bg-gradient-to-t from-[--wr-surface] via-[--wr-surface]/35 to-transparent" />
+                          <div className="absolute bottom-3 left-4 flex items-end gap-3">
+                            <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${gradient.icon}`}>
                               {serviceIcons[service.slug]}
                             </span>
                           </div>
                           <div className="absolute bottom-3 right-4">
-                            <span className="rounded-full border border-[--wr-gold]/30 bg-background/80 px-4 py-2 text-base font-bold text-[--wr-gold] backdrop-blur-sm">
+                            <span className="rounded-full border border-[--wr-gold]/25 bg-background/85 px-3 py-1.5 text-sm font-semibold tabular-nums text-[--wr-gold] backdrop-blur-sm sm:px-4 sm:py-2 sm:text-base">
                               {service.priceFrom}
                             </span>
                           </div>
                         </div>
                       </Link>
 
-                      <div className="flex flex-1 flex-col p-6">
+                      <div className="flex flex-1 flex-col p-5 sm:p-6">
                         <Link href={`/services/${service.slug}`}>
-                          <h3 className={`font-bold text-foreground ${i === 0 ? "text-2xl" : "text-xl"}`}>
+                          <h3 className={`font-semibold tracking-tight text-foreground ${featured ? "text-xl sm:text-2xl" : "text-lg sm:text-xl"}`}>
                             {service.name}
                           </h3>
                         </Link>
-                        <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                        <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
                           {service.teaser}
                         </p>
 
-                        <div className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full border border-[--wr-teal]/20 bg-[--wr-teal]/5 px-3 py-1">
-                          <FileText className="h-3 w-3 text-[--wr-teal]" />
-                          <span className="text-xs font-bold text-[--wr-teal]">Now / Soon / Monitor</span>
-                          <span className="text-xs text-muted-foreground">priorities included</span>
+                        <div className="mt-4 inline-flex w-fit flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-[--wr-teal]/18 bg-[--wr-teal]/[0.07] px-3 py-1.5">
+                          <FileText className="h-3.5 w-3.5 shrink-0 text-[--wr-teal]" />
+                          <span className="text-xs font-semibold text-[--wr-teal]">Now / Soon / Monitor</span>
+                          <span className="text-xs text-muted-foreground">on every visit</span>
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between gap-3">
-                          <span className="text-xs text-muted-foreground">{service.duration}</span>
-                          <div className="flex items-center gap-2">
+                        <div className="mt-5 flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">{service.duration}</span>
+                          <div className="flex flex-wrap items-center gap-2">
                             <Link
                               href={`/services/${service.slug}`}
-                              className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                              className="inline-flex items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-primary/85"
                             >
                               Details <ArrowRight className="h-3.5 w-3.5" />
                             </Link>
                             <button
+                              type="button"
                               onClick={scrollToBook}
-                              className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
                             >
-                              <Calendar className="h-3 w-3" />
-                              Book This Service
+                              <Calendar className="h-3.5 w-3.5" />
+                              Book
                             </button>
                           </div>
                         </div>
@@ -986,14 +979,8 @@ export function HomePage() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="shell section-space">
-        <motion.div
-          className="relative overflow-hidden rounded-3xl border border-[--wr-gold]/15"
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
+      <section className="shell section-space pb-28 md:pb-24">
+        <div className="relative overflow-hidden rounded-[1.75rem] border border-[--wr-gold]/12 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.5)]">
           <div className="absolute inset-0 -z-10">
             <Image
               src="/hero-cta.png"
@@ -1001,44 +988,45 @@ export function HomePage() {
               fill
               loading="lazy"
               className="object-cover"
-              sizes="100vw"
+              sizes="(max-width: 1280px) 100vw, 1200px"
             />
-            <div className="absolute inset-0 bg-background/85 backdrop-blur-[2px]" />
-            <div className="absolute inset-0 bg-gradient-to-r from-background/90 to-background/70" />
+            <div className="absolute inset-0 bg-background/88 backdrop-blur-[2px]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/80 to-[--wr-surface]/95" />
           </div>
 
           <SectionOrbs variant="gold" />
 
-          <div className="relative z-10 grid gap-8 p-8 sm:p-12 lg:grid-cols-2 lg:items-center lg:p-16">
+          <div className="relative z-10 grid gap-10 p-8 sm:p-10 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-14 lg:p-14">
             <div>
-              <p className="eyebrow" style={{ color: "var(--wr-gold)" }}>Ready to get started?</p>
-              <h2 className="gradient-text-gold mt-3 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+              <p className="eyebrow" style={{ color: "var(--wr-gold)" }}>
+                Next step
+              </p>
+              <h2 className="gradient-text-gold mt-2 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-[2.75rem] lg:leading-[1.12]">
                 Schedule your appointment.
               </h2>
-            </div>
-            <div>
-              <p className="text-base leading-relaxed text-muted-foreground">
-                Send the vehicle, the service or symptom, where the car is parked, and your preferred time window. That is enough to screen most jobs and get you a fast answer.
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
+                Send the vehicle, the symptom, where the car is parked, and a time window. That is usually enough to screen the job and get you a fast answer.
               </p>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={scrollToBook}
-                  className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[--wr-gold] to-[--wr-gold-soft] px-7 py-3.5 text-sm font-bold text-[--wr-surface] transition-all hover:shadow-lg hover:shadow-[--wr-gold]/20 hover:scale-[1.02]"
-                >
-                  Schedule Now
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-                <a
-                  href={siteConfig.contact.phoneHref}
-                  className="inline-flex items-center gap-2 rounded-full border border-border px-7 py-3.5 text-sm font-medium text-foreground transition-all hover:bg-secondary hover:border-transparent hover:scale-[1.02]"
-                >
-                  <Phone className="h-4 w-4" />
-                  {siteConfig.contact.phoneDisplay}
-                </a>
-              </div>
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
+              <button
+                type="button"
+                onClick={scrollToBook}
+                className="btn-shimmer inline-flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[--wr-gold] to-[--wr-gold-soft] px-8 py-3.5 text-[15px] font-semibold text-[--wr-surface] shadow-lg shadow-[--wr-gold]/10 transition-all hover:brightness-105 sm:min-w-[200px] sm:flex-none"
+              >
+                Open booking
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <a
+                href={siteConfig.contact.phoneHref}
+                className="inline-flex min-h-[3rem] flex-1 items-center justify-center gap-2 rounded-full border border-border/80 bg-background/40 px-7 py-3.5 text-[15px] font-medium text-foreground backdrop-blur-sm transition-colors hover:bg-secondary sm:flex-none"
+              >
+                <Phone className="h-4 w-4" />
+                {siteConfig.contact.phoneDisplay}
+              </a>
             </div>
           </div>
-        </motion.div>
+        </div>
       </section>
     </>
   );
