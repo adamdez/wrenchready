@@ -112,12 +112,12 @@ export function SectionHeading({ eyebrow, title, copy, tint = "blue" }: SectionH
   };
 
   return (
-    <FadeIn className="max-w-3xl space-y-4">
+    <FadeIn className="max-w-4xl space-y-5">
       <p className="eyebrow">{eyebrow}</p>
-      <h2 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+      <h2 className="text-3xl font-bold tracking-[-0.02em] sm:text-4xl lg:text-5xl xl:text-[3.25rem]">
         {title}
       </h2>
-      <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
+      <p className="text-base leading-relaxed text-muted-foreground sm:text-lg lg:text-xl/[1.65]">
         {copy}
       </p>
       <motion.div

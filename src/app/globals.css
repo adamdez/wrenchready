@@ -133,7 +133,7 @@ p, li {
   }
 
   .section-space {
-    @apply py-20 sm:py-28 lg:py-32;
+    @apply py-24 sm:py-32 lg:py-36;
   }
 
   .eyebrow {
