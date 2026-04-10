@@ -2,29 +2,39 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { useReloadableAsset } from "@/hooks/use-reloadable-asset";
 
 type HeroVideoBackgroundProps = {
   /** Single short looping background clip (H.264 MP4). */
   videoSrc: string;
   /** Poster / still frame while video loads and when motion is reduced. */
   posterSrc: string;
+  /** If the hero poster fails after retries, show this still (e.g. legacy stock). */
+  posterFallbackSrc?: string;
   /** Accessible description of the scene (for context; hero copy is primary). */
   decorativeDescription: string;
 };
 
-/**
- * Full-bleed hero background: one MP4, poster preload, prefers-reduced-motion,
- * and graceful fallback when autoplay fails or the source errors.
- */
-export function HeroVideoBackground({
+function HeroVideoBackgroundInner({
   videoSrc,
   posterSrc,
+  posterFallbackSrc = "/hero-main.png",
   decorativeDescription,
 }: HeroVideoBackgroundProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [videoSrcState, setVideoSrcState] = useState(videoSrc);
+  const videoRetries = useRef(0);
+
+  const {
+    src: posterSrcState,
+    onError: onPosterError,
+  } = useReloadableAsset(posterSrc, {
+    maxRetries: 2,
+    fallbackSrc: posterFallbackSrc,
+  });
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -50,22 +60,34 @@ export function HeroVideoBackground({
     else v.addEventListener("canplay", tryPlay, { once: true });
 
     return () => v.removeEventListener("canplay", tryPlay);
-  }, [reduceMotion, videoFailed, videoSrc]);
+  }, [reduceMotion, videoFailed, videoSrcState]);
 
   const showVideo = !reduceMotion && !videoFailed;
+
+  function onVideoError() {
+    const base = videoSrc.split("?")[0];
+    if (videoRetries.current < 2) {
+      videoRetries.current += 1;
+      setVideoSrcState(`${base}?reload=${videoRetries.current}&t=${Date.now()}`);
+      return;
+    }
+    setVideoFailed(true);
+  }
 
   return (
     <div className="absolute inset-0 -z-20">
       <span className="sr-only">{decorativeDescription}</span>
 
       <Image
-        src={posterSrc}
+        key={posterSrcState}
+        src={posterSrcState}
         alt=""
         aria-hidden
         fill
         priority
         fetchPriority="high"
         sizes="100vw"
+        onError={onPosterError}
         className={`object-cover transition-opacity duration-700 ${
           showVideo && playing ? "opacity-0" : "opacity-100"
         }`}
@@ -73,19 +95,20 @@ export function HeroVideoBackground({
 
       {showVideo && (
         <video
+          key={videoSrcState}
           ref={videoRef}
           className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
             playing ? "opacity-100" : "opacity-0"
           }`}
-          poster={posterSrc}
+          poster={posterSrcState}
           muted
           playsInline
           loop
           preload="metadata"
           aria-hidden
-          onError={() => setVideoFailed(true)}
+          onError={onVideoError}
         >
-          <source src={videoSrc} type="video/mp4" />
+          <source src={videoSrcState} type="video/mp4" />
         </video>
       )}
 
@@ -104,5 +127,18 @@ export function HeroVideoBackground({
         aria-hidden
       />
     </div>
+  );
+}
+
+/**
+ * Full-bleed hero background: one MP4, poster preload, prefers-reduced-motion,
+ * and graceful fallback when autoplay fails or the source errors.
+ */
+export function HeroVideoBackground(props: HeroVideoBackgroundProps) {
+  return (
+    <HeroVideoBackgroundInner
+      key={`${props.videoSrc}|${props.posterSrc}`}
+      {...props}
+    />
   );
 }

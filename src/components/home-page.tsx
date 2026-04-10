@@ -7,6 +7,7 @@ import { FaqList, SectionHeading } from "@/components/marketing";
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
 import { SectionOrbs } from "@/components/motion/gradient-orbs";
 import { HeroVideoBackground } from "@/components/hero-video-background";
+import { ReloadableImage } from "@/components/reloadable-image";
 import { AnimatedHeading, CountUp } from "@/components/motion/animated-text";
 import {
   homeFaqs,
@@ -420,7 +421,7 @@ export function HomePage() {
           <div className="grid gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.95fr)] lg:items-end lg:gap-16">
             <div className="max-w-2xl space-y-7 lg:max-w-none">
               <FadeIn>
-                <Image
+                <ReloadableImage
                   src="/wr-logo-full.png"
                   alt="Wrench Ready Mobile"
                   width={220}

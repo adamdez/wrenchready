@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { ReloadableImage } from "@/components/reloadable-image";
 import { Phone, MessageSquare, Calendar, Wrench, MapPin, ArrowRight, Menu, X, ExternalLink, Mail, Shield } from "lucide-react";
 import { locations, services, siteConfig } from "@/data/site";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,7 +15,7 @@ type SiteShellProps = {
 function BrandMark() {
   return (
     <Link className="group flex items-center gap-3 transition-transform hover:scale-[1.02]" href="/">
-      <Image
+      <ReloadableImage
         src="/wr-logo.png"
         alt=""
         width={40}
@@ -196,7 +196,7 @@ export function SiteShell({ children }: SiteShellProps) {
         <div className="shell grid gap-10 py-16 md:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-5">
             <Link href="/" className="block w-fit">
-              <Image
+              <ReloadableImage
                 src="/wr-logo-full.png"
                 alt="Wrench Ready Mobile"
                 width={200}
