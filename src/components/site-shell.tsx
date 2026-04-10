@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { ReloadableImage } from "@/components/reloadable-image";
 import { Phone, MessageSquare, Calendar, Wrench, MapPin, ArrowRight, Menu, X, ExternalLink, Mail, Shield } from "lucide-react";
 import { locations, services, siteConfig } from "@/data/site";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,16 +15,16 @@ type SiteShellProps = {
 function BrandMark() {
   return (
     <Link className="group flex items-center gap-3 transition-transform hover:scale-[1.02]" href="/">
-      <span
-        className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-extrabold tracking-tight text-white transition-shadow group-hover:shadow-lg group-hover:shadow-[--wr-blue]/20"
-        style={{
-          background: "linear-gradient(135deg, var(--wr-blue), var(--wr-teal))",
-        }}
-      >
-        WR
-      </span>
+      <ReloadableImage
+        src="/wr-logo.png"
+        alt=""
+        width={40}
+        height={40}
+        className="h-10 w-10 shrink-0 object-contain drop-shadow-md"
+        aria-hidden
+      />
       <span className="hidden sm:block">
-        <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--wr-teal)" }}>
+        <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--wr-emerald-soft)" }}>
           Wrench Ready
         </span>
         <span className="block text-sm font-semibold text-foreground">
@@ -71,14 +71,15 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
                 { label: "Areas We Serve", href: "/#areas" },
                 { label: "Reviews", href: "/#reviews" },
               ].map((item) => (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
+                  scroll={false}
                   onClick={onClose}
                   className="block rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 >
                   {item.label}
-                </a>
+                </Link>
               ))}
               <div className="my-3 h-px bg-border" />
               <a
@@ -88,14 +89,15 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
                 <Phone className="h-4 w-4" style={{ color: "var(--wr-teal)" }} />
                 {siteConfig.contact.phoneDisplay}
               </a>
-              <a
+              <Link
                 href="/#book"
+                scroll={false}
                 onClick={onClose}
                 className="mt-2 flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
               >
                 <Calendar className="h-4 w-4" />
                 Book Now
-              </a>
+              </Link>
             </div>
           </motion.nav>
         </>
@@ -113,49 +115,53 @@ export function SiteShell({ children }: SiteShellProps) {
         <div className="shell flex items-center justify-between gap-4 py-3">
           <BrandMark />
           <nav className="hidden items-center gap-1 lg:flex">
-            <a
+            <Link
               href="/#home"
+              scroll={false}
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Home
-            </a>
+            </Link>
             <Link
               href="/services"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Services
             </Link>
-            <a
+            <Link
               href="/#how-it-works"
+              scroll={false}
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               How It Works
-            </a>
+            </Link>
             <Link
               href="/locations"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Areas We Serve
             </Link>
-            <a
+            <Link
               href="/#reviews"
+              scroll={false}
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Reviews
-            </a>
+            </Link>
             <a
               href={siteConfig.contact.phoneHref}
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {siteConfig.contact.phoneDisplay}
             </a>
-            <a
+            <Link
               href="/#book"
+              scroll={false}
               className="ml-2 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
             >
               <Calendar className="h-4 w-4" />
               Book Now
-            </a>
+            </Link>
           </nav>
           <div className="flex items-center gap-2 lg:hidden">
             <a
@@ -164,12 +170,13 @@ export function SiteShell({ children }: SiteShellProps) {
             >
               <Phone className="h-4 w-4" />
             </a>
-            <a
+            <Link
               href="/#book"
+              scroll={false}
               className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
             >
               Book
-            </a>
+            </Link>
             <button
               onClick={() => setMobileMenuOpen(true)}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-secondary"
@@ -189,7 +196,7 @@ export function SiteShell({ children }: SiteShellProps) {
         <div className="shell grid gap-10 py-16 md:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-5">
             <Link href="/" className="block w-fit">
-              <Image
+              <ReloadableImage
                 src="/wr-logo-full.png"
                 alt="Wrench Ready Mobile"
                 width={200}
@@ -254,28 +261,31 @@ export function SiteShell({ children }: SiteShellProps) {
             <p className="mt-8 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Quick Links</p>
             <ul className="mt-4 space-y-2.5">
               <li>
-                <a
+                <Link
                   href="/#how-it-works"
+                  scroll={false}
                   className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   How It Works
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/#reviews"
+                  scroll={false}
                   className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Reviews
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/#faq"
+                  scroll={false}
                   className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   FAQ
-                </a>
+                </Link>
               </li>
               <li>
                 <Link
