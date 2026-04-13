@@ -25,13 +25,13 @@ export function LocationsPageClient() {
           </FadeIn>
           <FadeIn delay={0.1}>
             <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-              Route density matters as much as rankings.
+              Where Wrench Ready currently runs.
             </h1>
           </FadeIn>
           <FadeIn delay={0.2}>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              Built around a focused Spokane County footprint. These pages match local search intent
-              with the neighborhoods and commutes the business can actually support well.
+              We keep the footprint tight on purpose so arrival windows stay believable and the work
+              stays organized.
             </p>
           </FadeIn>
           <FadeIn delay={0.3}>
@@ -49,8 +49,8 @@ export function LocationsPageClient() {
       <section className="shell section-space">
         <SectionHeading
           eyebrow="Primary Coverage"
-          title="Service areas built around realistic early routes."
-          copy="Rather than promising the entire Inland Northwest on day one, the site starts with the locations most likely to produce tight routes and repeat work."
+          title="The main areas we serve right now."
+          copy="Start with the city or area closest to where the vehicle is parked. If the job is a strong fit, we can sometimes go a little wider."
         />
         <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" staggerDelay={0.1}>
           {cityLocations.map((location) => (
@@ -87,7 +87,7 @@ export function LocationsPageClient() {
             <SectionHeading
               eyebrow="Neighborhoods"
               title="Hyper-local pages for every neighborhood we cover."
-              copy="Each neighborhood page targets specific search intent and builds topical depth."
+              copy="Some neighborhoods get their own page because access, parking, and daily use cases are a little different."
             />
             <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" staggerDelay={0.05}>
               {neighborhoodLocations.map((location) => (
@@ -112,8 +112,8 @@ export function LocationsPageClient() {
       )}
 
       <CtaBand
-        title="Outside these routes?"
-        copy="Still send the appointment request. Route planning comes first, but higher-value repairs and grouped appointments can justify a wider trip."
+        title="Just outside the map?"
+        copy="Send the address anyway. Strong-fit jobs and grouped appointments can sometimes justify a slightly wider trip."
       />
     </div>
   );

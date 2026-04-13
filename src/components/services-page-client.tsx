@@ -2,7 +2,7 @@
 
 import { CtaBand, LinkButton, SectionHeading } from "@/components/marketing";
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
-import { services } from "@/data/site";
+import { getServicesInPriorityOrder, services } from "@/data/site";
 import { ArrowRight, CheckCircle2, Clock, Wrench, Shield, Zap, Eye } from "lucide-react";
 import Link from "next/link";
 
@@ -15,6 +15,8 @@ const serviceIcons: Record<string, React.ReactNode> = {
 };
 
 export function ServicesPageClient() {
+  const orderedServices = getServicesInPriorityOrder(services);
+
   return (
     <div>
       <section className="relative overflow-hidden">
@@ -29,13 +31,13 @@ export function ServicesPageClient() {
           </FadeIn>
           <FadeIn delay={0.1}>
             <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-              Five focused service lanes built for mobile.
+              Start with the service that fits the problem.
             </h1>
           </FadeIn>
           <FadeIn delay={0.2}>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              Each page matches a specific search intent with clear scope, pricing, and next actions.
-              That keeps the site strong for organic search and future ad traffic.
+              Battery, brake, diagnostic, and inspection work lead here because they are the best
+              fit for mobile service. Oil changes stay available, but they are not the whole brand.
             </p>
           </FadeIn>
           <FadeIn delay={0.3}>
@@ -53,10 +55,10 @@ export function ServicesPageClient() {
         <SectionHeading
           eyebrow="All Services"
           title="Clear scope and honest pricing for every lane."
-          copy="These cards link to the pages that matter most for high-intent traffic."
+          copy="Use these pages to see what is included, where the work makes sense, and what the next step looks like."
         />
         <Stagger className="mt-12 grid gap-6 lg:grid-cols-2" staggerDelay={0.08}>
-          {services.map((service) => (
+          {orderedServices.map((service) => (
             <StaggerItem key={service.slug}>
               <div className="rounded-2xl border border-border bg-card/50 p-8 transition-all hover:border-primary/20">
                 <div className="flex items-start justify-between">
@@ -103,7 +105,7 @@ export function ServicesPageClient() {
 
       <CtaBand
         title="Not sure which service?"
-        copy="If the problem is a symptom, start with diagnostics. If you already know the job, jump into the service page and use it as the appointment brief."
+        copy="If you only know the symptom, start with diagnostics. If you already know the job, pick the service and send the vehicle details from there."
       />
     </div>
   );

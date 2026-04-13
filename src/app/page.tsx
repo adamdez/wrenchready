@@ -6,14 +6,14 @@ import { absoluteUrl, buildMetadata } from "@/lib/seo";
 export const metadata = buildMetadata({
   title: "Mobile Mechanic in Spokane, WA",
   description:
-    "Wrench Ready Mobile delivers high-trust maintenance, brake service, battery replacement, diagnostics, and pre-purchase inspections across Spokane County without the shop drop-off.",
+    "Wrench Ready Mobile delivers promise-keeping mobile service for no-start, brake, diagnostic, and inspection work across Spokane County, with routine maintenance only when it fits the route.",
   path: "/",
   keywords: [
     "mobile mechanic Spokane WA",
-    "mobile oil change Spokane",
+    "mobile battery replacement Spokane",
     "mobile brake repair Spokane",
-    "battery replacement at home Spokane",
     "check engine light diagnostic Spokane",
+    "pre purchase inspection Spokane",
   ],
 });
 
@@ -63,23 +63,27 @@ const businessStructuredData = {
       },
     },
   })),
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "5.0",
-    reviewCount: String(reviews.length),
-    bestRating: "5",
-    worstRating: "1",
-  },
-  review: reviews.map((r) => ({
-    "@type": "Review",
-    reviewRating: {
-      "@type": "Rating",
-      ratingValue: String(r.rating),
-      bestRating: "5",
-    },
-    author: { "@type": "Person", name: r.name },
-    reviewBody: r.text,
-  })),
+  ...(reviews.length > 0
+    ? {
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: "5.0",
+          reviewCount: String(reviews.length),
+          bestRating: "5",
+          worstRating: "1",
+        },
+        review: reviews.map((r) => ({
+          "@type": "Review",
+          reviewRating: {
+            "@type": "Rating",
+            ratingValue: String(r.rating),
+            bestRating: "5",
+          },
+          author: { "@type": "Person", name: r.name },
+          reviewBody: r.text,
+        })),
+      }
+    : {}),
 };
 
 const faqStructuredData = {

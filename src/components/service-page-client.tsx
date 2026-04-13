@@ -2,6 +2,7 @@
 
 import { CtaBand, FaqList, LinkButton, SectionHeading } from "@/components/marketing";
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
+import { getServicesInPriorityOrder } from "@/data/site";
 import type { Location, Service } from "@/data/site";
 import { CheckCircle2, ArrowRight, MapPin, Clock } from "lucide-react";
 import Link from "next/link";
@@ -19,6 +20,8 @@ export function ServicePageClient({
   neighborhoodLocations,
   relatedServices,
 }: ServicePageClientProps) {
+  const orderedRelatedServices = getServicesInPriorityOrder(relatedServices);
+
   return (
     <div>
       {/* Hero */}
@@ -100,7 +103,7 @@ export function ServicePageClient({
             </FadeIn>
             <FadeIn delay={0.2}>
               <div className="rounded-2xl border border-border bg-card/50 p-8">
-                <p className="eyebrow">Why This Page Matters</p>
+                <p className="eyebrow">Why People Book This</p>
                 <ul className="mt-4 space-y-3">
                   {service.trustPoints.map((item) => (
                     <li key={item} className="text-sm leading-relaxed text-muted-foreground">
@@ -120,7 +123,7 @@ export function ServicePageClient({
           <SectionHeading
             eyebrow="Service Areas"
             title={`Where we offer ${service.name.toLowerCase()}`}
-            copy="Location links strengthen internal relevance and give future ads cleaner geographic paths."
+            copy="We currently offer this service in the areas where we can keep the promise and show up on time."
           />
           <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" staggerDelay={0.08}>
             {relevantLocations.map((location) => (
@@ -150,7 +153,7 @@ export function ServicePageClient({
           <SectionHeading
             eyebrow="Neighborhood Coverage"
             title={`${service.name} across Spokane neighborhoods`}
-            copy="Hyper-local pages help match search intent to the exact area where service is needed."
+            copy="If you are searching from a neighborhood page, start with the area closest to where the vehicle is parked."
           />
           <div className="mt-8 flex flex-wrap gap-2">
             {neighborhoodLocations.map((loc) => (
@@ -172,7 +175,7 @@ export function ServicePageClient({
               copy="Customers booking one service often need another."
             />
             <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" staggerDelay={0.08}>
-              {relatedServices.map((rs) => (
+            {orderedRelatedServices.map((rs) => (
                 <StaggerItem key={rs.slug}>
                   <Link
                     href={`/services/${rs.slug}`}
@@ -196,37 +199,16 @@ export function ServicePageClient({
         <SectionHeading
           eyebrow="FAQ"
           title={`Questions about ${service.name.toLowerCase()}`}
-          copy="The answers below qualify leads faster and give the page stronger topical depth."
+          copy="Short answers to the questions that usually come up before booking."
         />
         <div className="mt-12 max-w-3xl">
           <FaqList faqs={service.faqs} />
         </div>
       </section>
 
-      {/* Keywords */}
-      <section className="shell pb-8">
-        <FadeIn>
-          <div className="rounded-2xl border border-border bg-card/50 p-8">
-            <div className="flex flex-wrap items-center gap-4">
-              <p className="text-sm font-semibold text-muted-foreground">Related searches:</p>
-              <div className="flex flex-wrap gap-2">
-                {service.keywords.map((term) => (
-                  <span
-                    key={term}
-                    className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
-                  >
-                    {term}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </FadeIn>
-      </section>
-
       <CtaBand
         title={`Need ${service.name.toLowerCase()} in Spokane?`}
-        copy="Use the appointment page to send the vehicle, the address, and the symptom or known repair. That is enough to qualify the job and steer you to the right next step."
+        copy="Send the vehicle, the address, and the symptom or known repair. That is enough for us to tell you quickly whether the job fits the route and the work."
       />
     </div>
   );

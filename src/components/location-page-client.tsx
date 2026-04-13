@@ -77,7 +77,7 @@ export function LocationPageClient({
             <div className="rounded-2xl border border-border bg-card/50 p-8">
               <p className="eyebrow">Neighborhoods</p>
               <h2 className="mt-3 text-2xl font-bold">
-                {location.name} routes start with the areas easiest to serve well.
+                These are the parts of {location.name} where mobile service usually makes sense.
               </h2>
               <div className="mt-6 flex flex-wrap gap-2">
                 {location.neighborhoods.map((neighborhood) => (
@@ -90,7 +90,7 @@ export function LocationPageClient({
                 ))}
               </div>
               <div className="mt-8">
-                <p className="text-xs font-semibold uppercase tracking-widest text-primary">Route Highlights</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">Good Fit For This Area</p>
                 <ul className="mt-4 space-y-3">
                   {location.routeHighlights.map((highlight) => (
                     <li key={highlight} className="flex gap-3 text-sm leading-relaxed text-muted-foreground">
@@ -105,8 +105,8 @@ export function LocationPageClient({
 
           <FadeIn delay={0.1}>
             <div className="rounded-2xl border border-border bg-card/50 p-8">
-              <p className="eyebrow">Why Mobile Wins Here</p>
-              <h2 className="mt-3 text-2xl font-bold">Real local friction, addressed directly.</h2>
+              <p className="eyebrow">Why People Book Mobile Here</p>
+              <h2 className="mt-3 text-2xl font-bold">The local headaches this service solves.</h2>
               <ul className="mt-6 space-y-4">
                 {location.painPoints.map((point) => (
                   <li key={point} className="flex gap-3 text-sm leading-relaxed text-muted-foreground">
@@ -126,7 +126,7 @@ export function LocationPageClient({
           <SectionHeading
             eyebrow="Available Services"
             title={`What we offer in ${location.name}`}
-            copy="City and service pages link bidirectionally — useful for users and search engines alike."
+            copy="These are the services we most often run in this area."
           />
           <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" staggerDelay={0.08}>
             {featuredServices.map((service) => (
@@ -161,7 +161,7 @@ export function LocationPageClient({
                 ? `${location.name} is part of the ${parentLocation.name} service zone`
                 : `Neighborhoods within ${location.name}`
             }
-            copy="Explore other areas we cover to find the closest match for your address."
+            copy="Explore nearby areas if your address sits near the edge of a service zone."
           />
           <div className="mt-8 space-y-6">
             {parentLocation && (
@@ -206,7 +206,7 @@ export function LocationPageClient({
           <SectionHeading
             eyebrow="FAQ"
             title={`Questions drivers in ${location.name} ask first`}
-            copy="These answers handle local objections: access, parking, travel range, and response timing."
+            copy="Short answers about parking, timing, and whether the job is a good mobile fit here."
           />
           <div className="mt-12 max-w-3xl">
             <FaqList faqs={location.faqs} />
@@ -216,7 +216,7 @@ export function LocationPageClient({
 
       <CtaBand
         title={`Need a mobile mechanic in ${location.name}?`}
-        copy="Send the address, parking setup, vehicle details, and the service or symptom. That gives us enough to decide fit and route the job correctly."
+        copy="Send the address, parking setup, vehicle details, and the problem. We will tell you quickly whether it fits the schedule."
       />
     </div>
   );

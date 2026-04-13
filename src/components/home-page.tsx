@@ -1,4 +1,4 @@
-// Add this to your root layout <head> or _document if not already present:
+﻿// Add this to your root layout <head> or _document if not already present:
 // <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
 
 "use client";
@@ -10,9 +10,9 @@ import { AnimatedHeading, CountUp } from "@/components/motion/animated-text";
 import {
   homeFaqs,
   locations,
+  getServicesInPriorityOrder,
   processSteps,
   reviews,
-  services,
   siteConfig,
 } from "@/data/site";
 import {
@@ -87,13 +87,15 @@ const serviceGradients: Record<string, { border: string; icon: string; glow: str
   },
 };
 
+const priorityServices = getServicesInPriorityOrder();
+
 const trustFeatures = [
-  { icon: <Shield className="h-5 w-5" />, label: "Licensed & Insured", color: "text-[--wr-blue-soft]" },
-  { icon: <Star className="h-5 w-5" />, label: "New in Spokane", color: "text-[--wr-gold]" },
-  { icon: <Clock className="h-5 w-5" />, label: "Same-Week Scheduling", color: "text-[--wr-teal]" },
-  { icon: <Route className="h-5 w-5" />, label: "Focused Routes", color: "text-[--wr-blue-soft]" },
-  { icon: <Eye className="h-5 w-5" />, label: "Photo Reports", color: "text-[--wr-teal]" },
-  { icon: <CheckCircle2 className="h-5 w-5" />, label: "No Hidden Fees", color: "text-[--wr-gold]" },
+  { icon: <Shield className="h-5 w-5" />, label: "Screened requests", color: "text-[--wr-blue-soft]" },
+  { icon: <Star className="h-5 w-5" />, label: "Promise-first service", color: "text-[--wr-gold]" },
+  { icon: <Clock className="h-5 w-5" />, label: "Believable windows", color: "text-[--wr-teal]" },
+  { icon: <Route className="h-5 w-5" />, label: "Focused routes", color: "text-[--wr-blue-soft]" },
+  { icon: <Eye className="h-5 w-5" />, label: "Photo-backed findings", color: "text-[--wr-teal]" },
+  { icon: <CheckCircle2 className="h-5 w-5" />, label: "No surprise scope", color: "text-[--wr-gold]" },
 ];
 
 const processIcons = [
@@ -104,9 +106,24 @@ const processIcons = [
 ];
 
 const heroTrustItems = [
-  { icon: <ClipboardCheck className="h-4 w-4" />, label: "25-Point Inspection" },
-  { icon: <Camera className="h-4 w-4" />, label: "Photo Reports" },
-  { icon: <CircleCheck className="h-4 w-4" />, label: "Honest Recommendations" },
+  { icon: <ClipboardCheck className="h-4 w-4" />, label: "Screened first" },
+  { icon: <Camera className="h-4 w-4" />, label: "Photo reports" },
+  { icon: <CircleCheck className="h-4 w-4" />, label: "Clear next step" },
+];
+
+const launchTrustStandards = [
+  {
+    title: "Screened before booked",
+    copy: "We look at the vehicle, symptom, parking setup, and timing before we promise a slot.",
+  },
+  {
+    title: "Photos and plain-English notes",
+    copy: "You should leave the visit knowing what we did, what we found, and what matters next.",
+  },
+  {
+    title: "Believable windows",
+    copy: "We keep the service area focused so arrival promises stay realistic instead of vague.",
+  },
 ];
 
 function scrollToBook() {
@@ -163,7 +180,7 @@ function FloatingBookFab() {
           transition={{ duration: 0.3, ease: "backOut" }}
           className="fixed bottom-24 right-4 z-50 inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-sm font-bold text-white shadow-2xl md:hidden"
           style={{ background: "linear-gradient(135deg, var(--wr-teal), var(--wr-blue))" }}
-          aria-label="Book same-week slot"
+          aria-label="Request screened service"
         >
           <motion.span
             animate={{ scale: [1, 1.15, 1] }}
@@ -171,7 +188,7 @@ function FloatingBookFab() {
           >
             <Calendar className="h-4 w-4" />
           </motion.span>
-          Book Same-Week Slot
+          Request Screening
         </motion.button>
       )}
     </AnimatePresence>
@@ -185,14 +202,28 @@ function ReviewCarousel() {
   if (count === 0) {
     return (
       <div className="relative">
-        <div className="overflow-hidden rounded-2xl border border-border bg-card/40 backdrop-blur-sm p-8 sm:p-10 text-center">
-          <h3 className="text-2xl font-bold text-foreground">
-            We just launched. Reviews are coming.
-          </h3>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground max-w-md mx-auto">
-            We opened this week in Spokane. Book a service and you'll see why the reviews will speak for themselves.
-          </p>
-          <div className="mt-6">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card/40 backdrop-blur-sm p-8 sm:p-10">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-foreground">
+              New in Spokane. Clear about the standard.
+            </h3>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground max-w-2xl mx-auto">
+              The public review history is just getting started. Until it fills in, this is what
+              every customer should expect from the visit.
+            </p>
+          </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            {launchTrustStandards.map((item) => (
+              <div
+                key={item.title}
+                className="rounded-2xl border border-border bg-background/60 p-5 text-left"
+              >
+                <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.copy}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 text-center">
             <a
               href="https://www.google.com/maps/place/Wrench+Ready+Mobile"
               target="_blank"
@@ -288,16 +319,59 @@ function ReviewCarousel() {
 
 function IntakeForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    const data = Object.fromEntries(new FormData(form));
+    const data = new FormData(form);
+    const vehicle = [
+      String(data.get("year") ?? "").trim(),
+      String(data.get("make") ?? "").trim(),
+      String(data.get("model") ?? "").trim(),
+      String(data.get("mileage") ?? "").trim(),
+    ]
+      .filter(Boolean)
+      .join(" ");
 
-    // In production: POST to n8n / Zapier / OpenPhone workflow → triggers auto-text + admin dashboard entry (Blocker 2)
-    console.log("[WrenchReady Intake]", data);
+    setSubmitting(true);
+    setErrorMessage("");
 
-    setSubmitted(true);
+    try {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: String(data.get("name") ?? "").trim(),
+          phone: String(data.get("phone") ?? "").trim(),
+          email: "",
+          vehicle,
+          serviceNeeded: String(data.get("service") ?? "").trim(),
+          address: String(data.get("address") ?? "").trim(),
+          timing: String(data.get("timing") ?? "").trim(),
+          notes: [
+            `Symptom: ${String(data.get("symptom") ?? "").trim()}`,
+            `Driveway: ${String(data.get("driveway") ?? "").trim()}`,
+            `Prior diagnosis: ${String(data.get("prior_diagnosis") ?? "").trim()}`,
+          ].join(" | "),
+        }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error || "Submission failed");
+      }
+
+      setSubmitted(true);
+      form.reset();
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : "Something went wrong. Please call or text us instead.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (submitted) {
@@ -310,7 +384,7 @@ function IntakeForm() {
         <CheckCircle2 className="mx-auto h-12 w-12 text-[--wr-teal]" />
         <h3 className="mt-4 text-xl font-bold text-foreground">Thank you.</h3>
         <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-          Your intake has been received. Dez will call you within 15 minutes to confirm and schedule.
+          Your intake has been received. We will review the job and follow up with the next step.
         </p>
       </motion.div>
     );
@@ -318,6 +392,12 @@ function IntakeForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {errorMessage && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {errorMessage}
+        </div>
+      )}
+
       {/* Q1: Vehicle */}
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold text-foreground">1. Vehicle Details</legend>
@@ -333,8 +413,8 @@ function IntakeForm() {
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold text-foreground">2. What do you need done?</legend>
         <select name="service" className="form-input" required defaultValue="">
-          <option value="" disabled>Select a service or describe below...</option>
-          {services.map((s) => (
+          <option value="" disabled>Select the highest-fit service...</option>
+          {priorityServices.map((s) => (
             <option key={s.slug} value={s.slug}>{s.name}</option>
           ))}
           <option value="other">Other / Not sure</option>
@@ -364,8 +444,8 @@ function IntakeForm() {
         <legend className="text-sm font-semibold text-foreground">4. Is the driveway paved and relatively flat?</legend>
         <select name="driveway" className="form-input" required defaultValue="">
           <option value="" disabled>Select...</option>
-          <option value="yes-paved-flat">Yes — paved and flat</option>
-          <option value="yes-paved-slight-slope">Yes — paved with a slight slope</option>
+          <option value="yes-paved-flat">Yes - paved and flat</option>
+          <option value="yes-paved-slight-slope">Yes - paved with a slight slope</option>
           <option value="gravel-flat">Gravel but flat</option>
           <option value="steep-or-uneven">Steep slope or uneven surface</option>
           <option value="parking-lot">Parking lot or garage</option>
@@ -378,10 +458,10 @@ function IntakeForm() {
         <legend className="text-sm font-semibold text-foreground">5. Has anyone else already looked at this?</legend>
         <select name="prior_diagnosis" className="form-input" required defaultValue="">
           <option value="" disabled>Select...</option>
-          <option value="no">No — first time having it looked at</option>
-          <option value="yes-shop">Yes — a shop diagnosed it</option>
-          <option value="yes-self">Yes — I looked into it myself</option>
-          <option value="routine">Not applicable — routine maintenance</option>
+          <option value="no">No - first time having it looked at</option>
+          <option value="yes-shop">Yes - a shop diagnosed it</option>
+          <option value="yes-self">Yes - I looked into it myself</option>
+          <option value="routine">Not applicable - routine maintenance</option>
         </select>
       </fieldset>
 
@@ -396,27 +476,30 @@ function IntakeForm() {
 
       <button
         type="submit"
-        className="btn-shimmer inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-7 py-4 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25 sm:w-auto"
+        disabled={submitting}
+        className="btn-shimmer inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-7 py-4 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
         <ClipboardCheck className="h-4 w-4" />
-        Get My Free 25-Point Inspection Quote
+        {submitting ? "Sending..." : "Request Screening"}
       </button>
     </form>
   );
 }
 
 export function HomePage() {
+  const hasReviews = reviews.length > 0;
+
   return (
     <>
-      {/* Floating mobile-only "Book" FAB — appears after scrolling past hero */}
+      {/* Floating mobile-only "Book" FAB â€” appears after scrolling past hero */}
       <FloatingBookFab />
 
-      {/* ── Hero — Full-bleed Photo Background ── */}
+      {/* â”€â”€ Hero â€” Full-bleed Photo Background â”€â”€ */}
       <section id="home" className="relative min-h-[90vh] overflow-hidden">
         <div className="absolute inset-0 -z-20">
           <Image
             src="/hero-main.png"
-            alt="Wrench Ready Mobile van in a Spokane residential driveway at golden hour with tools visible and technician performing a 25-point inspection"
+            alt="Wrench Ready Mobile van in a Spokane residential driveway at golden hour with tools visible and technician performing a screened service visit"
             fill
             className="object-cover"
             priority
@@ -452,12 +535,12 @@ export function HomePage() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--wr-teal] opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-[--wr-teal]" />
                 </span>
-                Mobile Mechanic — Spokane, WA
+                Mobile Mechanic â€” Spokane, WA
               </motion.span>
             </FadeIn>
 
             <AnimatedHeading
-              text="Your mechanic comes to you."
+              text="Promise-keeping mobile service comes to you."
               gradient
               className="text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
               delay={0.15}
@@ -465,13 +548,13 @@ export function HomePage() {
 
             <FadeIn delay={0.35}>
               <p className="max-w-xl text-xl font-medium leading-snug text-white/80 sm:text-2xl">
-                Every job is built to earn the next visit — not the biggest invoice.
+                We screen the job first so the route, promise, and price all fit the day.
               </p>
             </FadeIn>
 
             <FadeIn delay={0.45}>
               <p className="max-w-xl text-lg leading-relaxed text-white/60">
-                Oil changes, brakes, batteries, diagnostics, and inspections at your home or workplace. No shop drop-off. No waiting room.
+                No-start and battery work, brakes, paid diagnostics, and inspections lead the site. Oil changes stay available as routine maintenance and bundle work, not the headline offer.
               </p>
             </FadeIn>
 
@@ -482,7 +565,7 @@ export function HomePage() {
                   className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.02]"
                 >
                   <Calendar className="h-5 w-5" />
-                  Book Now — Same-Week Slots
+                  Request Screened Service
                 </button>
                 <a
                   href={siteConfig.contact.phoneHref}
@@ -528,23 +611,23 @@ export function HomePage() {
           <FadeIn delay={0.75}>
             <div className="mt-12 flex flex-wrap items-center gap-3">
               <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
-                <span className="text-lg font-bold text-[--wr-teal]">Now Booking</span>
-                <p className="text-[10px] uppercase tracking-wider text-white/50">Same-week appointments</p>
+                <span className="text-lg font-bold text-[--wr-teal]">Screened first</span>
+                <p className="text-[10px] uppercase tracking-wider text-white/50">Only high-fit requests move forward</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
                 <span className="text-xl font-bold text-white">0</span>
                 <p className="text-[10px] uppercase tracking-wider text-white/50">Shop trips needed</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
-                <span className="text-xl font-bold text-white">25</span>
-                <p className="text-[10px] uppercase tracking-wider text-white/50">Point inspection</p>
+                <span className="text-xl font-bold text-white">4</span>
+                <p className="text-[10px] uppercase tracking-wider text-white/50">Core hero lanes</p>
               </div>
             </div>
           </FadeIn>
         </div>
       </section>
 
-      {/* ── Trust Strip ── */}
+      {/* â”€â”€ Trust Strip â”€â”€ */}
       <section className="relative border-y border-border">
         <div className="absolute inset-0 bg-gradient-to-r from-[--wr-blue]/3 via-[--wr-teal]/3 to-[--wr-gold]/3" />
         <div className="shell relative py-6">
@@ -572,18 +655,18 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── Services ── */}
+      {/* â”€â”€ Services â”€â”€ */}
       <section id="services" className="relative mesh-section-blue">
         <div className="shell section-space">
           <SectionHeading
             eyebrow="Services"
-            title="Focused service lanes, not a vague everything-menu."
-            copy="We handle the jobs that make the most sense mobile — maintenance, brakes, batteries, diagnostics, and inspections. Every visit includes a 25-point inspection and Now / Soon / Monitor recommendations."
+            title="High-fit service lanes first, support lanes behind them."
+            copy="We lead with no-start and battery work, brakes, paid diagnostics, and inspections. Oil changes stay available, but only as routine maintenance or bundle work when the route fits."
             tint="blue"
           />
 
           <Stagger className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3" staggerDelay={0.1}>
-            {services.map((service, i) => {
+            {priorityServices.map((service, i) => {
               const gradient = serviceGradients[service.slug] ?? serviceGradients["oil-change"];
               const image = serviceImages[service.slug];
               return (
@@ -601,7 +684,7 @@ export function HomePage() {
                         <div className={`relative w-full overflow-hidden ${i === 0 ? "aspect-[16/9]" : "aspect-[16/10]"}`}>
                           <Image
                             src={image}
-                            alt={`${service.name} — professional mobile mechanic service in Spokane, WA`}
+                            alt={`${service.name} â€” professional mobile mechanic service in Spokane, WA`}
                             fill
                             loading="lazy"
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -665,7 +748,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── How It Works ── */}
+      {/* â”€â”€ How It Works â”€â”€ */}
       <section id="how-it-works" className="relative mesh-section-teal border-y border-border">
         <SectionOrbs variant="teal" />
         <div className="shell section-space">
@@ -689,7 +772,7 @@ export function HomePage() {
               <SectionHeading
                 eyebrow="How It Works"
                 title="Four steps. That's it."
-                copy="Send us a message, we screen the job, show up on time, and leave you with a clear plan."
+                copy="Send the vehicle, symptom, and parking setup. We screen the job, make a believable promise, show up on time, and leave you with a clear plan."
                 tint="teal"
               />
 
@@ -724,7 +807,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── Stats ── */}
+      {/* â”€â”€ Stats â”€â”€ */}
       <section className="relative overflow-hidden">
         <SectionOrbs variant="blue" />
         <div className="shell py-20 sm:py-28">
@@ -771,24 +854,28 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── Reviews ── */}
+      {/* â”€â”€ Reviews â”€â”€ */}
       <section id="reviews" className="relative border-y border-border">
         <div className="absolute inset-0 bg-gradient-to-b from-[--wr-gold]/3 via-transparent to-[--wr-teal]/3" />
         <div className="shell section-space relative">
           <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-16 lg:items-start">
             <div>
-              <SectionHeading
-                eyebrow="Reviews"
-                title="What Spokane drivers are saying."
-                copy="Real feedback from customers who chose honest, mobile-first auto service over the shop shuffle."
-                tint="gold"
-              />
+            <SectionHeading
+              eyebrow={hasReviews ? "Reviews" : "What To Expect"}
+              title={hasReviews ? "What Spokane drivers are saying." : "New in Spokane, clear about the standard."}
+              copy={
+                hasReviews
+                  ? "Real feedback from customers who chose screened, mobile-first service over the shop shuffle."
+                  : "We would rather be honest about being new than fake a review wall. Here is the standard the business is trying to earn on every visit."
+              }
+              tint="gold"
+            />
 
               <FadeIn delay={0.3}>
                 <div className="mt-8 flex flex-col gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Every visit is designed to earn the next one — through honest findings, clear communication, and work you can verify yourself.
+                      Every visit is designed to earn the next one through honest findings, clear communication, and work you can verify yourself.
                     </p>
                   </div>
                 </div>
@@ -802,7 +889,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── Service Areas ── */}
+      {/* â”€â”€ Service Areas â”€â”€ */}
       <section id="areas" className="relative border-b border-border overflow-hidden">
         <div className="absolute inset-0 -z-10">
           <Image
@@ -821,7 +908,7 @@ export function HomePage() {
           <SectionHeading
             eyebrow="Service Areas"
             title="Focused routes beat vague county-wide claims."
-            copy="Each area has its own page because search intent, travel time, and service expectations are different enough to deserve it."
+            copy="We keep the footprint focused so arrival windows stay believable, repeat visits get easier, and the service does not turn into a vague county-wide promise."
             tint="gold"
           />
 
@@ -873,7 +960,7 @@ export function HomePage() {
           </Stagger>
 
           <FadeIn delay={0.3}>
-            <div className="mt-14 overflow-hidden rounded-2xl border border-border" role="region" aria-label="Wrench Ready Mobile service area map — Spokane County, WA">
+            <div className="mt-14 overflow-hidden rounded-2xl border border-border" role="region" aria-label="Wrench Ready Mobile service area map â€” Spokane County, WA">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d172684.78!2d-117.4260!3d47.6588!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sus!4v1"
                 width="100%"
@@ -882,7 +969,7 @@ export function HomePage() {
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="Wrench Ready Mobile service area — Spokane County, WA"
+                title="Wrench Ready Mobile service area â€” Spokane County, WA"
                 aria-label="Interactive Google Map showing Spokane County service area for Wrench Ready Mobile"
                 className="grayscale-[60%] contrast-[1.1] opacity-80 transition-all duration-500 hover:grayscale-0 hover:opacity-100"
               />
@@ -891,7 +978,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── Booking: Calendly Widget + Pre-Qualification Intake ── */}
+      {/* â”€â”€ Booking: Calendly Widget + Pre-Qualification Intake â”€â”€ */}
       <section id="book" className="relative">
         <SectionOrbs variant="blue" />
         <div className="shell section-space">
@@ -903,14 +990,14 @@ export function HomePage() {
                 {/* "Earn the Next Visit" doctrine badge */}
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-[--wr-teal]/20 bg-[--wr-teal]/5 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[--wr-teal]">
                   <Shield className="h-3.5 w-3.5" />
-                  Earn the Next Visit
+                  Promise first
                 </span>
-                <h2 className="text-3xl font-semibold text-gray-900">Book Your 25-Point Inspection</h2>
+                <h2 className="text-3xl font-semibold text-gray-900">Request a screened appointment</h2>
                 <p className="max-w-lg text-sm text-gray-500">
-                  Pick a time that works — most slots are available within the same week.
+                  Pick a time that works. We review the request before confirming the promise.
                 </p>
               </div>
-              {/* Calendly inline widget — loads when the external script is present */}
+              {/* Calendly inline widget â€” loads when the external script is present */}
               <div
                 className="calendly-inline-widget"
                 data-url="https://calendly.com/wrenchreadymobile/25-point-inspection?hide_event_type_details=1"
@@ -923,7 +1010,7 @@ export function HomePage() {
             <div>
               <SectionHeading
                 eyebrow="Pre-Qualification"
-                title="Tell us about your vehicle."
+                title="Tell us about the vehicle and the promise you want made."
                 copy="Five quick questions so we can screen the job, confirm fit, and get you a fast answer. No commitment until the appointment is confirmed."
                 tint="blue"
               />
@@ -933,19 +1020,19 @@ export function HomePage() {
                   <div className="flex items-start gap-3">
                     <ClipboardCheck className="mt-0.5 h-5 w-5 shrink-0 text-[--wr-teal]" />
                     <p className="text-sm text-muted-foreground">
-                      Every qualifying visit includes a free 25-point inspection with photo-backed findings.
+                      Every qualifying request is screened before the appointment is confirmed.
                     </p>
                   </div>
                   <div className="flex items-start gap-3">
                     <Bell className="mt-0.5 h-5 w-5 shrink-0 text-[--wr-teal]" />
                     <p className="text-sm text-muted-foreground">
-                      Dez will call you within 15 minutes of submission to confirm and schedule.
+                      We follow up as soon as the request is reviewed and the route is checked.
                     </p>
                   </div>
                   <div className="flex items-start gap-3">
                     <Shield className="mt-0.5 h-5 w-5 shrink-0 text-[--wr-teal]" />
                     <p className="text-sm text-muted-foreground">
-                      Licensed, insured, and fully transparent. The quote is the price — no surprises.
+                      Licensed, insured, and fully transparent. Scope and price are explained before you commit.
                     </p>
                   </div>
                 </div>
@@ -955,7 +1042,7 @@ export function HomePage() {
             <FadeIn delay={0.2}>
               <div className="rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm sm:p-8">
                 <h3 className="text-lg font-bold text-foreground">
-                  Ready for a smarter next visit?
+                  Ready for a better-fit next visit?
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Fill out the intake below. We screen every request before confirming a slot.
@@ -969,14 +1056,14 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── FAQ ── */}
+      {/* â”€â”€ FAQ â”€â”€ */}
       <section id="faq" className="relative border-t border-border">
         <SectionOrbs variant="purple" />
         <div className="shell section-space">
           <SectionHeading
             eyebrow="FAQ"
             title="Common questions, honest answers."
-            copy="Clear answers that explain how Wrench Ready Mobile actually works — from service scope to the Now / Soon / Monitor framework."
+            copy="Clear answers that explain how Wrench Ready Mobile actually works â€” from service scope to the Now / Soon / Monitor framework."
             tint="teal"
           />
           <div className="mt-12 max-w-3xl">
@@ -985,7 +1072,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
+      {/* â”€â”€ CTA â”€â”€ */}
       <section className="shell section-space">
         <motion.div
           className="relative overflow-hidden rounded-3xl border border-[--wr-gold]/15"
@@ -1043,3 +1130,4 @@ export function HomePage() {
     </>
   );
 }
+
