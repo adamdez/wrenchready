@@ -55,5 +55,12 @@ next-env.d.ts
 # intermediate video clips (only final stitched hero matters)
 public/wrenchready-clip-*.mp4
 public/wrenchready-hero-loop-orig.mp4
+public/wrenchready-v3-*.mp4
+public/wrenchready-hero-v2-*.png
+gen-clips*.py
+poll-clips*.py
+download-v3.py
+stitch-hero*.py
+fal-*-tasks.json
 
 .env*.local
