@@ -47,3 +47,13 @@ next-env.d.ts
 # tools and plugins
 /.tools/
 .firecrawl/
+.cursor/mcp.json
+
+# dev logs
+.next-dev*.log
+
+# intermediate video clips (only final stitched hero matters)
+public/wrenchready-clip-*.mp4
+public/wrenchready-hero-loop-orig.mp4
+
+.env*.local

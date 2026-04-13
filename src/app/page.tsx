@@ -4,16 +4,19 @@ import { homeFaqs, reviews, services, siteConfig } from "@/data/site";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Mobile Mechanic in Spokane, WA",
+  title: "Mobile Car Repair in Spokane | Batteries, Brakes, Diagnostics | WrenchReady",
   description:
-    "Wrench Ready Mobile delivers promise-keeping mobile service for no-start, brake, diagnostic, and inspection work across Spokane County, with routine maintenance only when it fits the route.",
+    "WrenchReady brings mobile car repair to your home or work in Spokane. Dead battery, brake problems, warning lights, and paid diagnostics with clear quotes and real status updates.",
   path: "/",
   keywords: [
     "mobile mechanic Spokane WA",
+    "mobile car repair Spokane",
     "mobile battery replacement Spokane",
     "mobile brake repair Spokane",
     "check engine light diagnostic Spokane",
     "pre purchase inspection Spokane",
+    "no start mobile mechanic Spokane",
+    "mobile auto repair Spokane Valley",
   ],
 });
 

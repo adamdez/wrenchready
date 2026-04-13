@@ -23,7 +23,7 @@ function handleDialResult(dialStatus: string) {
   return new NextResponse(
     `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="alice">Hey, you've reached Wrench Ready Mobile Mechanic. We can't get to the phone right now. Leave your name, number, and a short message and we'll get back to you as soon as possible.</Say>
+  <Say voice="alice">Hey, you've reached WrenchReady Mobile Mechanic. We can't get to the phone right now. Leave your name, number, and a short message and we'll get back to you as soon as possible.</Say>
   <Record maxLength="120" playBeep="true" action="/api/twilio/voicemail/complete" transcribe="false" />
   <Say voice="alice">We didn't receive a message. Feel free to text this number instead. Goodbye.</Say>
 </Response>`,

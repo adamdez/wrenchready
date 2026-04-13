@@ -36,7 +36,7 @@ export default function AdsLayout({
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
           <div className="shell flex items-center justify-between py-3">
             <span className="text-lg font-bold tracking-tight text-foreground">
-              Wrench Ready<span className="text-primary">.</span>
+              WrenchReady<span className="text-primary">.</span>
             </span>
             <a
               href={siteConfig.contact.phoneHref}

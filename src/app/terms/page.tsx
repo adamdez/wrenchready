@@ -4,9 +4,9 @@ import Link from "next/link";
 export const metadata = buildMetadata({
   title: "Terms & Conditions",
   description:
-    "Terms and Conditions for Wrench Ready Mobile Mechanic, including SMS messaging terms of service.",
+    "Terms and Conditions for WrenchReady Mobile Mechanic, including SMS messaging terms of service.",
   path: "/terms",
-  keywords: ["terms and conditions", "SMS terms", "Wrench Ready Mobile"],
+  keywords: ["terms and conditions", "SMS terms", "WrenchReady Mobile"],
 });
 
 export default function TermsPage() {
@@ -25,7 +25,7 @@ export default function TermsPage() {
         <div className="prose prose-invert max-w-none space-y-6 text-muted-foreground [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-foreground [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1">
           <p>
             These Terms &amp; Conditions (&quot;Terms&quot;) govern your use of
-            the Wrench Ready Mobile LLC (&quot;Wrench Ready,&quot;
+            the WrenchReady Mobile LLC (&quot;WrenchReady,&quot;
             &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) website at
             wrenchreadymobile.com and any related services, including text
             message (SMS) communications.
@@ -33,7 +33,7 @@ export default function TermsPage() {
 
           <h2>Services</h2>
           <p>
-            Wrench Ready Mobile provides mobile auto repair and maintenance
+            WrenchReady Mobile provides mobile auto repair and maintenance
             services in the Spokane, Washington area. Service requests submitted
             through our website are not guaranteed appointments until confirmed
             by our team.
@@ -41,11 +41,11 @@ export default function TermsPage() {
 
           <h2>SMS Messaging Terms</h2>
           <p>
-            <strong>Program name:</strong> Wrench Ready Mobile Alerts
+            <strong>Program name:</strong> WrenchReady Mobile Alerts
           </p>
           <p>
             <strong>Program description:</strong> When you opt in to text
-            messages from Wrench Ready Mobile, you may receive messages related
+            messages from WrenchReady Mobile, you may receive messages related
             to appointment confirmations, service updates, scheduling
             follow-ups, voicemail notifications, and general customer care
             communications.
@@ -118,10 +118,10 @@ export default function TermsPage() {
 
           <h2>Limitation of Liability</h2>
           <p>
-            Wrench Ready Mobile provides this website and its content on an
+            WrenchReady Mobile provides this website and its content on an
             &quot;as is&quot; basis. We make no warranties regarding the
             accuracy or completeness of the information on this site. To the
-            fullest extent permitted by law, Wrench Ready Mobile shall not be
+            fullest extent permitted by law, WrenchReady Mobile shall not be
             liable for any indirect, incidental, or consequential damages
             arising from your use of this website.
           </p>

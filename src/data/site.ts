@@ -39,14 +39,14 @@ export type Location = {
 };
 
 export const siteConfig = {
-  name: "Wrench Ready Mobile",
+  name: "WrenchReady Mobile",
   domain: "https://wrenchreadymobile.com",
   locale: "en_US",
   city: "Spokane",
   state: "Washington",
   stateCode: "WA",
   description:
-    "Wrench Ready Mobile delivers promise-keeping mobile service for no-start, brake, diagnostic, and inspection work across Spokane County, with routine maintenance only when it fits the route.",
+    "WrenchReady Mobile delivers promise-keeping mobile service for no-start, brake, diagnostic, and inspection work across Spokane County, with routine maintenance only when it fits the route.",
   shortDescription:
     "Mobile auto service built around screening, clarity, and keeping believable promises.",
   areaServed: ["Spokane", "Spokane Valley", "Liberty Lake", "South Hill"],
@@ -195,39 +195,49 @@ export const reviews: Review[] = [];
 
 export const homeFaqs: Faq[] = [
   {
-    question: "What kind of work does Wrench Ready Mobile focus on?",
+    question: "Do you only replace batteries?",
     answer:
-      "No-start and battery work, brakes, paid diagnostics, and pre-purchase inspections lead the site. Oil changes stay available as routine or bundle work, but we do not lead with cheap everything-menu promises.",
+      "No. Battery work is one of the clearest mobile jobs, but WrenchReady handles a wider set of high-fit services including no-start evaluation, brake work, paid diagnostics, inspections, and selected common repairs.",
   },
   {
-    question: "Do I need to know the exact repair before I book?",
+    question: "What if I am not sure what is wrong?",
     answer:
-      "No. If something doesn't sound right or the light's on, start with a diagnostic or screening request. We'll figure out the fit and explain what happens next.",
+      "If the problem is not obvious, we will say so. In those cases, diagnosis is the first service. We explain that upfront so you know what the visit is for and what happens after the findings.",
   },
   {
-    question: "What is the Now / Soon / Monitor framework?",
+    question: "How does pricing work?",
     answer:
-      "After we're done, you get a list. Now means fix it before you drive anywhere. Soon means schedule it this month. Monitor means keep an eye on it. No surprise bills, no hidden upsells, and no pretend urgency.",
+      "For straightforward jobs, you get a clear quote before work begins. If the problem is not obvious, the first step may be a paid diagnostic visit so the vehicle can be tested properly before a repair is approved.",
   },
   {
-    question: "Why is the service area focused instead of county-wide?",
+    question: "Will the price change once the technician arrives?",
     answer:
-      "Because we want to show up on time. A smaller service area means better routes, realistic ETAs, and fewer cancellations. Once the promise system is stable, we can expand with discipline.",
+      "Only if the inspected vehicle shows something materially different from the original request. If that happens, you get a plain-English explanation and an approval request before added work moves forward.",
   },
   {
-    question: "What does the inspection include?",
+    question: "Will I know if the job changes?",
     answer:
-      "Fluids, filters, belts, hoses, tires, lights, battery, brakes — the stuff that matters. You get photos and notes so you see what we saw.",
+      "Yes. If additional work is found, you get a clear explanation and approval request before anything moves forward. No surprise scope.",
+  },
+  {
+    question: "Do I have to take my car to a shop?",
+    answer:
+      "Not for the services that fit mobile repair well. WrenchReady is designed for home, work, and parking-lot service when the job is a good field fit.",
   },
   {
     question: "How quickly can I get an appointment?",
     answer:
-      "Usually within a few days. Battery and brake emergencies sometimes sooner. Send us your vehicle, what you need, parking notes, and your preferred day.",
+      "Usually within a few days. Battery and no-start emergencies sometimes sooner. Send us your vehicle, what you need, parking notes, and your preferred day.",
   },
   {
-    question: "Is Wrench Ready Mobile licensed and insured?",
+    question: "Is WrenchReady Mobile licensed and insured?",
     answer:
-      "Yes. Full license, full insurance. Washington State compliant. You're covered when we're working on your driveway.",
+      "Yes. Full license, full insurance. Washington State RCW 46.71 compliant. You are covered when we are working on your driveway.",
+  },
+  {
+    question: "Do you charge a diagnostic fee?",
+    answer:
+      "When the issue needs diagnosis, yes. That is explained clearly before the appointment so you know whether the visit is for testing, repair, or both. The fee may be credited toward approved repair work.",
   },
 ];
 
@@ -307,7 +317,7 @@ export const services: Service[] = [
     teaser:
       "Pads, rotors, inspection, and an honest assessment of what's going on. Done at your place so the repair stays high trust and high fit.",
     metaDescription:
-      "Need mobile brake repair in Spokane, WA? Wrench Ready Mobile handles brake pad and rotor service at your home or workplace with clear inspection notes.",
+      "Need mobile brake repair in Spokane, WA? WrenchReady Mobile handles brake pad and rotor service at your home or workplace with clear inspection notes.",
     priceFrom: "From $280 per axle",
     duration: "1.5-2.5 hours",
     idealFor: [
@@ -481,7 +491,7 @@ export const services: Service[] = [
     teaser:
       "We'll meet you at the seller's place, inspect the car, and give you a straight summary of what's good, what should change the price, and what should make you keep looking.",
     metaDescription:
-      "Need a pre-purchase inspection in Spokane, WA? Wrench Ready Mobile checks used vehicles on site and gives buyers a clearer picture before money changes hands.",
+      "Need a pre-purchase inspection in Spokane, WA? WrenchReady Mobile checks used vehicles on site and gives buyers a clearer picture before money changes hands.",
     priceFrom: "From $150",
     duration: "45-75 minutes",
     idealFor: [
@@ -540,9 +550,9 @@ export const locations: Location[] = [
     seoTitle: "Mobile Mechanic in Spokane, WA",
     headline: "Promise-keeping mobile service for Spokane drivers who need less downtime and clearer answers.",
     teaser:
-      "From neighborhood driveways to workday parking lots, Spokane is the launch market for Wrench Ready Mobile's no-start, brake, diagnostic, and inspection lanes. Oil changes stay available when they fit the route.",
+      "From neighborhood driveways to workday parking lots, Spokane is the launch market for WrenchReady Mobile's no-start, brake, diagnostic, and inspection lanes. Oil changes stay available when they fit the route.",
     metaDescription:
-      "Looking for a mobile mechanic in Spokane, WA? Wrench Ready Mobile is building focused service routes for battery, brake, diagnostic, and inspection work, with maintenance only when it fits the route.",
+      "Looking for a mobile mechanic in Spokane, WA? WrenchReady Mobile is building focused service routes for battery, brake, diagnostic, and inspection work, with maintenance only when it fits the route.",
     neighborhoods: ["Downtown Spokane", "North Spokane", "East Central", "Audubon"],
     routeHighlights: [
       "Residential driveways, office lots, and central parking make mobile service practical here.",
@@ -595,7 +605,7 @@ export const locations: Location[] = [
     teaser:
       "No-start, brake, battery, and diagnostic work without the drive to Spokane. Routine maintenance still exists, but only as a support lane when the route fits.",
     metaDescription:
-      "Need a mobile mechanic in Spokane Valley, WA? Wrench Ready Mobile is building focused local service routes for battery, brake, diagnostic, and inspection work.",
+      "Need a mobile mechanic in Spokane Valley, WA? WrenchReady Mobile is building focused local service routes for battery, brake, diagnostic, and inspection work.",
     neighborhoods: ["Veradale", "Dishman", "Greenacres", "Opportunity"],
     routeHighlights: [
       "Residential density helps keep arrival windows tighter.",
@@ -648,7 +658,7 @@ export const locations: Location[] = [
     teaser:
       "Quick service without losing your whole afternoon. Batteries, brakes, diagnostics, and inspections in your driveway or office lot, with maintenance when it fits the route.",
     metaDescription:
-      "Looking for a mobile mechanic in Liberty Lake, WA? Wrench Ready Mobile covers battery, brake, diagnostic, and inspection jobs on site, with maintenance as a support lane.",
+      "Looking for a mobile mechanic in Liberty Lake, WA? WrenchReady Mobile covers battery, brake, diagnostic, and inspection jobs on site, with maintenance as a support lane.",
     neighborhoods: ["River District", "Legacy Ridge", "Meadowwood", "Liberty Lake Village"],
     routeHighlights: [
       "Home driveways and workplace lots make on-site service practical.",
@@ -701,7 +711,7 @@ export const locations: Location[] = [
     teaser:
       "We come to your driveway for no-starts, brakes, batteries, diagnostics, and inspections. No school-run logistics or waiting rooms, and oil changes stay in a support lane.",
     metaDescription:
-      "Need a mobile mechanic on South Hill in Spokane, WA? Wrench Ready Mobile is building focused routes for battery, brake, diagnostic, and inspection work, with maintenance when it fits.",
+      "Need a mobile mechanic on South Hill in Spokane, WA? WrenchReady Mobile is building focused routes for battery, brake, diagnostic, and inspection work, with maintenance when it fits.",
     neighborhoods: ["Lincoln Heights", "Moran Prairie", "Comstock", "Manito"],
     routeHighlights: [
       "Residential driveways make at-home service practical.",

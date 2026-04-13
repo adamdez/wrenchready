@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { siteConfig } from "@/data/site";
+import { readEnv } from "@/lib/env";
 
 const XML_HEADERS = {
   "Content-Type": "text/xml; charset=utf-8",
@@ -27,14 +28,16 @@ function normalizePhone(value: string | undefined) {
 }
 
 function getCallerId() {
-  const configuredCallerId = normalizePhone(process.env.TWILIO_CALLER_ID_NUMBER);
+  const configuredCallerId = normalizePhone(
+    readEnv("TWILIO_CALLER_ID_NUMBER", "My_Twilio_phone_number"),
+  );
   if (configuredCallerId) return configuredCallerId;
 
   return normalizePhone(siteConfig.contact.phoneHref.replace(/^tel:/, ""));
 }
 
 function getForwardTimeoutSeconds() {
-  const configuredValue = Number(process.env.TWILIO_FORWARD_TIMEOUT_SECONDS);
+  const configuredValue = Number(readEnv("TWILIO_FORWARD_TIMEOUT_SECONDS"));
 
   if (!Number.isFinite(configuredValue)) return 20;
 
@@ -44,7 +47,7 @@ function getForwardTimeoutSeconds() {
 function buildUnavailableResponse() {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="alice">Wrench Ready is unavailable right now. Please text this number and we will get back to you shortly.</Say>
+  <Say voice="alice">WrenchReady is unavailable right now. Please text this number and we will get back to you shortly.</Say>
 </Response>`;
 }
 
@@ -58,7 +61,7 @@ function buildForwardingResponse(forwardTo: string, callerId: string, timeout: n
 }
 
 function handleVoiceWebhook() {
-  const forwardTo = normalizePhone(process.env.TWILIO_FORWARD_TO_PHONE);
+  const forwardTo = normalizePhone(readEnv("TWILIO_FORWARD_TO_PHONE"));
   const callerId = getCallerId();
 
   if (!forwardTo || !callerId) {

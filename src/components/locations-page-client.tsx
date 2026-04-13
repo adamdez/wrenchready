@@ -25,7 +25,7 @@ export function LocationsPageClient() {
           </FadeIn>
           <FadeIn delay={0.1}>
             <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-              Where Wrench Ready currently runs.
+              Where WrenchReady currently runs.
             </h1>
           </FadeIn>
           <FadeIn delay={0.2}>

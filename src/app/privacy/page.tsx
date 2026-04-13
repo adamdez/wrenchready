@@ -4,9 +4,9 @@ import Link from "next/link";
 export const metadata = buildMetadata({
   title: "Privacy Policy",
   description:
-    "Privacy Policy for Wrench Ready Mobile Mechanic. How we collect, use, and protect your personal information.",
+    "Privacy Policy for WrenchReady Mobile Mechanic. How we collect, use, and protect your personal information.",
   path: "/privacy",
-  keywords: ["privacy policy", "data protection", "Wrench Ready Mobile"],
+  keywords: ["privacy policy", "data protection", "WrenchReady Mobile"],
 });
 
 export default function PrivacyPage() {
@@ -24,7 +24,7 @@ export default function PrivacyPage() {
 
         <div className="prose prose-invert max-w-none space-y-6 text-muted-foreground [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-foreground [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1">
           <p>
-            Wrench Ready Mobile LLC (&quot;Wrench Ready,&quot; &quot;we,&quot;
+            WrenchReady Mobile LLC (&quot;WrenchReady,&quot; &quot;we,&quot;
             &quot;us,&quot; or &quot;our&quot;) operates the website
             wrenchreadymobile.com and the mobile mechanic services described on
             it. This Privacy Policy explains what information we collect, how we
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
 
           <h2>Text Messaging (SMS)</h2>
           <p>
-            If you opt in to receive text messages from Wrench Ready Mobile, we
+            If you opt in to receive text messages from WrenchReady Mobile, we
             may send you messages related to your appointment, service updates,
             or follow-up communication. Message and data rates may apply.
             Message frequency varies based on your interaction with our

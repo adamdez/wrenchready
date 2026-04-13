@@ -9,7 +9,7 @@ export function generateMetadata(): Metadata {
     ...buildMetadata({
       title: "Mobile Mechanic in Spokane, WA — Same-Day Service",
       description:
-        "Skip the shop. Wrench Ready Mobile comes to your driveway or workplace in Spokane for oil changes, brakes, batteries, diagnostics, and inspections.",
+        "Skip the shop. WrenchReady Mobile comes to your driveway or workplace in Spokane for oil changes, brakes, batteries, diagnostics, and inspections.",
       path: "/lp/mobile-mechanic",
       keywords: ["mobile mechanic Spokane", "mobile auto repair Spokane WA", "mechanic at home Spokane", "same day mobile mechanic Spokane"],
     }),
@@ -39,7 +39,7 @@ export default function MobileMechanicLandingPage() {
               <span className="text-primary">Same-day appointments.</span>
             </h1>
             <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              Skip the tow, the waiting room, and the half-day detour. Wrench Ready Mobile
+              Skip the tow, the waiting room, and the half-day detour. WrenchReady Mobile
               handles maintenance and repair at your home or workplace across Spokane County.
             </p>
             <div className="flex flex-wrap gap-3">

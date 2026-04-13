@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Phone, MessageSquare, Calendar, Wrench, MapPin, ArrowRight, Menu, X, ExternalLink, Mail, Shield } from "lucide-react";
-import { locations, services, siteConfig } from "@/data/site";
+import { getServicesInPriorityOrder, locations, services, siteConfig } from "@/data/site";
 import { motion, AnimatePresence } from "framer-motion";
 
 type SiteShellProps = {
@@ -25,7 +25,7 @@ function BrandMark() {
       </span>
       <span className="hidden sm:block">
         <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--wr-teal)" }}>
-          Wrench Ready
+          WrenchReady
         </span>
         <span className="block text-sm font-semibold text-foreground">
           Mobile
@@ -71,14 +71,14 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
                 { label: "Areas We Serve", href: "/#areas" },
                 { label: "Reviews", href: "/#reviews" },
               ].map((item) => (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
                   onClick={onClose}
                   className="block rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 >
                   {item.label}
-                </a>
+                </Link>
               ))}
               <div className="my-3 h-px bg-border" />
               <a
@@ -88,14 +88,14 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
                 <Phone className="h-4 w-4" style={{ color: "var(--wr-teal)" }} />
                 {siteConfig.contact.phoneDisplay}
               </a>
-              <a
+              <Link
                 href="/#book"
                 onClick={onClose}
                 className="mt-2 flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
               >
                 <Calendar className="h-4 w-4" />
-                Book Now
-              </a>
+                Request
+              </Link>
             </div>
           </motion.nav>
         </>
@@ -106,6 +106,7 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 export function SiteShell({ children }: SiteShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const footerServices = getServicesInPriorityOrder(services).slice(0, 5);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -113,49 +114,49 @@ export function SiteShell({ children }: SiteShellProps) {
         <div className="shell flex items-center justify-between gap-4 py-3">
           <BrandMark />
           <nav className="hidden items-center gap-1 lg:flex">
-            <a
+            <Link
               href="/#home"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Home
-            </a>
+            </Link>
             <Link
               href="/services"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Services
             </Link>
-            <a
+            <Link
               href="/#how-it-works"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               How It Works
-            </a>
+            </Link>
             <Link
               href="/locations"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Areas We Serve
             </Link>
-            <a
+            <Link
               href="/#reviews"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Reviews
-            </a>
+            </Link>
             <a
               href={siteConfig.contact.phoneHref}
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {siteConfig.contact.phoneDisplay}
             </a>
-            <a
+            <Link
               href="/#book"
               className="ml-2 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
             >
               <Calendar className="h-4 w-4" />
-              Book Now
-            </a>
+              Request
+            </Link>
           </nav>
           <div className="flex items-center gap-2 lg:hidden">
             <a
@@ -164,12 +165,12 @@ export function SiteShell({ children }: SiteShellProps) {
             >
               <Phone className="h-4 w-4" />
             </a>
-            <a
+            <Link
               href="/#book"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
             >
               Book
-            </a>
+            </Link>
             <button
               onClick={() => setMobileMenuOpen(true)}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-secondary"
@@ -191,7 +192,7 @@ export function SiteShell({ children }: SiteShellProps) {
             <Link href="/" className="block w-fit">
               <Image
                 src="/wr-logo-full.png"
-                alt="Wrench Ready Mobile"
+                alt="WrenchReady Mobile"
                 width={200}
                 height={80}
                 className="h-12 w-auto"
@@ -218,7 +219,7 @@ export function SiteShell({ children }: SiteShellProps) {
             </div>
             {/* Google Business Profile link */}
             <a
-              href="https://www.google.com/maps/place/Wrench+Ready+Mobile"
+              href="https://www.google.com/maps/place/WrenchReady+Mobile"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -237,7 +238,7 @@ export function SiteShell({ children }: SiteShellProps) {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Services</p>
             <ul className="mt-4 space-y-2.5">
-              {services.slice(0, 5).map((service) => (
+              {footerServices.map((service) => (
                 <li key={service.slug}>
                   <Link
                     href={`/services/${service.slug}`}
@@ -254,28 +255,28 @@ export function SiteShell({ children }: SiteShellProps) {
             <p className="mt-8 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Quick Links</p>
             <ul className="mt-4 space-y-2.5">
               <li>
-                <a
+                <Link
                   href="/#how-it-works"
                   className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   How It Works
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/#reviews"
                   className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Reviews
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/#faq"
                   className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   FAQ
-                </a>
+                </Link>
               </li>
               <li>
                 <Link
@@ -389,7 +390,7 @@ export function SiteShell({ children }: SiteShellProps) {
             href="/contact"
           >
             <Calendar className="h-4 w-4" />
-            Book
+            Request
           </Link>
         </div>
       </div>

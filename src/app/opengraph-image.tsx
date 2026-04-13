@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Wrench Ready Mobile — Mobile Mechanic in Spokane, WA";
+export const alt = "WrenchReady Mobile — Mobile Mechanic in Spokane, WA";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -49,7 +49,7 @@ export default function OgImage() {
                 color: "#3b7cf5",
               }}
             >
-              Wrench Ready
+              WrenchReady
             </span>
             <span style={{ fontSize: "24px", fontWeight: 600, color: "#e8ecf2" }}>
               Mobile Auto Service

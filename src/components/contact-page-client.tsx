@@ -16,18 +16,19 @@ export function ContactPageClient() {
         <div className="shell pt-16 pb-20 sm:pt-24 sm:pb-28">
           <FadeIn>
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
-              Schedule Appointment
+              Request Screening
             </span>
           </FadeIn>
           <FadeIn delay={0.1}>
             <h1 className="mt-6 max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-              Send the details, we&apos;ll screen the job.
+              Send the details. We&apos;ll screen the job.
             </h1>
           </FadeIn>
           <FadeIn delay={0.2}>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
               Include the vehicle, the symptom or service, where the car is parked, and your
-              preferred time window. That is usually enough to qualify most mobile jobs quickly.
+              preferred time window. We prioritize no-start, brake, diagnostic, and inspection work
+              that fits a real mobile route.
             </p>
           </FadeIn>
         </div>
@@ -41,7 +42,7 @@ export function ContactPageClient() {
                 <SectionHeading
                   eyebrow="Contact Info"
                   title="Call, text, or fill out the form."
-                  copy="The more complete the first message, the faster we can screen the job."
+                  copy="The more complete the first message, the faster we can screen the job and protect the promise."
                 />
                 <div className="mt-8 space-y-5">
                   <a
@@ -76,7 +77,7 @@ export function ContactPageClient() {
                     </span>
                     <div>
                       <p className="text-sm font-semibold text-foreground">Scheduling</p>
-                      <p className="text-xs text-muted-foreground">{siteConfig.contact.schedule}</p>
+                      <p className="text-xs text-muted-foreground">Screened appointments by request</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 rounded-xl border border-border bg-background/50 p-4">
@@ -95,7 +96,7 @@ export function ContactPageClient() {
                 <p className="eyebrow">What to Include</p>
                 <ul className="mt-4 space-y-3">
                   {[
-                    "Year, make, model, and engine when known",
+                    "Year, make, model, and mileage when known",
                     "Exact symptom or the repair you think you need",
                     "Address plus parking, gate, or apartment notes",
                     "Preferred time window and best callback method",

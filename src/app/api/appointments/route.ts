@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readEnv } from "@/lib/env";
+import { sendHighRiskInboundAlert } from "@/lib/promise-crm/alerts";
+import { createInboundFromAppointment } from "@/lib/promise-crm/server";
+import { evaluateIntake } from "@/lib/promise-crm/intake";
+import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
 
 type AppointmentPayload = {
   fullName: string;
@@ -9,6 +14,7 @@ type AppointmentPayload = {
   address: string;
   timing: string;
   notes: string;
+  smsConsent?: boolean;
 };
 
 function validatePayload(body: unknown): body is AppointmentPayload {
@@ -18,8 +24,8 @@ function validatePayload(body: unknown): body is AppointmentPayload {
 }
 
 async function storeToSupabase(payload: AppointmentPayload) {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY;
+  const url = readEnv("SUPABASE_URL");
+  const key = readEnv("SUPABASE_ANON_KEY");
   if (!url || !key) return null;
 
   const res = await fetch(`${url}/rest/v1/appointments`, {
@@ -51,32 +57,23 @@ async function storeToSupabase(payload: AppointmentPayload) {
 }
 
 async function sendWebhook(payload: AppointmentPayload) {
-  const webhookUrl = process.env.APPOINTMENT_WEBHOOK_URL;
-  if (!webhookUrl) return;
-
-  const lines = [
-    `**New Appointment Request**`,
-    `Name: ${payload.fullName || "Not provided"}`,
-    `Phone: ${payload.phone || "Not provided"}`,
-    `Email: ${payload.email || "Not provided"}`,
-    `Vehicle: ${payload.vehicle}`,
-    `Service: ${payload.serviceNeeded || "Not specified"}`,
-    `Address: ${payload.address || "Not provided"}`,
-    `Timing: ${payload.timing || "Not specified"}`,
-    payload.notes ? `Notes: ${payload.notes}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  try {
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: lines }),
-    });
-  } catch (err) {
-    console.error("Webhook delivery failed:", err);
-  }
+  const evaluation = evaluateIntake(payload);
+  return sendOpsWebhook({
+    event: "website_appointment_request",
+    business: "wrenchready",
+    payload: {
+      fullName: payload.fullName,
+      email: payload.email || null,
+      phone: payload.phone || null,
+      vehicle: payload.vehicle,
+      serviceNeeded: payload.serviceNeeded || null,
+      address: payload.address || null,
+      timing: payload.timing || null,
+      notes: payload.notes || null,
+      smsConsent: !!payload.smsConsent,
+      intakeEvaluation: evaluation,
+    },
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -90,9 +87,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await Promise.allSettled([storeToSupabase(body), sendWebhook(body)]);
+    const evaluation = evaluateIntake(body);
+    const [legacyResult, webhookResult, inboundResult] = await Promise.allSettled([
+      storeToSupabase(body),
+      sendWebhook(body),
+      createInboundFromAppointment(body, evaluation),
+    ]);
 
-    return NextResponse.json({ success: true });
+    if (inboundResult.status === "fulfilled" && inboundResult.value) {
+      await sendHighRiskInboundAlert(inboundResult.value).catch(() => false);
+    }
+
+    return NextResponse.json({
+      success: true,
+      intakeEvaluation: evaluation,
+      inboundCreated:
+        inboundResult.status === "fulfilled" && !!inboundResult.value,
+      legacyStored:
+        legacyResult.status === "fulfilled" && !!legacyResult.value,
+      webhookDelivered:
+        webhookResult.status === "fulfilled" && webhookResult.value === true,
+    });
   } catch {
     return NextResponse.json(
       { error: "Something went wrong. Please call or text us instead." },

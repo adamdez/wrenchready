@@ -2,15 +2,15 @@ import { ServicesPageClient } from "@/components/services-page-client";
 import { buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Mobile Auto Repair Services in Spokane",
+  title: "Mobile Service Lanes in Spokane",
   description:
-    "Explore Wrench Ready Mobile service lines for Spokane drivers: oil changes, brake work, battery replacement, diagnostics, and pre-purchase inspections.",
+    "Explore WrenchReady Mobile service lanes for Spokane drivers: no-start and battery work, brakes, paid diagnostics, pre-purchase inspections, and routine maintenance when it fits the route.",
   path: "/services",
   keywords: [
     "mobile auto repair Spokane",
-    "mobile oil change Spokane",
-    "mobile brake repair Spokane",
     "mobile battery replacement Spokane",
+    "mobile brake repair Spokane",
+    "check engine light diagnostic Spokane",
   ],
 });
 

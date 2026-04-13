@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { siteConfig } from "@/data/site";
+import { getServicesInPriorityOrder } from "@/data/site";
 import { trackFormSubmit } from "@/components/analytics";
 import { CheckCircle2, Phone, Send, RotateCcw } from "lucide-react";
 import Link from "next/link";
@@ -19,6 +20,14 @@ type RequestFormState = {
 
 type SubmitStatus = "idle" | "submitting" | "success" | "error";
 
+type IntakeEvaluation = {
+  serviceLane: string;
+  territory: string;
+  readinessRisk: "low" | "medium" | "high";
+  promiseFit: "strong" | "conditional" | "review";
+  nextAction: string;
+};
+
 const initialState: RequestFormState = {
   fullName: "",
   email: "",
@@ -30,14 +39,17 @@ const initialState: RequestFormState = {
   notes: "",
 };
 
+const priorityServices = getServicesInPriorityOrder();
+
 export function LaunchRequestForm() {
   const [formState, setFormState] = useState(initialState);
   const [smsConsent, setSmsConsent] = useState(false);
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [intakeEvaluation, setIntakeEvaluation] = useState<IntakeEvaluation | null>(null);
 
   function updateField(
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) {
     const { name, value } = event.target;
     setFormState((current) => ({ ...current, [name]: value }));
@@ -62,11 +74,13 @@ export function LaunchRequestForm() {
         body: JSON.stringify({ ...formState, smsConsent }),
       });
 
+      const data = await res.json().catch(() => null);
+
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
         throw new Error(data?.error || "Submission failed");
       }
 
+      setIntakeEvaluation(data?.intakeEvaluation || null);
       setStatus("success");
       trackFormSubmit();
     } catch (err) {
@@ -88,9 +102,27 @@ export function LaunchRequestForm() {
           </div>
           <h2 className="text-3xl font-bold">Request received.</h2>
           <p className="mx-auto max-w-lg text-sm leading-relaxed text-muted-foreground">
-            We&apos;ll screen the job and follow up within the next business window.
+            {intakeEvaluation?.promiseFit === "strong"
+              ? "This looks like a strong mobile-fit request. We’ll follow up with the next step as soon as we can."
+              : intakeEvaluation?.promiseFit === "conditional"
+                ? "We received your request and we’ll confirm the worksite, scope, and timing before we promise a slot."
+                : "We received your request and we’ll screen the fit carefully before we promise timing."}
             For anything urgent, call or text directly.
           </p>
+          {intakeEvaluation ? (
+            <div className="mx-auto max-w-lg rounded-2xl border border-border bg-background/50 p-4 text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                Screening read
+              </p>
+              <p className="mt-2 text-sm text-foreground">{intakeEvaluation.serviceLane}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {intakeEvaluation.territory} · {intakeEvaluation.readinessRisk} risk
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {intakeEvaluation.nextAction}
+              </p>
+            </div>
+          ) : null}
           <div className="flex flex-wrap justify-center gap-3">
             <a
               className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
@@ -103,6 +135,7 @@ export function LaunchRequestForm() {
               className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
               onClick={() => {
                 setFormState(initialState);
+                setIntakeEvaluation(null);
                 setStatus("idle");
               }}
               type="button"
@@ -123,7 +156,7 @@ export function LaunchRequestForm() {
         One clean message, faster screening.
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        Fill out the details below and we&apos;ll get back to you within the next business window.
+        Fill out the details below and we&apos;ll screen the job before we confirm the promise.
       </p>
 
       {status === "error" && errorMessage && (
@@ -190,15 +223,24 @@ export function LaunchRequestForm() {
 
         <label className="space-y-2 md:col-span-2">
           <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-            Service or symptom
+            Highest-fit service
           </span>
-          <input
+          <select
             className="form-input"
             name="serviceNeeded"
             onChange={updateField}
-            placeholder="Oil change, front brakes, no-start, check-engine light..."
             value={formState.serviceNeeded}
-          />
+          >
+            <option value="" disabled>
+              Select the best match
+            </option>
+            {priorityServices.map((service) => (
+              <option key={service.slug} value={service.name}>
+                {service.name}
+              </option>
+            ))}
+            <option value="Other / not sure">Other / not sure</option>
+          </select>
         </label>
 
         <label className="space-y-2 md:col-span-2">
@@ -248,7 +290,7 @@ export function LaunchRequestForm() {
             type="checkbox"
           />
           <span className="text-xs leading-relaxed text-muted-foreground">
-            I agree to receive text messages from Wrench Ready Mobile Mechanic
+            I agree to receive text messages from WrenchReady Mobile Mechanic
             regarding my service request. Message and data rates may apply.
             Message frequency varies. Reply <strong className="text-foreground">STOP</strong> to
             opt out, <strong className="text-foreground">HELP</strong> for help. See
@@ -271,7 +313,7 @@ export function LaunchRequestForm() {
             type="submit"
           >
             <Send className="h-4 w-4" />
-            {status === "submitting" ? "Sending..." : "Submit Request"}
+            {status === "submitting" ? "Sending..." : "Request Screening"}
           </button>
           <a
             className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"

@@ -73,7 +73,7 @@ export function ServicePageClient({
             <div className="rounded-2xl border border-border bg-card/50 p-8">
               <p className="eyebrow">What&apos;s Included</p>
               <h2 className="mt-3 text-2xl font-bold">
-                What {service.name.toLowerCase()} looks like with Wrench Ready
+                What {service.name.toLowerCase()} looks like with WrenchReady
               </h2>
               <ul className="mt-6 space-y-4">
                 {service.includes.map((item) => (

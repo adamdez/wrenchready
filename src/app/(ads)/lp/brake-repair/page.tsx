@@ -9,7 +9,7 @@ export function generateMetadata(): Metadata {
     ...buildMetadata({
       title: "Mobile Brake Repair in Spokane — No Shop Visit Needed",
       description:
-        "Squealing or grinding? Wrench Ready Mobile handles brake pad and rotor service at your home or workplace in Spokane. From $280 per axle.",
+        "Squealing or grinding? WrenchReady Mobile handles brake pad and rotor service at your home or workplace in Spokane. From $280 per axle.",
       path: "/lp/brake-repair",
       keywords: ["mobile brake repair Spokane", "brake pads at home Spokane", "mobile mechanic brakes Spokane", "brake service Spokane WA"],
     }),
@@ -47,7 +47,7 @@ export default function BrakeRepairLandingPage() {
               <span className="text-primary">We come to you. From $280/axle.</span>
             </h1>
             <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              Stop driving on worn brakes and stop losing half a day at a shop. Wrench Ready Mobile handles brake service at your driveway or workplace.
+              Stop driving on worn brakes and stop losing half a day at a shop. WrenchReady Mobile handles brake service at your driveway or workplace.
             </p>
             <div className="flex flex-wrap gap-3">
               <a href="#request-form" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110">
