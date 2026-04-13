@@ -145,13 +145,21 @@ function buildCloseoutRecapDraft(promise: PromiseRecord): PromiseOutboundDraft {
     };
   }
 
+  const recapState = closeout.customerRecap;
+
   const nowItems = formatRecapList(closeout.now);
   const soonItems = formatRecapList(closeout.soon);
   const monitorItems = formatRecapList(closeout.monitor);
 
   return {
-    status: "draft",
-    channel: promise.customer.preferredContact === "email" ? "email" : "text",
+    status:
+      recapState?.status === "ready"
+        ? "send-ready"
+        : closeout.customerConditionSummary || closeout.workPerformedSummary
+          ? "draft"
+          : "not-ready",
+    channel:
+      recapState?.channel || (promise.customer.preferredContact === "email" ? "email" : "text"),
     headline: "Customer recap draft",
     subject: `Your WrenchReady visit recap`,
     body: [
@@ -168,7 +176,10 @@ function buildCloseoutRecapDraft(promise: PromiseRecord): PromiseOutboundDraft {
     ]
       .filter(Boolean)
       .join("\n\n"),
-    reason: "This recap turns the finished visit into a clear next-step story for the customer.",
+    reason:
+      recapState?.status === "ready"
+        ? "The customer recap is marked ready, so ops can send this same-day summary now."
+        : "This recap turns the finished visit into a clear next-step story for the customer.",
   };
 }
 

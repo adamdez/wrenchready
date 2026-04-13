@@ -23,6 +23,7 @@ Primary folder:
 - Operator playbooks are now also live in the app at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\playbooks\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\playbooks\page.tsx)
 - The follow-through queue is now stage-aware for review asks, reminder seeds, deferred work, and open closeout at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\follow-through\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\follow-through\page.tsx)
 - Promise detail now includes generated outbound drafts plus proof-capture summaries at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\promises\[id]\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\promises\[id]\page.tsx)
+- The outbound send queue is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\outbound\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\outbound\page.tsx)
 
 ## Research / strategy / pricing folder
 

@@ -7,6 +7,7 @@ export {
   getInboundRecord,
   getInboundRecords,
   getMarketingOfferPerformance,
+  getOutboundQueueSnapshot,
   getOwnerExecutionOverview,
   getOwnerExecutionSnapshot,
   getPromiseBoardMetrics,

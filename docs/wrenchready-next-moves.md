@@ -32,7 +32,8 @@ Current status:
 - partly built in the Promise CRM through `reviewRequest` inside closeout
 - review ask wording and queue actions are now built in the operator playbooks and follow-through queue
 - generated review ask drafts are now live on promise detail
-- still needs the real send flow and completion tracking
+- outbound queue plus webhook-backed send request is now live
+- still needs deeper completion tracking after delivery
 
 ### 2. Follow-Up and Retention System
 
@@ -57,6 +58,7 @@ Current status:
 - structurally built through closeout, follow-through, maintenance reminder seed, and next probable visit
 - lane-aware queue progression now lets review, reminder, deferred-work, and open-closeout work advance in sequence
 - generated recap and reminder drafts are now live on promise detail
+- outbound queue now lets recap and reminder drafts become owned send work
 - still needs deeper automation and cleaner measurement
 
 ### 3. Dispatcher Decision Framework

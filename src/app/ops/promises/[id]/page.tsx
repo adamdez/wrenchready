@@ -366,6 +366,18 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 <div className="mt-4 grid gap-4 md:grid-cols-3">
                   <div className="rounded-2xl border border-border bg-background/60 p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                      Customer recap
+                    </p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {promise.closeout.customerRecap?.status || "Not ready"}
+                    </p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {promise.closeout.customerRecap?.summary || "No recap send summary recorded"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-border bg-background/60 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
                       Review request
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
@@ -388,7 +400,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
+                  <div className="rounded-2xl border border-border bg-background/60 p-4 md:col-span-2">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
                       Next probable visit
                     </p>

@@ -235,6 +235,9 @@ This phase also added:
 - a proof-capture layer inside closeout so each finished visit can store why the customer booked, what promise mattered most, customer relief language, and proof assets worth keeping
 - generated outbound drafts on each promise for closeout recap, review ask, and maintenance reminder so the operator can act from the same record instead of inventing wording every time
 - follow-through history on promise detail so review, reminder, and deferred-work resolutions are visible as a sequence instead of only the latest action
+- a dedicated outbound queue so recap, review, and reminder sends are owned work instead of implied future work
+- webhook-backed outbound send actions that update review / recap / reminder state after delivery is requested
+- closeout reporting now includes recap-ready, recap-sent, and proof-captured counts in addition to review and reminder metrics
 
 ## What we are optimizing for
 
@@ -319,6 +322,7 @@ The next step is to make it more automatic and more measurable:
 - make Now / Soon / Monitor the default post-visit operating habit
 - tie deferred-work and add-on offers more tightly to the field playbook
 - turn the new generated outbound drafts into real send or copy actions instead of operator-only reference
+- capture completion on outbound delivery channels so queued, sent, responded, and converted become measurable states
 
 ### 4. Standardize quoting and field conversion
 

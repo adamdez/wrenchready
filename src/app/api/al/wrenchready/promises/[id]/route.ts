@@ -59,7 +59,7 @@ type UpdatePromisePayload = {
     deferredValueAmount?: number;
     outcomeSummary?: string;
   } | null;
-  closeout?: PromiseCloseout | null;
+  closeout?: Partial<PromiseCloseout> | null;
   followThroughDueAt?: string | null;
   followThroughResolution?: {
     resolvedAt?: string;
@@ -190,6 +190,7 @@ function isCloseoutPayload(value: unknown) {
   const maintenanceReminder = candidate.maintenanceReminder;
   const nextProbableVisit = candidate.nextProbableVisit;
   const proofCapture = candidate.proofCapture;
+  const customerRecap = candidate.customerRecap;
 
   return (
     (candidate.completedAt === undefined || typeof candidate.completedAt === "string") &&
@@ -203,6 +204,11 @@ function isCloseoutPayload(value: unknown) {
       (Array.isArray(candidate.soon) && candidate.soon.every(isRecapItemPayload))) &&
     (candidate.monitor === undefined ||
       (Array.isArray(candidate.monitor) && candidate.monitor.every(isRecapItemPayload))) &&
+    (customerRecap === undefined ||
+      customerRecap === null ||
+      (typeof customerRecap === "object" &&
+        ((customerRecap as Record<string, unknown>).status === undefined ||
+          typeof (customerRecap as Record<string, unknown>).status === "string"))) &&
     (reviewRequest === undefined ||
       reviewRequest === null ||
       (typeof reviewRequest === "object" &&

@@ -421,6 +421,13 @@ export function PromiseBoard(props: PromiseBoardProps) {
             Follow-through worklist
           </Link>
           <Link
+            href="/ops/outbound"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+          >
+            <Phone className="h-4 w-4" />
+            Outbound queue
+          </Link>
+          <Link
             href="/ops/tomorrow"
             className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
           >

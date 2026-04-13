@@ -70,6 +70,33 @@ function normalizeReviewRequest(value: unknown): PromiseCloseout["reviewRequest"
     : undefined;
 }
 
+function normalizeCustomerRecap(value: unknown): PromiseCloseout["customerRecap"] {
+  if (!value || typeof value !== "object") return undefined;
+
+  const candidate = value as Record<string, unknown>;
+  const status =
+    candidate.status === "ready" || candidate.status === "sent"
+      ? candidate.status
+      : "not-ready";
+
+  const normalized = {
+    status,
+    sentAt: typeof candidate.sentAt === "string" ? candidate.sentAt.trim() || undefined : undefined,
+    channel:
+      candidate.channel === "email" || candidate.channel === "text"
+        ? candidate.channel
+        : undefined,
+    summary: typeof candidate.summary === "string" ? candidate.summary.trim() || undefined : undefined,
+  } as const;
+
+  return normalized.status !== "not-ready" ||
+    normalized.sentAt ||
+    normalized.channel ||
+    normalized.summary
+    ? { ...normalized }
+    : undefined;
+}
+
 function normalizeMaintenanceReminder(
   value: unknown,
 ): PromiseCloseout["maintenanceReminder"] {
@@ -195,6 +222,7 @@ export function normalizePromiseCloseout(
     now: normalizeRecapItems(value.now),
     soon: normalizeRecapItems(value.soon),
     monitor: normalizeRecapItems(value.monitor),
+    customerRecap: normalizeCustomerRecap(value.customerRecap),
     reviewRequest: normalizeReviewRequest(value.reviewRequest),
     maintenanceReminder: normalizeMaintenanceReminder(value.maintenanceReminder),
     nextProbableVisit: normalizeNextProbableVisit(value.nextProbableVisit),
@@ -208,6 +236,7 @@ export function normalizePromiseCloseout(
     normalized.now.length > 0 ||
     normalized.soon.length > 0 ||
     normalized.monitor.length > 0 ||
+    !!normalized.customerRecap ||
     !!normalized.reviewRequest ||
     !!normalized.maintenanceReminder ||
     !!normalized.nextProbableVisit ||
@@ -218,7 +247,7 @@ export function normalizePromiseCloseout(
 
 export function mergePromiseCloseout(
   current?: PromiseCloseout | null,
-  updates?: PromiseCloseout | null,
+  updates?: Partial<PromiseCloseout> | null,
 ) {
   if (updates === undefined) {
     return normalizePromiseCloseout(current || undefined);
@@ -236,6 +265,13 @@ export function mergePromiseCloseout(
     now: updates.now ?? current?.now ?? [],
     soon: updates.soon ?? current?.soon ?? [],
     monitor: updates.monitor ?? current?.monitor ?? [],
+    customerRecap:
+      updates.customerRecap === undefined
+        ? current?.customerRecap
+        : {
+            ...(current?.customerRecap || { status: "not-ready" as const }),
+            ...updates.customerRecap,
+          },
     reviewRequest:
       updates.reviewRequest === undefined
         ? current?.reviewRequest

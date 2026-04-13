@@ -5,6 +5,7 @@ import {
   mergePromiseCloseout,
   mergePromiseNotesWithCloseout,
 } from "@/lib/promise-crm/closeout-recapture";
+import { getPromiseOutboundSnapshot } from "@/lib/promise-crm/outbound-drafts";
 import {
   extractCommercialOutcome,
   isConvertedWork,
@@ -52,6 +53,8 @@ import type {
   FollowThroughTask,
   InboundRecord,
   MarketingOfferPerformance,
+  OutboundQueueItem,
+  OutboundQueueSnapshot,
   OwnerDailyPriority,
   OwnerExecutionMetrics,
   OwnerExecutionSnapshot,
@@ -120,7 +123,7 @@ type UpdatePromiseInput = {
   noteToAdd?: string;
   economics?: PromiseEconomicsSnapshot | null;
   commercialOutcome?: PromiseRecord["commercialOutcome"] | null;
-  closeout?: PromiseCloseout | null;
+  closeout?: Partial<PromiseCloseout> | null;
   followThroughDueAt?: string | null;
   followThroughResolution?: PromiseRecord["followThroughResolution"] | null;
   customerApproval?: PromiseCustomerApproval | null;
@@ -1559,12 +1562,23 @@ export async function getCloseoutRecaptureSnapshot(): Promise<CloseoutRecaptureS
 
       summary.completedPromises += 1;
       if (closeout) summary.closeoutCompleted += 1;
+      if (closeout?.customerRecap?.status === "ready") summary.recapReady += 1;
+      if (closeout?.customerRecap?.status === "sent") summary.recapSent += 1;
       if (closeout?.reviewRequest?.status === "ready") summary.reviewReady += 1;
       if (closeout?.reviewRequest?.status === "sent") summary.reviewSent += 1;
       if (closeout?.reviewRequest?.status === "completed") summary.reviewCompleted += 1;
       if (closeout?.maintenanceReminder?.status === "seeded") summary.reminderSeeded += 1;
       if (closeout?.maintenanceReminder?.status === "scheduled") summary.reminderScheduled += 1;
       if (getNextProbableVisit(record)) summary.nextProbableVisitCaptured += 1;
+      if (
+        closeout?.proofCapture?.bookingReason ||
+        closeout?.proofCapture?.promiseThatMatteredMost ||
+        closeout?.proofCapture?.customerReliefQuote ||
+        closeout?.proofCapture?.proofNotes ||
+        (closeout?.proofCapture?.assets.length || 0) > 0
+      ) {
+        summary.proofCaptured += 1;
+      }
       summary.nowItems += closeout?.now.length || 0;
       summary.soonItems += closeout?.soon.length || 0;
       summary.monitorItems += closeout?.monitor.length || 0;
@@ -1574,16 +1588,119 @@ export async function getCloseoutRecaptureSnapshot(): Promise<CloseoutRecaptureS
     {
       completedPromises: 0,
       closeoutCompleted: 0,
+      recapReady: 0,
+      recapSent: 0,
       reviewReady: 0,
       reviewSent: 0,
       reviewCompleted: 0,
       reminderSeeded: 0,
       reminderScheduled: 0,
       nextProbableVisitCaptured: 0,
+      proofCaptured: 0,
       nowItems: 0,
       soonItems: 0,
       monitorItems: 0,
       deferredValueOpen: 0,
     },
   );
+}
+
+export async function getOutboundQueueSnapshot(): Promise<OutboundQueueSnapshot> {
+  const promises = await getPromiseRecords();
+
+  const items = promises
+    .flatMap((promise) => {
+      const outbound = getPromiseOutboundSnapshot(promise);
+      const drafts: OutboundQueueItem[] = [];
+
+      if (
+        outbound.closeoutRecap.status !== "not-ready" &&
+        promise.closeout?.customerRecap?.status !== "sent"
+      ) {
+        drafts.push({
+          promiseId: promise.id,
+          customerName: promise.customer.name,
+          owner: promise.owner,
+          territory: promise.location.territory,
+          serviceScope: promise.serviceScope,
+          channelType: "closeout-recap",
+          status: outbound.closeoutRecap.status,
+          preferredChannel: outbound.closeoutRecap.channel,
+          headline: outbound.closeoutRecap.headline,
+          subject: outbound.closeoutRecap.subject,
+          body: outbound.closeoutRecap.body,
+          reason: outbound.closeoutRecap.reason,
+          dueAt: promise.closeout?.completedAt,
+          recapStatus: promise.closeout?.customerRecap?.status || "not-ready",
+        });
+      }
+
+      if (promise.closeout?.reviewRequest?.status === "ready") {
+        drafts.push({
+          promiseId: promise.id,
+          customerName: promise.customer.name,
+          owner: promise.owner,
+          territory: promise.location.territory,
+          serviceScope: promise.serviceScope,
+          channelType: "review-ask",
+          status: outbound.reviewAsk.status,
+          preferredChannel: outbound.reviewAsk.channel,
+          headline: outbound.reviewAsk.headline,
+          subject: outbound.reviewAsk.subject,
+          body: outbound.reviewAsk.body,
+          reason: outbound.reviewAsk.reason,
+          dueAt: promise.closeout?.reviewRequest?.dueAt,
+          reviewStatus: promise.closeout?.reviewRequest?.status || "not-ready",
+        });
+      }
+
+      if (promise.closeout?.maintenanceReminder?.status === "seeded") {
+        drafts.push({
+          promiseId: promise.id,
+          customerName: promise.customer.name,
+          owner: promise.owner,
+          territory: promise.location.territory,
+          serviceScope: promise.serviceScope,
+          channelType: "maintenance-reminder",
+          status: outbound.reminderSeed.status,
+          preferredChannel: outbound.reminderSeed.channel,
+          headline: outbound.reminderSeed.headline,
+          subject: outbound.reminderSeed.subject,
+          body: outbound.reminderSeed.body,
+          reason: outbound.reminderSeed.reason,
+          dueAt: promise.closeout?.maintenanceReminder?.dueAt,
+          reminderStatus: promise.closeout?.maintenanceReminder?.status || "not-seeded",
+        });
+      }
+
+      return drafts;
+    })
+    .sort((a, b) => {
+      if (a.status !== b.status) return a.status === "send-ready" ? -1 : 1;
+      if (a.dueAt && b.dueAt) return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
+      if (a.dueAt) return -1;
+      if (b.dueAt) return 1;
+      return a.customerName.localeCompare(b.customerName);
+    });
+
+  const sentToday = promises.reduce((count, promise) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const recapSent = promise.closeout?.customerRecap?.sentAt?.startsWith(today);
+    const reviewSent = promise.closeout?.reviewRequest?.sentAt?.startsWith(today);
+    return count + (recapSent ? 1 : 0) + (reviewSent ? 1 : 0);
+  }, 0);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    summary: {
+      total: items.length,
+      sendReady: items.filter((item) => item.status === "send-ready").length,
+      draftOnly: items.filter((item) => item.status === "draft").length,
+      recapReady: items.filter((item) => item.channelType === "closeout-recap").length,
+      reviewReady: items.filter((item) => item.channelType === "review-ask").length,
+      reminderReady: items.filter((item) => item.channelType === "maintenance-reminder").length,
+      sentToday,
+    },
+    items,
+  };
 }

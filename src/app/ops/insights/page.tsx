@@ -238,6 +238,20 @@ export default async function OfferPerformancePage() {
         <div className="mt-4 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Recap ready
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{closeout.recapReady}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Completed visits ready for a same-day recap.</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Recap sent
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{closeout.recapSent}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Same-day recap touches already pushed out.</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
               Closeout done
             </p>
             <p className="mt-2 text-2xl font-bold text-foreground">{closeout.closeoutCompleted}</p>
@@ -285,6 +299,13 @@ export default async function OfferPerformancePage() {
               {formatCurrency(closeout.deferredValueOpen)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">Value still sitting in completed-visit follow-up.</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Proof captured
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{closeout.proofCaptured}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Completed visits with usable trust assets logged.</p>
           </div>
         </div>
       </section>

@@ -136,6 +136,15 @@ export type PromiseNextProbableVisit = {
   estimatedAmount?: number;
 };
 
+export type PromiseCustomerRecapStatus = "not-ready" | "ready" | "sent";
+
+export type PromiseCustomerRecap = {
+  status: PromiseCustomerRecapStatus;
+  channel?: "email" | "text";
+  sentAt?: string;
+  summary?: string;
+};
+
 export type PromiseProofAssetKind = "photo" | "testimonial" | "recap" | "review";
 
 export type PromiseProofAsset = {
@@ -160,6 +169,7 @@ export type PromiseCloseout = {
   now: PromiseRecapItem[];
   soon: PromiseRecapItem[];
   monitor: PromiseRecapItem[];
+  customerRecap?: PromiseCustomerRecap;
   reviewRequest?: PromiseReviewRequest;
   maintenanceReminder?: PromiseMaintenanceReminderSeed;
   nextProbableVisit?: PromiseNextProbableVisit;
@@ -169,12 +179,15 @@ export type PromiseCloseout = {
 export type CloseoutRecaptureSnapshot = {
   completedPromises: number;
   closeoutCompleted: number;
+  recapReady: number;
+  recapSent: number;
   reviewReady: number;
   reviewSent: number;
   reviewCompleted: number;
   reminderSeeded: number;
   reminderScheduled: number;
   nextProbableVisitCaptured: number;
+  proofCaptured: number;
   nowItems: number;
   soonItems: number;
   monitorItems: number;
@@ -419,4 +432,39 @@ export type PromiseOutboundSnapshot = {
   reminderSeed: PromiseOutboundDraft;
   closeoutRecap: PromiseOutboundDraft;
   proofSummary: string[];
+};
+
+export type PromiseOutboundChannel = "review-ask" | "maintenance-reminder" | "closeout-recap";
+
+export type OutboundQueueItem = {
+  promiseId: string;
+  customerName: string;
+  owner: RecordOwner;
+  territory: string;
+  serviceScope: string;
+  channelType: PromiseOutboundChannel;
+  status: PromiseOutboundDraftStatus;
+  preferredChannel: "email" | "text";
+  headline: string;
+  subject?: string;
+  body: string;
+  reason: string;
+  dueAt?: string;
+  reviewStatus?: ReviewRequestStatus;
+  reminderStatus?: MaintenanceReminderStatus;
+  recapStatus?: PromiseCustomerRecapStatus;
+};
+
+export type OutboundQueueSnapshot = {
+  generatedAt: string;
+  summary: {
+    total: number;
+    sendReady: number;
+    draftOnly: number;
+    recapReady: number;
+    reviewReady: number;
+    reminderReady: number;
+    sentToday: number;
+  };
+  items: OutboundQueueItem[];
 };

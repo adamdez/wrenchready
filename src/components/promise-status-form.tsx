@@ -173,6 +173,18 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
   const [nowRecap, setNowRecap] = useState(formatRecapItems(promise.closeout?.now));
   const [soonRecap, setSoonRecap] = useState(formatRecapItems(promise.closeout?.soon));
   const [monitorRecap, setMonitorRecap] = useState(formatRecapItems(promise.closeout?.monitor));
+  const [customerRecapStatus, setCustomerRecapStatus] = useState<
+    "not-ready" | "ready" | "sent"
+  >(promise.closeout?.customerRecap?.status || "not-ready");
+  const [customerRecapChannel, setCustomerRecapChannel] = useState<"email" | "text">(
+    promise.closeout?.customerRecap?.channel || "email",
+  );
+  const [customerRecapSentAt, setCustomerRecapSentAt] = useState(
+    promise.closeout?.customerRecap?.sentAt || "",
+  );
+  const [customerRecapSummary, setCustomerRecapSummary] = useState(
+    promise.closeout?.customerRecap?.summary || "",
+  );
   const [reviewRequestStatus, setReviewRequestStatus] = useState<
     "not-ready" | "ready" | "sent" | "completed"
   >(
@@ -337,6 +349,12 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
             now: parseRecapItems(nowRecap),
             soon: parseRecapItems(soonRecap),
             monitor: parseRecapItems(monitorRecap),
+            customerRecap: {
+              status: customerRecapStatus,
+              channel: customerRecapChannel,
+              sentAt: customerRecapSentAt.trim() || undefined,
+              summary: customerRecapSummary.trim() || undefined,
+            },
             reviewRequest: {
               status: reviewRequestStatus,
               dueAt: reviewRequestDueAt.trim() || undefined,
@@ -691,6 +709,67 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
                 onChange={(event) => setMonitorRecap(event.target.value)}
                 placeholder="Alternator output monitor | Readings were borderline today"
                 value={monitorRecap}
+              />
+            </label>
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Customer recap status
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) =>
+                  setCustomerRecapStatus(
+                    event.target.value as "not-ready" | "ready" | "sent",
+                  )
+                }
+                value={customerRecapStatus}
+              >
+                <option value="not-ready">Not ready</option>
+                <option value="ready">Ready to send</option>
+                <option value="sent">Sent</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Recap channel
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) =>
+                  setCustomerRecapChannel(event.target.value as "email" | "text")
+                }
+                value={customerRecapChannel}
+              >
+                <option value="email">Email</option>
+                <option value="text">Text</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Recap sent at
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setCustomerRecapSentAt(event.target.value)}
+                placeholder="2026-04-13T16:30:00-07:00"
+                value={customerRecapSentAt}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Recap send summary
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setCustomerRecapSummary(event.target.value)}
+                placeholder="Why this recap matters and what it should reinforce."
+                value={customerRecapSummary}
               />
             </label>
           </div>
