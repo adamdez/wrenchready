@@ -46,9 +46,9 @@ export const siteConfig = {
   state: "Washington",
   stateCode: "WA",
   description:
-    "WrenchReady Mobile delivers promise-keeping mobile service for no-start, brake, diagnostic, and inspection work across Spokane County, with routine maintenance only when it fits the route.",
+    "WrenchReady Mobile brings mobile car repair to your driveway or workplace in Spokane County — batteries, brakes, diagnostics, inspections, and routine maintenance with clear quotes and approval before added work.",
   shortDescription:
-    "Mobile auto service built around screening, clarity, and keeping believable promises.",
+    "Mobile auto repair in Spokane built around honest screening, clear communication, and approval before added work.",
   areaServed: ["Spokane", "Spokane Valley", "Liberty Lake", "South Hill"],
   contact: {
     email: "admin@wrenchreadymobile.com",
@@ -78,22 +78,22 @@ export const launchStats = [
 
 export const operatingPrinciples = [
   {
-    kicker: "Promise First",
-    title: "We only promise work the route can actually support.",
+    kicker: "Screen First",
+    title: "We check whether the job fits before we schedule it.",
     copy:
-      "Screening is part of the service. If the job, parking, or timing is a bad fit, we say so before the promise gets shaky.",
+      "If the job, parking, or timing is wrong for mobile service, we say so upfront instead of scheduling something that will not work.",
   },
   {
-    kicker: "Protect Wrench Time",
-    title: "Admin, routing, and follow-up exist to protect profitable field time.",
+    kicker: "Protect the Work",
+    title: "One person fixes cars. Another handles everything else.",
     copy:
       "Simon fixes cars. Dez handles calls, scheduling, and logistics so the day stays tight and the work actually gets done.",
   },
   {
-    kicker: "Driveway-Safe Scope",
-    title: "We lead with jobs that fit mobile service and keep oil changes in their lane.",
+    kicker: "Right Jobs First",
+    title: "We lead with the work that fits driveways and parking lots.",
     copy:
-      "No-starts, brakes, batteries, paid diagnostics, and inspections lead the site. Oil changes stay available, but they do not define the brand.",
+      "No-starts, brakes, batteries, paid diagnostics, and inspections are the core of the business. Oil changes are available when they fit the route.",
   },
 ] as const;
 
@@ -102,7 +102,7 @@ export const trustPoints = [
     kicker: "Clarity",
     title: "Photo-backed findings and plain-language next steps",
     copy:
-      "Customers should know what was done, what was found, what matters now versus later, and why we chose that promise in the first place.",
+      "You see what was done, what was found, and what matters now versus later — in normal language, not shop jargon.",
   },
   {
     kicker: "Convenience",
@@ -111,23 +111,23 @@ export const trustPoints = [
       "The value is not only the repair. It is the time, ride coordination, and drop-off friction you never have to deal with.",
   },
   {
-    kicker: "Discipline",
-    title: "Tight route planning for believable arrival windows",
+    kicker: "Focused Routes",
+    title: "Spokane County coverage that stays realistic",
     copy:
-      "Coverage is intentionally focused so promises stay believable and repeatable instead of turning into cheap, chaotic jobs.",
+      "We keep the service area focused so arrival windows are reliable and each visit gets the time it needs.",
   },
   {
-    kicker: "Growth",
-    title: "Built to convert local search and future ads",
+    kicker: "Honest Screening",
+    title: "We check the job before we schedule it",
     copy:
-      "The service and city structure already supports stronger Google Ads message match once campaigns go live.",
+      "If the work is not a good mobile fit, we tell you early. That saves everyone time and keeps the service predictable.",
   },
 ] as const;
 
 export const proofStatements = [
-  "Simon turns wrenches. Dez handles operations. Two people, focused service, launched March 30, 2026.",
-  "We lead with the highest-fit mobile lanes first: no-start, brakes, diagnostics, and inspections.",
-  "When the job is done, you get what was done, what was found, and what comes next in plain language.",
+  "Simon turns wrenches. Dez handles operations. Two people, focused service.",
+  "We lead with the work that fits mobile best: no-starts, brakes, diagnostics, and inspections.",
+  "When the job is done, you get what was done, what was found, and what comes next — in plain language.",
 ] as const;
 
 export const customerBenefits = [
@@ -147,24 +147,24 @@ export const scopeGuardrails = [
 
 export const processSteps = [
   {
-    title: "Send the vehicle, symptom, and parking setup",
+    title: "Tell us what the car is doing",
     copy:
-      "Year, make, model, what you need, where it sits, and whether the spot is actually workable.",
+      "Send the vehicle info, where it is parked, and a short description of the issue.",
   },
   {
-    title: "We check if the job fits the route and the day",
+    title: "We tell you the right first appointment",
     copy:
-      "Route, parking, service lane, and timing. If it works, we make the promise. If not, we say so.",
+      "Straightforward repair? We quote it. Needs diagnosis first? We say that clearly.",
   },
   {
-    title: "Service happens where you are",
+    title: "We confirm the visit",
     copy:
-      "We show up, do the work, and keep you in the loop the whole time.",
+      "You get a real appointment window and follow-up before the visit.",
   },
   {
-    title: "You get a clear next step",
+    title: "You approve added work before it happens",
     copy:
-      "Not just an invoice. A list of what's next, what can wait, and what to watch so the next promise is easier to keep.",
+      "If inspection changes the plan, we explain it first. No surprise scope.",
   },
 ] as const;
 
@@ -255,9 +255,9 @@ export const services: Service[] = [
     slug: "oil-change",
     name: "Mobile Oil Change",
     seoTitle: "Mobile Oil Change in Spokane, WA",
-    headline: "Routine maintenance that stays in its lane.",
+    headline: "Oil change at your place, with a quick look around.",
     teaser:
-      "Fresh oil, new filter, and a quick inspection when the route and vehicle make sense. Useful as maintenance or bundle work, not the headline offer.",
+      "Fresh oil, the right filter, and a simple inspection so routine maintenance stays convenient without turning into a shop day.",
     metaDescription:
       "Book a mobile oil change in Spokane, WA when routine maintenance fits the route. Oil service stays available as a support lane, with inspection notes and next-step recommendations.",
     priceFrom: "From $85",
@@ -313,9 +313,9 @@ export const services: Service[] = [
     slug: "brake-repair",
     name: "Mobile Brake Service",
     seoTitle: "Mobile Brake Repair in Spokane, WA",
-    headline: "Brake service that keeps the day moving.",
+    headline: "Brake service with an inspection first.",
     teaser:
-      "Pads, rotors, inspection, and an honest assessment of what's going on. Done at your place so the repair stays high trust and high fit.",
+      "Squealing, grinding, vibration, or soft pedal? We inspect the system, explain what is worn, and quote the work clearly before anything changes.",
     metaDescription:
       "Need mobile brake repair in Spokane, WA? WrenchReady Mobile handles brake pad and rotor service at your home or workplace with clear inspection notes.",
     priceFrom: "From $280 per axle",
@@ -371,9 +371,9 @@ export const services: Service[] = [
     slug: "battery-replacement",
     name: "Battery Replacement",
     seoTitle: "Mobile Battery Replacement in Spokane, WA",
-    headline: "No-start? We come to you.",
+    headline: "Battery service that starts with a test.",
     teaser:
-      "We test it on the spot and replace it if that's the problem. A clean no-start lane is one of the strongest mobile fits.",
+      "If the car will not start, we come to you, test the battery and charging system, and replace the battery only if that is the real problem.",
     metaDescription:
       "Get mobile battery replacement in Spokane, WA with on-site testing, installation, and a clear explanation of what caused the no-start condition.",
     priceFrom: "From $180 installed",
@@ -429,9 +429,9 @@ export const services: Service[] = [
     slug: "check-engine-diagnostics",
     name: "Check Engine Diagnostics",
     seoTitle: "Check Engine Light Diagnostics in Spokane, WA",
-    headline: "Check engine light? Start with a paid evaluation.",
+    headline: "Check engine light on? Start with diagnosis.",
     teaser:
-      "We'll scan the codes, explain what they mean, and tell you what actually needs to happen. The goal is a clear next step, not a cheap false certainty.",
+      "We scan the codes, explain what they actually mean, and tell you the next step without guessing from the light alone.",
     metaDescription:
       "Book check-engine light diagnostics in Spokane, WA with a mobile mechanic who starts from the symptom, screens the job honestly, and explains the next repair step clearly.",
     priceFrom: "From $150",
@@ -487,9 +487,9 @@ export const services: Service[] = [
     slug: "pre-purchase-inspection",
     name: "Pre-Purchase Inspection",
     seoTitle: "Pre-Purchase Inspection in Spokane, WA",
-    headline: "Know what you're buying before you buy it.",
+    headline: "Know what you're buying before money changes hands.",
     teaser:
-      "We'll meet you at the seller's place, inspect the car, and give you a straight summary of what's good, what should change the price, and what should make you keep looking.",
+      "We meet you at the seller's location, inspect the vehicle, and give you a plain summary of what looks solid, what should change the price, and what should make you walk away.",
     metaDescription:
       "Need a pre-purchase inspection in Spokane, WA? WrenchReady Mobile checks used vehicles on site and gives buyers a clearer picture before money changes hands.",
     priceFrom: "From $150",
@@ -508,7 +508,7 @@ export const services: Service[] = [
     trustPoints: [
       "You get a calm second set of eyes before money changes hands.",
       "We point out what looks solid, what should change the price, and what should stop the deal.",
-      "The goal is a useful driveway inspection, not false certainty or sales pressure.",
+      "The goal is a practical driveway inspection, not a rushed thumbs-up or a sales pitch.",
     ],
     whyItWins: [
       "Excellent trust builder for a young brand",
@@ -548,7 +548,7 @@ export const locations: Location[] = [
     slug: "spokane",
     name: "Spokane",
     seoTitle: "Mobile Mechanic in Spokane, WA",
-    headline: "Promise-keeping mobile service for Spokane drivers who need less downtime and clearer answers.",
+    headline: "Mobile car repair for Spokane drivers who need less downtime and clearer answers.",
     teaser:
       "From neighborhood driveways to workday parking lots, Spokane is the launch market for WrenchReady Mobile's no-start, brake, diagnostic, and inspection lanes. Oil changes stay available when they fit the route.",
     metaDescription:
@@ -557,7 +557,7 @@ export const locations: Location[] = [
     routeHighlights: [
       "Residential driveways, office lots, and central parking make mobile service practical here.",
       "Good fit for no-start calls, brake work, diagnostics, and after-work appointments.",
-      "The city's mix of neighborhoods supports tighter routes and more believable arrival windows.",
+      "The city's mix of neighborhoods supports tighter routes and more reliable arrival windows.",
       "Strong area for customers who want the repair handled without a tow or shop drop-off.",
     ],
     painPoints: [
@@ -634,7 +634,7 @@ export const locations: Location[] = [
       {
         question: "Will you travel from Spokane into the Valley for a small job?",
         answer:
-          "That depends on route density and timing. The page exists so Valley requests can be screened against a realistic local route, not a vague maybe.",
+          "That depends on route density and timing. The page exists so Valley requests can be screened against realistic route availability.",
       },
       {
         question: "Why does Spokane Valley have its own page?",

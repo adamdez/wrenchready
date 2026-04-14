@@ -4,9 +4,9 @@ import { SymptomChecker } from "@/components/symptom-checker";
 import { buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "What's Wrong With My Car? — Free Diagnostic Tool",
+  title: "Start With the Symptom — Free Diagnostic Tool",
   description:
-    "Not sure what service your vehicle needs? Use our free symptom checker to identify the issue and find the right mobile mechanic service in Spokane, WA.",
+    "Not sure what service your vehicle needs? Pick the symptom, and we will point you to the right first appointment for mobile mechanic service in Spokane, WA.",
   path: "/tools/symptom-checker",
   keywords: [
     "car symptom checker",
@@ -59,8 +59,8 @@ export default function SymptomCheckerPage() {
           <div className="mx-auto max-w-3xl text-center">
             <SectionHeading
               eyebrow="Free Diagnostic Tool"
-              title="What's wrong with my car?"
-              copy="Not sure what service you need? Pick the symptom that best matches what your vehicle is doing, and we will point you to the right service lane and next step — whether that is a call right now or a scheduled appointment."
+              title="Start with the symptom."
+              copy="Pick what the car is doing and we'll point you to the right first appointment. If it still is not clear, send the symptom and vehicle info and we'll screen it."
             />
           </div>
         </section>
@@ -70,8 +70,8 @@ export default function SymptomCheckerPage() {
         </section>
 
         <CtaBand
-          title="Still not sure? Just tell us the symptom."
-          copy="Send us the vehicle year, make, and model along with what it is doing. We will screen the job, explain what service lane fits, and give you a clean next step — no guesswork."
+          title="Still not sure? Send the symptom, vehicle, and location."
+          copy="We'll tell you the best next step for mobile service."
         />
       </div>
     </>

@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CircleCheckBig,
   ClipboardList,
+  DollarSign,
   HandCoins,
   Phone,
   ShieldAlert,
@@ -428,6 +429,41 @@ export function PromiseBoard(props: PromiseBoardProps) {
             Outbound queue
           </Link>
           <Link
+            href="/ops/cadence"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+          >
+            <ClipboardList className="h-4 w-4" />
+            Operating cadence
+          </Link>
+          <Link
+            href="/ops/recapture"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+          >
+            <TimerReset className="h-4 w-4" />
+            Weekly recapture
+          </Link>
+          <Link
+            href="/ops/proof"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+          >
+            <ShieldAlert className="h-4 w-4" />
+            Proof discipline
+          </Link>
+          <Link
+            href="/ops/accounts"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+          >
+            <HandCoins className="h-4 w-4" />
+            Recurring accounts
+          </Link>
+          <Link
+            href="/ops/systems"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+          >
+            <Wrench className="h-4 w-4" />
+            Systems readiness
+          </Link>
+          <Link
             href="/ops/tomorrow"
             className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
           >
@@ -440,6 +476,27 @@ export function PromiseBoard(props: PromiseBoardProps) {
           >
             <UserRound className="h-4 w-4" />
             Owner cockpits
+          </Link>
+          <Link
+            href="/ops/field"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+          >
+            <ClipboardList className="h-4 w-4" />
+            Field execution
+          </Link>
+          <Link
+            href="/ops/collections"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+          >
+            <DollarSign className="h-4 w-4" />
+            Collections
+          </Link>
+          <Link
+            href="/ops/warranty"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+          >
+            <ShieldAlert className="h-4 w-4" />
+            Warranty lane
           </Link>
           <Link
             href="/ops/playbooks"

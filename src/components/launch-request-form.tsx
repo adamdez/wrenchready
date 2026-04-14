@@ -313,7 +313,7 @@ export function LaunchRequestForm() {
             type="submit"
           >
             <Send className="h-4 w-4" />
-            {status === "submitting" ? "Sending..." : "Request Screening"}
+            {status === "submitting" ? "Sending..." : "Request Service"}
           </button>
           <a
             className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"

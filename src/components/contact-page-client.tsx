@@ -16,7 +16,7 @@ export function ContactPageClient() {
         <div className="shell pt-16 pb-20 sm:pt-24 sm:pb-28">
           <FadeIn>
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">
-              Request Screening
+              Request Service
             </span>
           </FadeIn>
           <FadeIn delay={0.1}>

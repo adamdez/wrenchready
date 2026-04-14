@@ -277,7 +277,7 @@ export function CtaBand({ title, copy }: CtaBandProps) {
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <LinkButton href="/contact" variant="gold">
-                Request Screening
+                Request Service
                 <ArrowRight className="h-4 w-4" />
               </LinkButton>
               <LinkButton href={siteConfig.contact.phoneHref} variant="secondary" icon={<Phone className="h-4 w-4" />}>

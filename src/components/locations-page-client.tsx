@@ -30,7 +30,7 @@ export function LocationsPageClient() {
           </FadeIn>
           <FadeIn delay={0.2}>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              We keep the footprint tight on purpose so arrival windows stay believable and the work
+              We keep the footprint tight on purpose so arrival windows stay reliable and the work
               stays organized.
             </p>
           </FadeIn>

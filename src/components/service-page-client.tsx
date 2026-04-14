@@ -55,7 +55,7 @@ export function ServicePageClient({
           <FadeIn delay={0.3}>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <LinkButton href="/contact">
-                Schedule Now
+                Request Service
                 <ArrowRight className="h-4 w-4" />
               </LinkButton>
               <LinkButton href="/services" variant="secondary">

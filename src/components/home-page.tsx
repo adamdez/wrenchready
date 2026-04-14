@@ -6,6 +6,10 @@ import { SectionOrbs } from "@/components/motion/gradient-orbs";
 import { AnimatedHeading } from "@/components/motion/animated-text";
 import { homeFaqs, siteConfig } from "@/data/site";
 import {
+  SHOW_DEMO_TESTIMONIALS,
+  demoTestimonials,
+} from "@/data/demo-testimonials";
+import {
   Shield,
   Clock,
   ArrowRight,
@@ -27,6 +31,7 @@ import {
   CircleDollarSign,
   Users,
   MapPin,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -42,10 +47,11 @@ function scrollToBook() {
 
 /* ───────────────────────── data ───────────────────────── */
 
-const heroStats = [
-  { value: "0", label: "Shop trips needed" },
-  { value: "$125", label: "Minimum job quote" },
-  { value: "Spokane", label: "Local & focused" },
+const trustChips = [
+  { icon: <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Licensed & insured" },
+  { icon: <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Photo-backed findings" },
+  { icon: <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Approval before added work" },
+  { icon: <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Focused Spokane routes" },
 ];
 
 const trustStrip = [
@@ -61,7 +67,7 @@ const coreServices = [
   {
     icon: <Battery className="h-6 w-6" />,
     title: "Dead battery & no-start help",
-    body: "If your car will not start, we do not jump straight to selling a battery. We test the battery, charging system, and likely starting issues so you get the right fix, not a guess.",
+    body: "We test the battery and charging system first. If the battery is the problem, we replace it on the spot. If it is something else, we tell you that before swapping anything.",
     price: "From $180",
     time: "30–45 min",
     image: "/wrenchready-battery-diagnostic.webp",
@@ -71,7 +77,7 @@ const coreServices = [
   {
     icon: <Disc3 className="h-6 w-6" />,
     title: "Brake inspection & repair",
-    body: "Grinding, squealing, vibration, or soft pedal? We inspect first, explain what actually needs attention, and get approval before any added work is done.",
+    body: "Grinding, squealing, vibration, or soft pedal? We inspect the brakes, explain what is worn, and get your approval before any parts go on.",
     price: "From $280/axle",
     time: "1.5–2.5 hrs",
     image: "/wrenchready-brake-service.webp",
@@ -81,7 +87,7 @@ const coreServices = [
   {
     icon: <Search className="h-6 w-6" />,
     title: "Check engine & paid diagnostics",
-    body: "When the issue needs diagnosis, we treat that as a real service, explain the fee upfront, and give you a clear repair path if more work is needed.",
+    body: "A warning light is a symptom, not a repair order. We scan the codes, explain what they mean in plain language, and tell you the actual next step.",
     price: "From $150",
     time: "45–75 min",
     image: "/wrenchready-diagnostic-approval.webp",
@@ -91,7 +97,7 @@ const coreServices = [
   {
     icon: <Eye className="h-6 w-6" />,
     title: "Inspections & routine work",
-    body: "Pre-purchase inspection before a used car buy, fleet intake, or common maintenance at your location. We handle the jobs that fit the field well and save you time.",
+    body: "Pre-purchase inspection before buying a used car, or routine maintenance at your location. We handle the jobs that fit the field well and save you the shop trip.",
     price: "From $150",
     time: "45–75 min",
     image: "/wrenchready-technician-arrival.webp",
@@ -124,55 +130,53 @@ const colorMap = {
 const differentiators = [
   {
     icon: <Gauge className="h-5 w-5" />,
-    title: "Whether your request is a fit",
-    body: "We screen before we promise. If the job, parking, or timing is wrong, we say so upfront.",
+    title: "We screen the job before we schedule it",
+    body: "If the job, parking, or timing is wrong for mobile service, we tell you upfront instead of booking something that will not work.",
   },
   {
     icon: <CircleDollarSign className="h-5 w-5" />,
-    title: "What the first step costs",
-    body: "Clear quote for straightforward work. Defined diagnostic fee when the issue needs testing first.",
+    title: "Straightforward work gets a clear quote",
+    body: "If we know the repair, you get a price before we start. No vague estimates, no hourly guessing.",
   },
   {
-    icon: <Clock className="h-5 w-5" />,
-    title: "When someone is coming",
-    body: "Confirmed appointment window with real updates as the visit gets closer.",
+    icon: <Search className="h-5 w-5" />,
+    title: "If diagnosis comes first, we say that upfront",
+    body: "When the issue needs testing before a repair, we explain the diagnostic fee and what the visit will cover before scheduling.",
   },
   {
     icon: <FileText className="h-5 w-5" />,
-    title: "When the plan changes",
-    body: "If the inspected vehicle shows something different, you get a plain-English explanation before anything changes.",
+    title: "You approve added work before it starts",
+    body: "If inspection turns up something different from the original request, you get a plain explanation and an approval request before anything changes.",
   },
   {
     icon: <CheckCircle2 className="h-5 w-5" />,
-    title: "When approval is needed",
-    body: "Added work requires your sign-off. No surprise scope. No driveway pressure.",
+    title: "If it is not a good mobile fit, we say so early",
+    body: "Some jobs need a lift, a shop bay, or tools we cannot bring to a driveway. We would rather tell you that upfront than waste your time.",
   },
 ];
 
 const processSteps = [
   {
     icon: <Send className="h-5 w-5" />,
-    title: "Tell us what is going on",
-    body: "Vehicle details, your location, and a short description of the problem. Photos help when the issue is visible.",
+    title: "Tell us what the car is doing",
+    body: "Send the vehicle info, where it is parked, and a short description of the issue.",
   },
   {
     icon: <ClipboardCheck className="h-5 w-5" />,
-    title: "Get a clear next step",
-    body: "Straightforward repair? You get a quote. Needs diagnosis? We explain that clearly so you know what the visit covers.",
+    title: "We tell you the right first appointment",
+    body: "Straightforward repair? We quote it. Needs diagnosis first? We say that clearly so you know what the visit covers.",
   },
   {
     icon: <Truck className="h-5 w-5" />,
     title: "We confirm the visit",
-    body: "Appointment window, confirmation, and updates as the visit gets closer. No wondering if anyone is actually coming.",
+    body: "You get a real appointment window and follow-up before the visit.",
   },
   {
     icon: <Shield className="h-5 w-5" />,
-    title: "Approve only what you want done",
-    body: "If the job changes once the vehicle is inspected, you get a clear explanation and approval request before added work moves forward.",
+    title: "You approve added work before it happens",
+    body: "If inspection changes the plan, we explain it first. No surprise scope.",
   },
 ];
-
-/* FloatingBookFab removed — mobile sticky bottom bar handles this */
 
 /* ───────────────────────── Intake Form ───────────────────────── */
 
@@ -232,7 +236,7 @@ function IntakeForm() {
         <CheckCircle2 className="mx-auto h-12 w-12 text-[--wr-teal]" />
         <h3 className="mt-4 text-xl font-bold text-foreground">Request received.</h3>
         <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-          We will review the details and follow up with a clear next step — usually within a few hours.
+          We will review the details and follow up with the right next step — usually within a few hours.
         </p>
       </motion.div>
     );
@@ -275,7 +279,7 @@ function IntakeForm() {
         disabled={submitting}
         className="btn-shimmer inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-7 py-4 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
-        {submitting ? "Sending..." : "Get My Quote"}
+        {submitting ? "Sending..." : "Request Service"}
         {!submitting && <ArrowRight className="h-4 w-4" />}
       </button>
     </form>
@@ -342,12 +346,12 @@ export function HomePage() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--wr-teal] opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-[--wr-teal]" />
                 </span>
-                Mobile Car Repair — Spokane, WA
+                Mobile Car Repair &bull; Spokane County, WA
               </span>
             </FadeIn>
 
             <AnimatedHeading
-              text="Mobile car repair that actually feels dependable."
+              text="Mobile car repair in Spokane with clear quotes and no surprise scope."
               gradient
               className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl"
               delay={0.15}
@@ -355,7 +359,7 @@ export function HomePage() {
 
             <FadeIn delay={0.35}>
               <p className="max-w-xl text-base font-medium leading-snug text-white/80 sm:text-xl">
-                Dead battery, brake noise, warning lights, or a car that will not start? We come to your home or office, give you a clear next step, and keep you updated from request to repair.
+                Dead battery, brake noise, warning lights, or a car that will not start? We come to your home or work, tell you what fits mobile service, and explain the next step before work begins.
               </p>
             </FadeIn>
 
@@ -365,7 +369,7 @@ export function HomePage() {
                   onClick={scrollToBook}
                   className="btn-shimmer inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.02] sm:py-4"
                 >
-                  Get My Quote
+                  Request Service
                   <ArrowRight className="h-5 w-5" />
                 </button>
                 <a
@@ -373,19 +377,14 @@ export function HomePage() {
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-7 py-3.5 text-base font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:scale-[1.02] sm:py-4"
                 >
                   <Phone className="h-5 w-5" />
-                  {siteConfig.contact.phoneDisplay}
+                  Call or Text {siteConfig.contact.phoneDisplay}
                 </a>
               </div>
             </FadeIn>
 
             <FadeIn delay={0.6}>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 sm:gap-x-5 sm:pt-2">
-                {[
-                  { icon: <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Clear quotes" },
-                  { icon: <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Photo reports" },
-                  { icon: <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "No surprise scope" },
-                  { icon: <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Status updates" },
-                ].map((item) => (
+                {trustChips.map((item) => (
                   <span key={item.label} className="flex items-center gap-1.5 text-xs font-medium text-white/70 sm:gap-2 sm:text-sm">
                     <span className="text-[--wr-teal]">{item.icon}</span>
                     {item.label}
@@ -394,17 +393,6 @@ export function HomePage() {
               </div>
             </FadeIn>
           </div>
-
-          <FadeIn delay={0.7}>
-            <div className="mt-6 flex flex-wrap items-center gap-2 sm:mt-10 sm:gap-3">
-              {heroStats.map((stat) => (
-                <div key={stat.label} className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2 backdrop-blur-md sm:px-5 sm:py-3">
-                  <span className="text-base font-bold text-white sm:text-lg">{stat.value}</span>
-                  <p className="text-[9px] uppercase tracking-wider text-white/50 sm:text-[10px]">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </FadeIn>
         </div>
       </section>
 
@@ -423,13 +411,50 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* ── WHAT TO SEND US ── */}
+      <section className="relative border-b border-border">
+        <div className="shell py-12 sm:py-16">
+          <FadeIn>
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="eyebrow" style={{ color: "var(--wr-teal)" }}>What to send us</p>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                Fastest way to get a clear answer
+              </h2>
+            </div>
+          </FadeIn>
+
+          <Stagger className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-3" staggerDelay={0.1}>
+            {[
+              { icon: <Truck className="h-5 w-5" />, label: "Year, make, and model" },
+              { icon: <MapPin className="h-5 w-5" />, label: "Where the vehicle is parked" },
+              { icon: <MessageSquare className="h-5 w-5" />, label: "What the car is doing" },
+            ].map((item) => (
+              <StaggerItem key={item.label}>
+                <div className="flex items-center gap-3 rounded-xl border border-border bg-card/50 p-4 backdrop-blur-sm">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[--wr-teal]/10 text-[--wr-teal]">
+                    {item.icon}
+                  </span>
+                  <span className="text-sm font-medium text-foreground">{item.label}</span>
+                </div>
+              </StaggerItem>
+            ))}
+          </Stagger>
+
+          <FadeIn delay={0.4}>
+            <p className="mx-auto mt-6 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
+              That is usually enough for us to tell you whether the job fits mobile service and what the next step should be.
+            </p>
+          </FadeIn>
+        </div>
+      </section>
+
       {/* ── CORE SERVICES ── */}
       <section id="services" className="relative mesh-section-blue">
         <div className="shell section-space">
           <SectionHeading
             eyebrow="What We Handle Best"
-            title="Start with the jobs people need handled now."
-            copy="WrenchReady is built around the vehicle problems that create the most stress and the most wasted time. We focus on the work that fits mobile service well, can be quoted clearly, and can be completed without making you lose half your day at a shop."
+            title="The vehicle problems that need a clear answer quickly."
+            copy="WrenchReady is built around the kinds of jobs that fit mobile service well, can be screened honestly, and can usually be completed without turning into a shop-day hassle."
             tint="blue"
           />
 
@@ -485,7 +510,7 @@ export function HomePage() {
                           className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
                         >
                           <Calendar className="h-3 w-3" />
-                          Get Quote
+                          Request Service
                         </button>
                       </div>
                     </div>
@@ -497,7 +522,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── WHY WRENCHREADY FEELS DIFFERENT ── */}
+      {/* ── WHAT MAKES THIS EASIER THAN A SHOP VISIT ── */}
       <section className="relative border-y border-border">
         <SectionOrbs variant="teal" />
         <div className="shell section-space">
@@ -505,15 +530,10 @@ export function HomePage() {
             <div>
               <SectionHeading
                 eyebrow="The WrenchReady Difference"
-                title="We do not sell mystery. We sell a clear promise."
-                copy="Most people are not just frustrated because their car has a problem. They are frustrated because they do not know what happens next. WrenchReady is built to reduce that uncertainty."
+                title="What makes this easier than a shop visit."
+                copy="Most people are not just dealing with a car problem. They are dealing with uncertainty, timing, and the hassle of getting the vehicle somewhere. WrenchReady is built to reduce that friction without overpromising what mobile service can do."
                 tint="teal"
               />
-              <FadeIn delay={0.3}>
-                <p className="mt-6 max-w-lg text-sm leading-relaxed text-muted-foreground">
-                  That is the difference between &ldquo;mobile mechanic&rdquo; as a category and WrenchReady as a service experience. The goal is not to sound impressive. The goal is to make the next step obvious and believable.
-                </p>
-              </FadeIn>
             </div>
 
             <Stagger className="space-y-4" staggerDelay={0.1}>
@@ -540,8 +560,8 @@ export function HomePage() {
         <div className="shell section-space">
           <SectionHeading
             eyebrow="How It Works"
-            title="Simple from request to repair."
-            copy="Four steps. No runaround."
+            title="Four steps. No runaround."
+            copy="From first message to finished repair."
             tint="teal"
           />
 
@@ -593,6 +613,45 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* ── SOCIAL PROOF / TESTIMONIALS ── */}
+      {SHOW_DEMO_TESTIMONIALS && (
+        <section id="reviews" className="relative border-y border-border">
+          <SectionOrbs variant="gold" />
+          <div className="shell section-space">
+            <SectionHeading
+              eyebrow="What Customers Notice"
+              title="Clear communication, honest screening, and work that does not turn into a guessing game."
+              copy=""
+              tint="gold"
+            />
+
+            <Stagger className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" staggerDelay={0.08}>
+              {demoTestimonials.map((t) => (
+                <StaggerItem key={t.id}>
+                  <div className="flex h-full flex-col rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm transition-colors hover:border-[--wr-gold]/20">
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: t.stars }).map((_, i) => (
+                        <Star key={i} className="h-4 w-4 fill-[--wr-gold] text-[--wr-gold]" />
+                      ))}
+                    </div>
+                    <h3 className="mt-3 text-sm font-bold text-foreground">{t.headline}</h3>
+                    <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                      &ldquo;{t.quote}&rdquo;
+                    </p>
+                    <div className="mt-4 border-t border-border pt-3">
+                      <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.neighborhood} &middot; {t.vehicle} &middot; {t.service}
+                      </p>
+                    </div>
+                  </div>
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </div>
+        </section>
+      )}
+
       {/* ── NO-START / BATTERY FEATURE ── */}
       <section className="relative overflow-hidden border-y border-border">
         <div className="absolute inset-0 -z-10">
@@ -615,7 +674,7 @@ export function HomePage() {
                   Dead battery or car will not start?
                 </h2>
                 <p className="mt-5 text-base leading-relaxed text-muted-foreground sm:text-lg">
-                  This is one of the worst ways to lose time in your day. WrenchReady is built for urgent, understandable problems like no-start and battery issues.
+                  We come to you, test the battery and charging system, and replace the battery only if that is the real problem. If it is something else, we tell you that before swapping anything.
                 </p>
                 <ul className="mt-6 space-y-3">
                   {[
@@ -635,7 +694,7 @@ export function HomePage() {
                     className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25"
                   >
                     <Zap className="h-4 w-4" />
-                    Request No-Start Help
+                    Request Service
                   </button>
                 </div>
               </div>
@@ -681,7 +740,7 @@ export function HomePage() {
                   Brake noise should not turn into guesswork.
                 </h2>
                 <p className="mt-5 text-base leading-relaxed text-muted-foreground sm:text-lg">
-                  Brake jobs are a strong fit for mobile service when they are screened and explained properly. If your brakes are squealing, grinding, vibrating, or feeling soft, we inspect the vehicle, explain what is worn, and quote the work clearly before moving ahead.
+                  We inspect the brakes, explain what is worn, and quote the work clearly before moving ahead. If the problem is not pads and rotors, we tell you what it looks like and what comes next.
                 </p>
                 <div className="mt-6 grid grid-cols-2 gap-4">
                   {[
@@ -700,7 +759,7 @@ export function HomePage() {
                     className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25"
                   >
                     <Disc3 className="h-4 w-4" />
-                    Get a Brake Quote
+                    Request Service
                   </button>
                 </div>
               </div>
@@ -720,7 +779,7 @@ export function HomePage() {
                 One clear price per job. No driveway haggling.
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-                We do not like surprise pricing any more than you do. If the repair is straightforward, we quote it clearly. If the issue needs diagnosis first, we explain that before the visit starts.
+                If the repair is straightforward, we quote it before we start. If the issue needs diagnosis first, we explain that before the visit.
               </p>
             </FadeIn>
 
@@ -773,7 +832,7 @@ export function HomePage() {
                   Keep work vehicles moving without shop-day chaos.
                 </h2>
                 <p className="mt-5 text-base leading-relaxed text-muted-foreground">
-                  For local fleets and small businesses, WrenchReady can support inspections, common repairs, and repeat maintenance with one point of contact and a cleaner service history by vehicle. Fewer surprises, less idle time, and less admin burden on your team.
+                  For local fleets and small businesses, WrenchReady can handle inspections, common repairs, and repeat maintenance with one point of contact and service records by vehicle.
                 </p>
                 <ul className="mt-6 space-y-3">
                   {[
@@ -822,8 +881,8 @@ export function HomePage() {
         <div className="shell section-space">
           <SectionHeading
             eyebrow="FAQ"
-            title="Common questions, honest answers."
-            copy="Clear answers about how WrenchReady actually works — pricing, diagnostics, scope, and what to expect from a visit."
+            title="Common questions, straight answers."
+            copy="How WrenchReady works — pricing, diagnostics, scope, and what to expect from a visit."
             tint="teal"
           />
           <div className="mt-12 max-w-3xl">
@@ -840,8 +899,8 @@ export function HomePage() {
             <div>
               <SectionHeading
                 eyebrow="Get Started"
-                title="If the car is down, the next step should be clear."
-                copy="Tell us what is happening, where the vehicle is, and what you are driving. If it is a good fit for mobile service, we will give you a clear next step and a quote you can act on."
+                title="Tell us what the car is doing. We'll tell you the right next step."
+                copy="Send the year, make, and model, where the car is parked, and what is going on. If it is a good fit for mobile service, we will follow up with the right first step — quote, diagnostic visit, or a clear answer that it belongs in a shop."
                 tint="blue"
               />
               <FadeIn delay={0.3}>
@@ -877,7 +936,7 @@ export function HomePage() {
               <div className="rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm sm:p-8">
                 <h3 className="text-lg font-bold text-foreground">Start your request</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Tell us what you are driving and what is going on. We will follow up with a clear next step.
+                  Tell us what you are driving and what is going on. We will follow up with the right next step.
                 </p>
                 <div className="mt-6">
                   <IntakeForm />
@@ -915,19 +974,19 @@ export function HomePage() {
             <div>
               <p className="eyebrow" style={{ color: "var(--wr-gold)" }}>Ready to get started?</p>
               <h2 className="gradient-text-gold mt-3 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-                Clear next step. Quote you can act on.
+                Tell us what the car is doing. We&apos;ll tell you the right next step.
               </h2>
             </div>
             <div>
               <p className="text-base leading-relaxed text-muted-foreground">
-                Tell us what is happening, where the vehicle is, and what you are driving. If it is a good fit for mobile service, you will hear back with a clear next step — usually within a few hours.
+                Send the year, make, and model, where the car is parked, and what is going on. If it is a good fit for mobile service, we will follow up with the right first step — quote, diagnostic visit, or a clear answer that it belongs in a shop.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button
                   onClick={scrollToBook}
                   className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[--wr-gold] to-[--wr-gold-soft] px-7 py-3.5 text-sm font-bold text-[--wr-surface] transition-all hover:shadow-lg hover:shadow-[--wr-gold]/20 hover:scale-[1.02]"
                 >
-                  Start My Request
+                  Request Service
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <a
@@ -935,7 +994,7 @@ export function HomePage() {
                   className="inline-flex items-center gap-2 rounded-full border border-border px-7 py-3.5 text-sm font-medium text-foreground transition-all hover:bg-secondary hover:border-transparent hover:scale-[1.02]"
                 >
                   <Phone className="h-4 w-4" />
-                  {siteConfig.contact.phoneDisplay}
+                  Call or Text {siteConfig.contact.phoneDisplay}
                 </a>
               </div>
             </div>

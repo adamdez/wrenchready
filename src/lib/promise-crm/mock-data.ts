@@ -8,11 +8,12 @@ import type { InboundRecord, PromiseRecord } from "@/lib/promise-crm/types";
 function withPromiseDefaults(
   record: Omit<
     PromiseRecord,
-    "customerAccess" | "customerApproval" | "customerCertainty" | "dayReadiness"
+    "customerAccess" | "customerApproval" | "customerCertainty" | "dayReadiness" | "jobStage"
   >,
 ): PromiseRecord {
   return {
     ...record,
+    jobStage: "triage-needed",
     customerCertainty: getDefaultCustomerCertainty(),
     dayReadiness: getDefaultDayReadiness(),
     customerAccess: buildLegacyPromiseCustomerAccess(record.id),
@@ -139,7 +140,7 @@ export const inboundRecords: InboundRecord[] = [
 
 const rawPromiseRecords: Omit<
   PromiseRecord,
-  "customerAccess" | "customerApproval" | "customerCertainty" | "dayReadiness"
+  "customerAccess" | "customerApproval" | "customerCertainty" | "dayReadiness" | "jobStage"
 >[] = [
   {
     id: "promise-2001",

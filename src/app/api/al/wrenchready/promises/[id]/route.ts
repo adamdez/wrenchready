@@ -9,6 +9,8 @@ import type {
   PromiseCloseout,
   PromiseCustomerCertainty,
   PromiseDayReadiness,
+  PromiseJobStage,
+  PromiseRecord,
 } from "@/lib/promise-crm/types";
 import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
 
@@ -36,6 +38,7 @@ type UpdatePromisePayload = {
   owner?: "Dez" | "Simon" | "Unassigned";
   readinessRisk?: "low" | "medium" | "high";
   status?: "promises-waiting" | "tomorrow-at-risk" | "follow-through-due" | "completed";
+  jobStage?: PromiseJobStage;
   serviceScope?: string;
   scheduledWindowLabel?: string;
   readinessSummary?: string;
@@ -79,6 +82,39 @@ type UpdatePromisePayload = {
   } | null;
   customerCertainty?: PromiseCustomerCertainty | null;
   dayReadiness?: PromiseDayReadiness | null;
+  fieldExecution?: {
+    serviceGoal?: string;
+    partsChecklist?: string[];
+    photosRequired?: string[];
+    inspectionChecklist?: string[];
+    notesTemplate?: string;
+    upsellFocus?: string[];
+    closeoutSteps?: string[];
+  } | null;
+  paymentCollection?: {
+    status?: string;
+    method?: string;
+    depositRequestedAmount?: number;
+    amountCollected?: number;
+    balanceDueAmount?: number;
+    collectedAt?: string;
+    paymentSummary?: string;
+  } | null;
+  warrantyCase?: {
+    status?: string;
+    issueSummary?: string;
+    callbackDueAt?: string;
+    resolutionSummary?: string;
+  } | null;
+  recurringAccount?: {
+    status?: string;
+    accountName?: string;
+    vehicleCount?: number;
+    cadenceLabel?: string;
+    billingTerms?: string;
+    nextTouchDueAt?: string;
+    summary?: string;
+  } | null;
 };
 
 const COMMERCIAL_OUTCOME_STATUSES: CommercialOutcomeStatus[] = [
@@ -265,6 +301,74 @@ function isDayReadinessPayload(value: unknown) {
   return Object.values(candidate).every((entry) => typeof entry === "boolean");
 }
 
+function isStringArray(value: unknown) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function isFieldExecutionPayload(value: unknown) {
+  if (value === null || value === undefined) return true;
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    (candidate.serviceGoal === undefined || typeof candidate.serviceGoal === "string") &&
+    (candidate.partsChecklist === undefined || isStringArray(candidate.partsChecklist)) &&
+    (candidate.photosRequired === undefined || isStringArray(candidate.photosRequired)) &&
+    (candidate.inspectionChecklist === undefined ||
+      isStringArray(candidate.inspectionChecklist)) &&
+    (candidate.notesTemplate === undefined || typeof candidate.notesTemplate === "string") &&
+    (candidate.upsellFocus === undefined || isStringArray(candidate.upsellFocus)) &&
+    (candidate.closeoutSteps === undefined || isStringArray(candidate.closeoutSteps))
+  );
+}
+
+function isPaymentCollectionPayload(value: unknown) {
+  if (value === null || value === undefined) return true;
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    (candidate.status === undefined || typeof candidate.status === "string") &&
+    (candidate.method === undefined || typeof candidate.method === "string") &&
+    (candidate.depositRequestedAmount === undefined ||
+      typeof candidate.depositRequestedAmount === "number") &&
+    (candidate.amountCollected === undefined || typeof candidate.amountCollected === "number") &&
+    (candidate.balanceDueAmount === undefined || typeof candidate.balanceDueAmount === "number") &&
+    (candidate.collectedAt === undefined || typeof candidate.collectedAt === "string") &&
+    (candidate.paymentSummary === undefined || typeof candidate.paymentSummary === "string")
+  );
+}
+
+function isWarrantyCasePayload(value: unknown) {
+  if (value === null || value === undefined) return true;
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    (candidate.status === undefined || typeof candidate.status === "string") &&
+    (candidate.issueSummary === undefined || typeof candidate.issueSummary === "string") &&
+    (candidate.callbackDueAt === undefined || typeof candidate.callbackDueAt === "string") &&
+    (candidate.resolutionSummary === undefined ||
+      typeof candidate.resolutionSummary === "string")
+  );
+}
+
+function isRecurringAccountPayload(value: unknown) {
+  if (value === null || value === undefined) return true;
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    (candidate.status === undefined || typeof candidate.status === "string") &&
+    (candidate.accountName === undefined || typeof candidate.accountName === "string") &&
+    (candidate.vehicleCount === undefined || typeof candidate.vehicleCount === "number") &&
+    (candidate.cadenceLabel === undefined || typeof candidate.cadenceLabel === "string") &&
+    (candidate.billingTerms === undefined || typeof candidate.billingTerms === "string") &&
+    (candidate.nextTouchDueAt === undefined || typeof candidate.nextTouchDueAt === "string") &&
+    (candidate.summary === undefined || typeof candidate.summary === "string")
+  );
+}
+
 function isUpdatePromisePayload(value: unknown): value is UpdatePromisePayload {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
@@ -290,6 +394,10 @@ function isUpdatePromisePayload(value: unknown): value is UpdatePromisePayload {
     isCustomerApprovalPayload(candidate.customerApproval) &&
     isCustomerCertaintyPayload(candidate.customerCertainty) &&
     isDayReadinessPayload(candidate.dayReadiness) &&
+    isFieldExecutionPayload(candidate.fieldExecution) &&
+    isPaymentCollectionPayload(candidate.paymentCollection) &&
+    isWarrantyCasePayload(candidate.warrantyCase) &&
+    isRecurringAccountPayload(candidate.recurringAccount) &&
     (candidate.followThroughDueAt === undefined ||
       candidate.followThroughDueAt === null ||
       typeof candidate.followThroughDueAt === "string")
@@ -347,18 +455,24 @@ export async function PATCH(request: Request, context: RouteContext) {
             },
       customerCertainty: body.customerCertainty,
       dayReadiness: body.dayReadiness,
+      jobStage: body.jobStage,
+      fieldExecution: body.fieldExecution as PromiseRecord["fieldExecution"],
+      paymentCollection: body.paymentCollection as PromiseRecord["paymentCollection"],
+      warrantyCase: body.warrantyCase as PromiseRecord["warrantyCase"],
+      recurringAccount: body.recurringAccount as PromiseRecord["recurringAccount"],
     });
 
     await sendOpsWebhook({
       event: "promise_updated",
       business: "wrenchready",
-      payload: {
-        promiseId: promise.id,
-        owner: promise.owner,
-        status: promise.status,
-        readinessRisk: promise.readinessRisk,
-        followThroughDueAt: promise.followThroughDueAt || null,
-      },
+        payload: {
+          promiseId: promise.id,
+          owner: promise.owner,
+          status: promise.status,
+          jobStage: promise.jobStage,
+          readinessRisk: promise.readinessRisk,
+          followThroughDueAt: promise.followThroughDueAt || null,
+        },
     });
 
     if (promise.closeout) {
