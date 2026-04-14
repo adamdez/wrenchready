@@ -19,7 +19,6 @@ import {
   ClipboardCheck,
   FileText,
   Send,
-  ChevronRight,
   Truck,
   Gauge,
   Battery,
@@ -31,8 +30,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
-import { useRef, useState, useEffect, type FormEvent } from "react";
+import { motion } from "framer-motion";
+import { useState, type FormEvent } from "react";
 
 /* ───────────────────────── helpers ───────────────────────── */
 
@@ -173,36 +172,7 @@ const processSteps = [
   },
 ];
 
-/* ───────────────────────── Floating FAB ───────────────────────── */
-
-function FloatingBookFab() {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    function onScroll() { setVisible(window.scrollY > 600); }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return (
-    <AnimatePresence>
-      {visible && (
-        <motion.button
-          onClick={scrollToBook}
-          initial={{ opacity: 0, scale: 0.8, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.8, y: 20 }}
-          transition={{ duration: 0.3, ease: "backOut" }}
-          className="fixed bottom-24 right-4 z-50 inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-sm font-bold text-white shadow-2xl md:hidden"
-          style={{ background: "linear-gradient(135deg, var(--wr-teal), var(--wr-blue))" }}
-          aria-label="Get a quote"
-        >
-          <Calendar className="h-4 w-4" />
-          Get My Quote
-        </motion.button>
-      )}
-    </AnimatePresence>
-  );
-}
+/* FloatingBookFab removed — mobile sticky bottom bar handles this */
 
 /* ───────────────────────── Intake Form ───────────────────────── */
 
@@ -319,12 +289,24 @@ function IntakeForm() {
 export function HomePage() {
   return (
     <>
-      <FloatingBookFab />
-
       {/* ── HERO ── */}
-      <section id="home" className="relative min-h-[92vh] overflow-hidden">
-        {/* Video background with fallback image */}
-        <div className="absolute inset-0 -z-20">
+      <section id="home" className="relative min-h-[80vh] overflow-hidden sm:min-h-[92vh]">
+        {/* Mobile: static image (saves bandwidth, keeps Simon visible) */}
+        <div className="absolute inset-0 -z-20 md:hidden">
+          <Image
+            src="/wrenchready-hero-service.webp"
+            alt="WrenchReady mobile mechanic working on a vehicle"
+            fill
+            priority
+            className="object-cover object-[65%_center]"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/20" />
+        </div>
+
+        {/* Desktop: video background */}
+        <div className="absolute inset-0 -z-20 hidden md:block">
           <video
             autoPlay
             muted
@@ -339,21 +321,21 @@ export function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-black/10" />
         </div>
 
-        <div className="shell relative flex min-h-[92vh] flex-col justify-center pt-24 pb-28 sm:pt-32 sm:pb-36">
-          <div className="max-w-3xl space-y-7">
+        <div className="shell relative flex min-h-[80vh] flex-col justify-center pt-20 pb-24 sm:min-h-[92vh] sm:pt-32 sm:pb-36">
+          <div className="max-w-3xl space-y-5 sm:space-y-7">
             <FadeIn>
               <Image
                 src="/wr-logo-full.png"
                 alt="WrenchReady Mobile"
                 width={180}
                 height={120}
-                className="mb-2 drop-shadow-2xl"
+                className="mb-1 w-[140px] drop-shadow-2xl sm:mb-2 sm:w-[180px]"
                 priority
               />
             </FadeIn>
 
             <FadeIn delay={0.1}>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white/90 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/90 backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-xs">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--wr-teal] opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-[--wr-teal]" />
@@ -365,28 +347,28 @@ export function HomePage() {
             <AnimatedHeading
               text="Mobile car repair that actually feels dependable."
               gradient
-              className="text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl"
+              className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl"
               delay={0.15}
             />
 
             <FadeIn delay={0.35}>
-              <p className="max-w-xl text-lg font-medium leading-snug text-white/80 sm:text-xl">
+              <p className="max-w-xl text-base font-medium leading-snug text-white/80 sm:text-xl">
                 Dead battery, brake noise, warning lights, or a car that will not start? We come to your home or office, give you a clear next step, and keep you updated from request to repair.
               </p>
             </FadeIn>
 
             <FadeIn delay={0.5}>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <button
                   onClick={scrollToBook}
-                  className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.02]"
+                  className="btn-shimmer inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 text-base font-semibold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.02] sm:py-4"
                 >
                   Get My Quote
                   <ArrowRight className="h-5 w-5" />
                 </button>
                 <a
                   href={siteConfig.contact.phoneHref}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-7 py-4 text-base font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:scale-[1.02]"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-7 py-3.5 text-base font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:scale-[1.02] sm:py-4"
                 >
                   <Phone className="h-5 w-5" />
                   {siteConfig.contact.phoneDisplay}
@@ -395,14 +377,14 @@ export function HomePage() {
             </FadeIn>
 
             <FadeIn delay={0.6}>
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-2">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 sm:gap-x-5 sm:pt-2">
                 {[
-                  { icon: <ClipboardCheck className="h-4 w-4" />, label: "Clear quotes" },
-                  { icon: <Camera className="h-4 w-4" />, label: "Photo reports" },
-                  { icon: <Shield className="h-4 w-4" />, label: "No surprise scope" },
-                  { icon: <Zap className="h-4 w-4" />, label: "Status updates" },
+                  { icon: <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Clear quotes" },
+                  { icon: <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Photo reports" },
+                  { icon: <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "No surprise scope" },
+                  { icon: <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Status updates" },
                 ].map((item) => (
-                  <span key={item.label} className="flex items-center gap-2 text-sm font-medium text-white/70">
+                  <span key={item.label} className="flex items-center gap-1.5 text-xs font-medium text-white/70 sm:gap-2 sm:text-sm">
                     <span className="text-[--wr-teal]">{item.icon}</span>
                     {item.label}
                   </span>
@@ -412,11 +394,11 @@ export function HomePage() {
           </div>
 
           <FadeIn delay={0.7}>
-            <div className="mt-10 flex flex-wrap items-center gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-2 sm:mt-10 sm:gap-3">
               {heroStats.map((stat) => (
-                <div key={stat.label} className="rounded-xl border border-white/10 bg-black/30 px-5 py-3 backdrop-blur-md">
-                  <span className="text-lg font-bold text-white">{stat.value}</span>
-                  <p className="text-[10px] uppercase tracking-wider text-white/50">{stat.label}</p>
+                <div key={stat.label} className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2 backdrop-blur-md sm:px-5 sm:py-3">
+                  <span className="text-base font-bold text-white sm:text-lg">{stat.value}</span>
+                  <p className="text-[9px] uppercase tracking-wider text-white/50 sm:text-[10px]">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -427,10 +409,10 @@ export function HomePage() {
       {/* ── TRUST STRIP ── */}
       <section className="relative border-y border-border">
         <div className="absolute inset-0 bg-gradient-to-r from-[--wr-blue]/3 via-[--wr-teal]/3 to-[--wr-gold]/3" />
-        <div className="shell relative py-5">
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+        <div className="relative overflow-hidden">
+          <div className="shell flex items-center gap-6 overflow-x-auto py-4 scrollbar-none sm:flex-wrap sm:justify-center sm:gap-x-8 sm:gap-y-3 sm:overflow-x-visible sm:py-5">
             {trustStrip.map((item) => (
-              <span key={item.text} className="flex items-center gap-2.5 text-sm font-medium text-muted-foreground">
+              <span key={item.text} className="flex shrink-0 items-center gap-2 text-xs font-medium text-muted-foreground sm:gap-2.5 sm:text-sm">
                 <span className="text-[--wr-teal]">{item.icon}</span>
                 {item.text}
               </span>
