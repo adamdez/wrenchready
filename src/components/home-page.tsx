@@ -5,10 +5,7 @@ import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
 import { SectionOrbs } from "@/components/motion/gradient-orbs";
 import { AnimatedHeading } from "@/components/motion/animated-text";
 import { homeFaqs, siteConfig } from "@/data/site";
-import {
-  SHOW_DEMO_TESTIMONIALS,
-  demoTestimonials,
-} from "@/data/demo-testimonials";
+import { demoTestimonials } from "@/data/demo-testimonials";
 import {
   Shield,
   Clock,
@@ -236,7 +233,7 @@ function IntakeForm() {
         <CheckCircle2 className="mx-auto h-12 w-12 text-[--wr-teal]" />
         <h3 className="mt-4 text-xl font-bold text-foreground">Request received.</h3>
         <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-          We will review the details and follow up with the right next step — usually within a few hours.
+          We will review the details and follow up with the right next step.
         </p>
       </motion.div>
     );
@@ -614,7 +611,6 @@ export function HomePage() {
       </section>
 
       {/* ── SOCIAL PROOF / TESTIMONIALS ── */}
-      {SHOW_DEMO_TESTIMONIALS && (
         <section id="reviews" className="relative border-y border-border">
           <SectionOrbs variant="gold" />
           <div className="shell section-space">
@@ -650,7 +646,6 @@ export function HomePage() {
             </Stagger>
           </div>
         </section>
-      )}
 
       {/* ── NO-START / BATTERY FEATURE ── */}
       <section className="relative overflow-hidden border-y border-border">
@@ -742,16 +737,11 @@ export function HomePage() {
                 <p className="mt-5 text-base leading-relaxed text-muted-foreground sm:text-lg">
                   We inspect the brakes, explain what is worn, and quote the work clearly before moving ahead. If the problem is not pads and rotors, we tell you what it looks like and what comes next.
                 </p>
-                <div className="mt-6 grid grid-cols-2 gap-4">
-                  {[
-                    { label: "Pads + Rotors", price: "From $280/axle" },
-                    { label: "Inspection", price: "From $145" },
-                  ].map((item) => (
-                    <div key={item.label} className="rounded-xl border border-border bg-card/50 p-4 backdrop-blur-sm">
-                      <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
-                      <p className="mt-1 text-lg font-bold text-[--wr-gold]">{item.price}</p>
-                    </div>
-                  ))}
+                <div className="mt-6">
+                  <div className="inline-block rounded-xl border border-border bg-card/50 p-4 backdrop-blur-sm">
+                    <span className="text-xs font-medium text-muted-foreground">Pads + Rotors</span>
+                    <p className="mt-1 text-lg font-bold text-[--wr-gold]">From $280/axle</p>
+                  </div>
                 </div>
                 <div className="mt-8">
                   <button
@@ -799,24 +789,6 @@ export function HomePage() {
               ))}
             </Stagger>
 
-            <FadeIn delay={0.4}>
-              <div className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-6 rounded-2xl border border-border bg-card/40 px-8 py-5 backdrop-blur-sm">
-                <div className="text-center">
-                  <span className="text-xs text-muted-foreground">Same-day</span>
-                  <p className="text-lg font-bold text-foreground">+$35</p>
-                </div>
-                <div className="h-8 w-px bg-border" />
-                <div className="text-center">
-                  <span className="text-xs text-muted-foreground">After-hours / Weekend</span>
-                  <p className="text-lg font-bold text-foreground">+$75</p>
-                </div>
-                <div className="h-8 w-px bg-border" />
-                <div className="text-center">
-                  <span className="text-xs text-muted-foreground">Travel within 15 mi</span>
-                  <p className="text-lg font-bold text-[--wr-teal]">Free</p>
-                </div>
-              </div>
-            </FadeIn>
           </div>
         </div>
       </section>
@@ -907,7 +879,7 @@ export function HomePage() {
                 <div className="mt-8 space-y-4">
                   {[
                     { icon: <ClipboardCheck />, text: "Every request is reviewed before an appointment is confirmed" },
-                    { icon: <Zap />, text: "We follow up as soon as the request is reviewed — usually within a few hours" },
+                    { icon: <Zap />, text: "We follow up as soon as the request is reviewed" },
                     { icon: <Shield />, text: "Licensed, insured, and fully transparent. Price and scope explained before you commit." },
                   ].map((item) => (
                     <div key={item.text} className="flex items-start gap-3">

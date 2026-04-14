@@ -55,7 +55,7 @@ export const siteConfig = {
     phoneDisplay: "(509) 309-0617",
     phoneHref: "tel:+15093090617",
     smsHref: "sms:+15093090617",
-    schedule: "Weeknight and Saturday appointments by request",
+    schedule: "Spokane County mobile service",
   },
   globalKeywords: [
     "mobile mechanic Spokane WA",
@@ -227,7 +227,7 @@ export const homeFaqs: Faq[] = [
   {
     question: "How quickly can I get an appointment?",
     answer:
-      "Usually within a few days. Battery and no-start emergencies sometimes sooner. Send us your vehicle, what you need, parking notes, and your preferred day.",
+      "Send us your vehicle, what you need, parking notes, and your preferred day. We will follow up with availability.",
   },
   {
     question: "Is WrenchReady Mobile licensed and insured?",
