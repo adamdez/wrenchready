@@ -32,8 +32,11 @@ Current status:
 - partly built in the Promise CRM through `reviewRequest` inside closeout
 - review ask wording and queue actions are now built in the operator playbooks and follow-through queue
 - generated review ask drafts are now live on promise detail
-- outbound queue plus webhook-backed send request is now live
-- still needs deeper completion tracking after delivery
+- outbound queue plus send request is now live
+- direct email transport is now wired through Resend when configured
+- delivered/responded/converted/failed result tracking is now live on the promise record and outbound queue
+- transport policy is now live, so text outbound is honestly held until compliance/transport are truly ready and email can now be first-party instead of webhook-only
+- still needs deeper production-channel automation and weekly review discipline
 
 ### 2. Follow-Up and Retention System
 
@@ -59,7 +62,10 @@ Current status:
 - lane-aware queue progression now lets review, reminder, deferred-work, and open-closeout work advance in sequence
 - generated recap and reminder drafts are now live on promise detail
 - outbound queue now lets recap and reminder drafts become owned send work
-- still needs deeper automation and cleaner measurement
+- outbound results are now measurable through delivered/responded/converted history and recent activity
+- weekly recapture scorecard is now live as an operator surface
+- weekly recapture now also measures deposit collection, callback resolution, and recurring-account progression
+- still needs deeper automation and cleaner weekly measurement
 
 ### 3. Dispatcher Decision Framework
 
@@ -147,7 +153,8 @@ Why it matters:
 
 Current status:
 - now built inside the operator playbooks
-- still needs real send automation and measurement
+- outbound request plus result tracking is now live
+- still needs real production-channel send automation and measurement habit
 
 ### 5B. Reminder Seed Plays
 
@@ -166,6 +173,7 @@ Why it matters:
 
 Current status:
 - now built inside the operator playbooks
+- outbound request plus result tracking is now live
 - still needs recurring send automation
 
 ### 6. Real Proof Asset Library
@@ -188,7 +196,29 @@ Why it matters:
 
 Current status:
 - structurally built into closeout through booking reason, promise that mattered most, customer relief quote, and proof assets
+- proof discipline page is now live and scoring proof gaps on completed visits
 - should be treated as an operating process, not just a marketing wish
+
+### 6A. Deposit and modern payment surface
+
+This is now part of the active operating spine, not a later website extra.
+
+Why it matters:
+- deposits make the promise financially real
+- modern wallets reduce friction on mobile
+- approval should be able to become payment without a manual side process
+
+Current status:
+- Stripe is now the chosen payment rail in code
+- customer status now has a deposit checkout card
+- customer status now also has a remaining-balance checkout card
+- Stripe checkout session creation is now wired off the promise record
+- Stripe webhook capture is now wired back into the same promise record for both deposit and remaining-balance completion
+- Stripe test-mode keys and webhook are now live on the deployed app
+- duplicate deposit sessions are now blocked once a deposit is collected
+- duplicate Stripe completion events now resolve as duplicates instead of double-counting the payment
+- collections queue now has inline actions for status, method, invoice reference, write-off reason, and notes
+- still needs live-mode Stripe keys before real customer charges should go through
 
 ### 7. Fleet / B2B Starter Offer
 
@@ -207,8 +237,8 @@ Why it matters:
 - makes the business look more established
 
 Current status:
-- still relevant
-- likely a parallel business-development lane rather than the very next product build
+- now live as a starter lane in ops with one offer, one opener, one follow-up, and live candidate detection
+- still needs real outreach habit and account wins
 
 ### 8. Weekly Operator Dashboard
 
@@ -237,10 +267,35 @@ Current status:
 
 If only a few things get layered on top of the current spine next, do them in this order:
 
-1. Review capture system
-2. Follow-up and retention system
-3. Real proof asset collection
+1. Production outbound transport for recap, review, and reminder
+2. Weekly recapture scorecard with real result tracking
+3. Real proof asset collection and closeout proof discipline
 4. Fleet outreach starter pack
+
+### What is now added on top of that
+
+- weekly operating cadence so the why, the standard, and the first actions stay explicit
+- systems readiness so the team can see what is live, what is held, and what likely needs vendor purchase or provisioning next
+- job-stage truth so promise-board buckets and actual execution phase do not get conflated
+- field-execution packets, collections, warranty/comeback, and recurring-account health as live operating surfaces
+
+### Why this is the current top 4
+
+These are the best next moves because the app spine is now strong enough to:
+
+- generate and track outbound
+- store proof and closeout
+- measure next-step conversion
+
+So the next compounding gains come from:
+
+- getting the messages out through the right channels
+- reviewing the result states every week
+- collecting proof that makes the site and sales story stronger
+- adding one narrow recurring-account lane instead of waiting for a perfect future version
+
+These four layers are now built in structure.
+What remains is depth, habit, and channel execution.
 
 ## Bottom Line
 

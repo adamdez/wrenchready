@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, BarChart3 } from "lucide-react";
 import {
   getCloseoutRecaptureSnapshot,
   getMarketingOfferPerformance,
+  getOutboundQueueSnapshot,
   getPromiseEconomicsRollup,
 } from "@/lib/promise-crm/server";
 import type { MarketingOfferPerformance } from "@/lib/promise-crm/types";
@@ -80,10 +81,11 @@ function getOfferActionDetail(offer: MarketingOfferPerformance) {
 }
 
 export default async function OfferPerformancePage() {
-  const [offers, economics, closeout] = await Promise.all([
+  const [offers, economics, closeout, outbound] = await Promise.all([
     getMarketingOfferPerformance(),
     getPromiseEconomicsRollup(),
     getCloseoutRecaptureSnapshot(),
+    getOutboundQueueSnapshot(),
   ]);
   const topNetProfitOffer = offers[0];
   const topDemandOffer = [...offers].sort((a, b) => b.inboundCount - a.inboundCount)[0];
@@ -306,6 +308,20 @@ export default async function OfferPerformancePage() {
             </p>
             <p className="mt-2 text-2xl font-bold text-foreground">{closeout.proofCaptured}</p>
             <p className="mt-1 text-sm text-muted-foreground">Completed visits with usable trust assets logged.</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Outbound delivered
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{outbound.summary.deliveredToday}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Outbound touches handed off successfully so far.</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Outbound converted
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{outbound.summary.converted}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Touches that already turned into real response or next revenue.</p>
           </div>
         </div>
       </section>

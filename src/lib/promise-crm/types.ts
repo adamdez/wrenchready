@@ -40,6 +40,18 @@ export type PromiseDayReadiness = {
   paymentMethodReady: boolean;
 };
 
+export type PromiseJobStage =
+  | "triage-needed"
+  | "quoted"
+  | "scheduled"
+  | "confirmed"
+  | "en-route"
+  | "on-site"
+  | "waiting-approval"
+  | "completed"
+  | "collected"
+  | "warranty-issue";
+
 export type CustomerApprovalStatus =
   | "not-needed"
   | "awaiting-approval"
@@ -146,12 +158,17 @@ export type PromiseCustomerRecap = {
 };
 
 export type PromiseProofAssetKind = "photo" | "testimonial" | "recap" | "review";
+export type PromiseProofPermissionStatus =
+  | "unknown"
+  | "internal-only"
+  | "customer-approved";
 
 export type PromiseProofAsset = {
   kind: PromiseProofAssetKind;
   label: string;
   url?: string;
   note?: string;
+  permissionStatus?: PromiseProofPermissionStatus;
 };
 
 export type PromiseProofCapture = {
@@ -160,6 +177,87 @@ export type PromiseProofCapture = {
   customerReliefQuote?: string;
   proofNotes?: string;
   assets: PromiseProofAsset[];
+};
+
+export type PromiseFieldExecutionPacket = {
+  serviceGoal?: string;
+  partsChecklist: string[];
+  photosRequired: string[];
+  inspectionChecklist: string[];
+  notesTemplate?: string;
+  upsellFocus: string[];
+  closeoutSteps: string[];
+};
+
+export type PromisePaymentMethod =
+  | "not-set"
+  | "card"
+  | "apple-pay"
+  | "google-pay"
+  | "cash-app-pay"
+  | "paypal"
+  | "venmo"
+  | "link"
+  | "invoice"
+  | "cash"
+  | "bnpl"
+  | "other";
+
+export type PromisePaymentCollectionStatus =
+  | "not-requested"
+  | "deposit-requested"
+  | "awaiting-payment"
+  | "partial"
+  | "paid"
+  | "written-off";
+
+export type PromisePaymentCollection = {
+  status: PromisePaymentCollectionStatus;
+  method?: PromisePaymentMethod;
+  processor?: "stripe" | "paypal" | "manual";
+  depositRequestedAmount?: number;
+  depositRequestedAt?: string;
+  depositSessionId?: string;
+  depositCheckoutUrl?: string;
+  depositPaidAt?: string;
+  balanceRequestedAt?: string;
+  balanceSessionId?: string;
+  balanceCheckoutUrl?: string;
+  balancePaidAt?: string;
+  lastPaymentReference?: string;
+  amountCollected?: number;
+  balanceDueAmount?: number;
+  collectedAt?: string;
+  invoiceReference?: string;
+  writeOffReason?: string;
+  paymentSummary?: string;
+};
+
+export type PromiseWarrantyCaseStatus = "none" | "monitoring" | "open" | "resolved";
+
+export type PromiseWarrantyCase = {
+  status: PromiseWarrantyCaseStatus;
+  issueSummary?: string;
+  callbackDueAt?: string;
+  resolutionSummary?: string;
+};
+
+export type PromiseRecurringAccountStatus =
+  | "not-account"
+  | "lead"
+  | "pitched"
+  | "trial-active"
+  | "active"
+  | "at-risk";
+
+export type PromiseRecurringAccount = {
+  status: PromiseRecurringAccountStatus;
+  accountName?: string;
+  vehicleCount?: number;
+  cadenceLabel?: string;
+  billingTerms?: string;
+  nextTouchDueAt?: string;
+  summary?: string;
 };
 
 export type PromiseCloseout = {
@@ -267,13 +365,19 @@ export type PromiseRecord = {
   nextAction: string;
   topRisks: string[];
   notes: string[];
+  jobStage: PromiseJobStage;
   customerCertainty: PromiseCustomerCertainty;
   dayReadiness: PromiseDayReadiness;
+  fieldExecution?: PromiseFieldExecutionPacket;
+  paymentCollection?: PromisePaymentCollection;
+  warrantyCase?: PromiseWarrantyCase;
+  recurringAccount?: PromiseRecurringAccount;
   customerAccess: PromiseCustomerAccess;
   customerApproval: PromiseCustomerApproval;
   economics?: PromiseEconomicsSnapshot;
   commercialOutcome?: PromiseCommercialOutcome;
   closeout?: PromiseCloseout;
+  outboundHistory?: PromiseOutboundEvent[];
   followThroughDueAt?: string;
   followThroughResolution?: PromiseFollowThroughResolution;
   followThroughHistory?: PromiseFollowThroughResolution[];
@@ -284,6 +388,79 @@ export type PromiseBoardMetrics = {
   promisesWaiting: number;
   tomorrowAtRisk: number;
   followThroughDue: number;
+};
+
+export type FieldExecutionTask = {
+  promiseId: string;
+  customerName: string;
+  owner: RecordOwner;
+  territory: string;
+  serviceScope: string;
+  scheduledWindowLabel: string;
+  jobStage: PromiseJobStage;
+  missingPartsChecklist: boolean;
+  missingPhotosChecklist: boolean;
+  missingInspectionChecklist: boolean;
+  nextStep: string;
+};
+
+export type FieldExecutionSnapshot = {
+  generatedAt: string;
+  total: number;
+  needsPacket: number;
+  confirmedToday: number;
+  onSiteNow: number;
+  tasks: FieldExecutionTask[];
+};
+
+export type CollectionTask = {
+  promiseId: string;
+  customerName: string;
+  owner: RecordOwner;
+  territory: string;
+  serviceScope: string;
+  status: PromisePaymentCollectionStatus;
+  method?: PromisePaymentMethod;
+  amountCollected?: number;
+  balanceDueAmount?: number;
+  depositRequestedAmount?: number;
+  invoiceReference?: string;
+  writeOffReason?: string;
+  balanceCheckoutReady: boolean;
+  collectionPriority: "high" | "medium" | "low";
+  nextStep: string;
+};
+
+export type CollectionSnapshot = {
+  generatedAt: string;
+  totalOpen: number;
+  awaitingPayment: number;
+  partial: number;
+  paid: number;
+  writtenOff: number;
+  totalBalanceOpen: number;
+  readyForBalanceCheckout: number;
+  tasks: CollectionTask[];
+};
+
+export type WarrantyTask = {
+  promiseId: string;
+  customerName: string;
+  owner: RecordOwner;
+  territory: string;
+  serviceScope: string;
+  status: PromiseWarrantyCaseStatus;
+  issueSummary?: string;
+  callbackDueAt?: string;
+  nextStep: string;
+};
+
+export type WarrantySnapshot = {
+  generatedAt: string;
+  open: number;
+  monitoring: number;
+  resolved: number;
+  tasks: WarrantyTask[];
 };
 
 export type PromiseEconomicsRollup = {
@@ -435,6 +612,39 @@ export type PromiseOutboundSnapshot = {
 };
 
 export type PromiseOutboundChannel = "review-ask" | "maintenance-reminder" | "closeout-recap";
+export type OutboundTransportMode = "webhook" | "direct-email" | "held";
+
+export type OutboundTransportPolicy = {
+  mode: OutboundTransportMode;
+  enabled: boolean;
+  reason: string;
+  destinationLabel: string;
+  nextStep: string;
+};
+
+export type PromiseOutboundEventStatus =
+  | "delivered"
+  | "responded"
+  | "converted"
+  | "failed";
+
+export type PromiseOutboundConversionType =
+  | "review-left"
+  | "next-visit-requested"
+  | "scheduled-next-visit"
+  | "other";
+
+export type PromiseOutboundEvent = {
+  id: string;
+  recordedAt: string;
+  channelType: PromiseOutboundChannel;
+  status: PromiseOutboundEventStatus;
+  channel: "email" | "text";
+  headline: string;
+  summary?: string;
+  actor: RecordOwner | "System";
+  conversionType?: PromiseOutboundConversionType;
+};
 
 export type OutboundQueueItem = {
   promiseId: string;
@@ -453,6 +663,7 @@ export type OutboundQueueItem = {
   reviewStatus?: ReviewRequestStatus;
   reminderStatus?: MaintenanceReminderStatus;
   recapStatus?: PromiseCustomerRecapStatus;
+  transport: OutboundTransportPolicy;
 };
 
 export type OutboundQueueSnapshot = {
@@ -461,10 +672,157 @@ export type OutboundQueueSnapshot = {
     total: number;
     sendReady: number;
     draftOnly: number;
+    held: number;
     recapReady: number;
     reviewReady: number;
     reminderReady: number;
-    sentToday: number;
+    deliveredToday: number;
+    responded: number;
+    converted: number;
+    failed: number;
   };
   items: OutboundQueueItem[];
+  recentActivity: Array<
+    PromiseOutboundEvent & {
+      promiseId: string;
+      customerName: string;
+      serviceScope: string;
+      owner: RecordOwner;
+    }
+  >;
+};
+
+export type WeeklyRecaptureScorecard = {
+  generatedAt: string;
+  windowLabel: string;
+  metrics: {
+    completedVisits: number;
+    closeoutsDone: number;
+    closeoutRate: number;
+    proofReady: number;
+    reviewReady: number;
+    reviewCompleted: number;
+    recapsSent: number;
+    recapResponses: number;
+    reminderSeeded: number;
+    reminderConversions: number;
+    nextVisitCaptured: number;
+    nextVisitConversions: number;
+    netProfitInView: number;
+    depositsRequested: number;
+    depositsCollected: number;
+    collectionRate: number;
+    balanceOpen: number;
+    callbackOpen: number;
+    callbackResolved: number;
+    callbackRate: number;
+    recurringLeads: number;
+    recurringTrialActive: number;
+    recurringActive: number;
+    recurringAtRisk: number;
+  };
+  priorities: Array<{
+    title: string;
+    detail: string;
+    tone: "focus" | "risk" | "growth" | "trust";
+  }>;
+};
+
+export type ProofDisciplineTask = {
+  promiseId: string;
+  customerName: string;
+  owner: RecordOwner;
+  serviceScope: string;
+  territory: string;
+  proofScore: number;
+  needsPermission: boolean;
+  approvedAssets: number;
+  blockers: string[];
+  nextStep: string;
+};
+
+export type ProofDisciplineSnapshot = {
+  generatedAt: string;
+  summary: {
+    completedVisits: number;
+    proofReady: number;
+    proofWeak: number;
+    permissionSafeAssets: number;
+  };
+  tasks: ProofDisciplineTask[];
+};
+
+export type RecurringAccountStarterCandidate = {
+  sourceType: "inbound" | "promise";
+  sourceId: string;
+  customerName: string;
+  owner: RecordOwner;
+  lane: string;
+  territory: string;
+  whyThisFits: string;
+  nextStep: string;
+};
+
+export type RecurringAccountStarterSnapshot = {
+  generatedAt: string;
+  starterOffer: {
+    title: string;
+    summary: string;
+    bestTargets: string[];
+    promise: string[];
+  };
+  outreachScripts: {
+    opener: string;
+    followUp: string;
+    landingPageHeadline: string;
+  };
+  candidates: RecurringAccountStarterCandidate[];
+  activeAccounts?: PromiseRecurringAccount[];
+};
+
+export type OperatingCadenceAction = {
+  title: string;
+  detail: string;
+  owner: RecordOwner | "Ops";
+  href: string;
+  tone: "promise" | "trust" | "growth" | "system";
+};
+
+export type WeeklyOperatingCadenceSnapshot = {
+  generatedAt: string;
+  companyGoal: string;
+  buildGoal: string;
+  why: string;
+  standard: string[];
+  metrics: {
+    closeoutRate: number;
+    outboundSendReady: number;
+    balancesOpen: number;
+    callbackOpen: number;
+    proofWeak: number;
+    recurringCandidates: number;
+  };
+  immediateActions: OperatingCadenceAction[];
+};
+
+export type SystemNeedStatus = "ready" | "configure-now" | "buy-or-provision" | "held";
+export type SystemNeedPriority = "now" | "soon" | "later";
+
+export type SystemReadinessItem = {
+  name: string;
+  status: SystemNeedStatus;
+  priority: SystemNeedPriority;
+  summary: string;
+  whyItMatters: string;
+  nextStep: string;
+  accessNeed: "none" | "config" | "purchase";
+};
+
+export type SystemsReadinessSnapshot = {
+  generatedAt: string;
+  companyGoal: string;
+  buildGoal: string;
+  systems: SystemReadinessItem[];
+  needsNow: SystemReadinessItem[];
+  needsSoon: SystemReadinessItem[];
 };

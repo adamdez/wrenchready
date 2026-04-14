@@ -7,6 +7,8 @@ import { computePromiseEconomics } from "@/lib/promise-crm/economics";
 import type {
   CommercialOutcomeStatus,
   CustomerApprovalStatus,
+  PromiseJobStage,
+  PromisePaymentMethod,
   PromiseProofAsset,
   PromiseRecapItem,
   PromiseRecord,
@@ -18,6 +20,17 @@ type PromiseStatusFormProps = {
 
 function formatRiskList(value: string[]) {
   return value.join("\n");
+}
+
+function formatList(value: string[] = []) {
+  return value.join("\n");
+}
+
+function parseList(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 function formatRecapItems(value: PromiseRecapItem[] = []) {
@@ -56,7 +69,15 @@ function parseRecapItems(value: string): PromiseRecapItem[] {
 function formatProofAssets(value: PromiseProofAsset[] = []) {
   return value
     .map((item) =>
-      [item.kind, item.label, item.note || "", item.url || ""].filter(Boolean).join(" | "),
+      [
+        item.kind,
+        item.label,
+        item.note || "",
+        item.url || "",
+        item.permissionStatus || "",
+      ]
+        .filter(Boolean)
+        .join(" | "),
     )
     .join("\n");
 }
@@ -67,7 +88,7 @@ function parseProofAssets(value: string): PromiseProofAsset[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [kindPart = "", labelPart = "", notePart = "", urlPart = ""] = line
+      const [kindPart = "", labelPart = "", notePart = "", urlPart = "", permissionPart = ""] = line
         .split("|")
         .map((entry) => entry.trim());
       const kind: PromiseProofAsset["kind"] =
@@ -83,6 +104,12 @@ function parseProofAssets(value: string): PromiseProofAsset[] {
         label: labelPart,
         note: notePart || undefined,
         url: urlPart || undefined,
+        permissionStatus:
+          permissionPart === "customer-approved" ||
+          permissionPart === "internal-only" ||
+          permissionPart === "unknown"
+            ? (permissionPart as PromiseProofAsset["permissionStatus"])
+            : undefined,
       };
     })
     .filter((item) => item.label);
@@ -94,6 +121,7 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
   const [statusValue, setStatusValue] = useState<
     "promises-waiting" | "tomorrow-at-risk" | "follow-through-due" | "completed"
   >(promise.status);
+  const [jobStage, setJobStage] = useState<PromiseJobStage>(promise.jobStage);
   const [readinessRisk, setReadinessRisk] = useState<"low" | "medium" | "high">(
     promise.readinessRisk,
   );
@@ -280,6 +308,79 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
   const [paymentMethodReady, setPaymentMethodReady] = useState(
     promise.dayReadiness.paymentMethodReady,
   );
+  const [serviceGoal, setServiceGoal] = useState(promise.fieldExecution?.serviceGoal || "");
+  const [partsChecklist, setPartsChecklist] = useState(
+    formatList(promise.fieldExecution?.partsChecklist),
+  );
+  const [photosRequired, setPhotosRequired] = useState(
+    formatList(promise.fieldExecution?.photosRequired),
+  );
+  const [inspectionChecklist, setInspectionChecklist] = useState(
+    formatList(promise.fieldExecution?.inspectionChecklist),
+  );
+  const [notesTemplate, setNotesTemplate] = useState(
+    promise.fieldExecution?.notesTemplate || "",
+  );
+  const [upsellFocus, setUpsellFocus] = useState(
+    formatList(promise.fieldExecution?.upsellFocus),
+  );
+  const [closeoutSteps, setCloseoutSteps] = useState(
+    formatList(promise.fieldExecution?.closeoutSteps),
+  );
+  const [paymentCollectionStatus, setPaymentCollectionStatus] = useState<
+    "not-requested" | "deposit-requested" | "awaiting-payment" | "partial" | "paid" | "written-off"
+  >(promise.paymentCollection?.status || "not-requested");
+  const [paymentMethod, setPaymentMethod] = useState<PromisePaymentMethod>(
+    promise.paymentCollection?.method || "not-set",
+  );
+  const [depositRequestedAmount, setDepositRequestedAmount] = useState(
+    promise.paymentCollection?.depositRequestedAmount?.toString() || "",
+  );
+  const [amountCollected, setAmountCollected] = useState(
+    promise.paymentCollection?.amountCollected?.toString() || "",
+  );
+  const [balanceDueAmount, setBalanceDueAmount] = useState(
+    promise.paymentCollection?.balanceDueAmount?.toString() || "",
+  );
+  const [collectedAt, setCollectedAt] = useState(
+    promise.paymentCollection?.collectedAt || "",
+  );
+  const [paymentSummary, setPaymentSummary] = useState(
+    promise.paymentCollection?.paymentSummary || "",
+  );
+  const [warrantyStatus, setWarrantyStatus] = useState<
+    "none" | "monitoring" | "open" | "resolved"
+  >(promise.warrantyCase?.status || "none");
+  const [warrantyIssueSummary, setWarrantyIssueSummary] = useState(
+    promise.warrantyCase?.issueSummary || "",
+  );
+  const [warrantyCallbackDueAt, setWarrantyCallbackDueAt] = useState(
+    promise.warrantyCase?.callbackDueAt || "",
+  );
+  const [warrantyResolutionSummary, setWarrantyResolutionSummary] = useState(
+    promise.warrantyCase?.resolutionSummary || "",
+  );
+  const [recurringAccountStatus, setRecurringAccountStatus] = useState<
+    "not-account" | "lead" | "pitched" | "trial-active" | "active" | "at-risk"
+  >(promise.recurringAccount?.status || "not-account");
+  const [accountName, setAccountName] = useState(
+    promise.recurringAccount?.accountName || "",
+  );
+  const [vehicleCount, setVehicleCount] = useState(
+    promise.recurringAccount?.vehicleCount?.toString() || "",
+  );
+  const [cadenceLabel, setCadenceLabel] = useState(
+    promise.recurringAccount?.cadenceLabel || "",
+  );
+  const [billingTerms, setBillingTerms] = useState(
+    promise.recurringAccount?.billingTerms || "",
+  );
+  const [nextTouchDueAt, setNextTouchDueAt] = useState(
+    promise.recurringAccount?.nextTouchDueAt || "",
+  );
+  const [recurringSummary, setRecurringSummary] = useState(
+    promise.recurringAccount?.summary || "",
+  );
   const [noteToAdd, setNoteToAdd] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -317,6 +418,7 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
         body: JSON.stringify({
           owner,
           status: statusValue,
+          jobStage,
           readinessRisk,
           scheduledWindowLabel,
           readinessSummary,
@@ -412,6 +514,39 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
             routeLocked,
             paymentMethodReady,
           },
+          fieldExecution: {
+            serviceGoal: serviceGoal.trim() || undefined,
+            partsChecklist: parseList(partsChecklist),
+            photosRequired: parseList(photosRequired),
+            inspectionChecklist: parseList(inspectionChecklist),
+            notesTemplate: notesTemplate.trim() || undefined,
+            upsellFocus: parseList(upsellFocus),
+            closeoutSteps: parseList(closeoutSteps),
+          },
+          paymentCollection: {
+            status: paymentCollectionStatus,
+            method: paymentMethod === "not-set" ? undefined : paymentMethod,
+            depositRequestedAmount: toOptionalNumber(depositRequestedAmount),
+            amountCollected: toOptionalNumber(amountCollected),
+            balanceDueAmount: toOptionalNumber(balanceDueAmount),
+            collectedAt: collectedAt.trim() || undefined,
+            paymentSummary: paymentSummary.trim() || undefined,
+          },
+          warrantyCase: {
+            status: warrantyStatus,
+            issueSummary: warrantyIssueSummary.trim() || undefined,
+            callbackDueAt: warrantyCallbackDueAt.trim() || undefined,
+            resolutionSummary: warrantyResolutionSummary.trim() || undefined,
+          },
+          recurringAccount: {
+            status: recurringAccountStatus,
+            accountName: accountName.trim() || undefined,
+            vehicleCount: toOptionalNumber(vehicleCount),
+            cadenceLabel: cadenceLabel.trim() || undefined,
+            billingTerms: billingTerms.trim() || undefined,
+            nextTouchDueAt: nextTouchDueAt.trim() || undefined,
+            summary: recurringSummary.trim() || undefined,
+          },
           noteToAdd: noteToAdd.trim() || undefined,
         }),
       });
@@ -485,6 +620,28 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
             <option value="tomorrow-at-risk">Tomorrow at risk</option>
             <option value="follow-through-due">Follow-through due</option>
             <option value="completed">Completed</option>
+          </select>
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+            Job stage
+          </span>
+          <select
+            className="form-input"
+            onChange={(event) => setJobStage(event.target.value as PromiseJobStage)}
+            value={jobStage}
+          >
+            <option value="triage-needed">Triage needed</option>
+            <option value="quoted">Quoted</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="en-route">En route</option>
+            <option value="on-site">On site</option>
+            <option value="waiting-approval">Waiting approval</option>
+            <option value="completed">Completed</option>
+            <option value="collected">Collected</option>
+            <option value="warranty-issue">Warranty issue</option>
           </select>
         </label>
 
@@ -1036,7 +1193,7 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
               <textarea
                 className="form-textarea"
                 onChange={(event) => setProofAssets(event.target.value)}
-                placeholder="photo | Brake pads before and after | Customer approved sharing | https://..."
+                placeholder="photo | Brake pads before and after | Customer approved sharing | https://... | customer-approved"
                 value={proofAssets}
               />
             </label>
@@ -1195,6 +1352,406 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
                 <span>{label as string}</span>
               </label>
             ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-background/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+            Field execution packet
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Give the tech one clean packet instead of scattered texts. Use one line per checklist item.
+          </p>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Service goal
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setServiceGoal(event.target.value)}
+                placeholder="What must be true by the time this visit is done?"
+                value={serviceGoal}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Parts checklist
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setPartsChecklist(event.target.value)}
+                placeholder="Battery group size 35&#10;Starter core check&#10;Brake pads + rotors"
+                value={partsChecklist}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Photos required
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setPhotosRequired(event.target.value)}
+                placeholder="VIN&#10;Before condition&#10;Completed repair"
+                value={photosRequired}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Inspection checklist
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setInspectionChecklist(event.target.value)}
+                placeholder="Charging system check&#10;Rear brakes visual&#10;Fluid level check"
+                value={inspectionChecklist}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Honest add-on focus
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setUpsellFocus(event.target.value)}
+                placeholder="Charging system retest&#10;Rear brake status&#10;Cabin air filter"
+                value={upsellFocus}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Notes template
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setNotesTemplate(event.target.value)}
+                placeholder="Complaint / findings / work performed / next recommendation"
+                value={notesTemplate}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Closeout steps
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setCloseoutSteps(event.target.value)}
+                placeholder="Collect payment&#10;Ask for review&#10;Seed next visit"
+                value={closeoutSteps}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-background/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+            Payment and collection
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A job is not truly done if the money surface is vague. Record deposit, balance, method, and collection truth.
+          </p>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Collection status
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) =>
+                  setPaymentCollectionStatus(
+                    event.target.value as
+                      | "not-requested"
+                      | "deposit-requested"
+                      | "awaiting-payment"
+                      | "partial"
+                      | "paid"
+                      | "written-off",
+                  )
+                }
+                value={paymentCollectionStatus}
+              >
+                <option value="not-requested">Not requested</option>
+                <option value="deposit-requested">Deposit requested</option>
+                <option value="awaiting-payment">Awaiting payment</option>
+                <option value="partial">Partial</option>
+                <option value="paid">Paid</option>
+                <option value="written-off">Written off</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Payment method
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) => setPaymentMethod(event.target.value as PromisePaymentMethod)}
+                value={paymentMethod}
+              >
+                <option value="not-set">Not set</option>
+                <option value="card">Card</option>
+                <option value="apple-pay">Apple Pay</option>
+                <option value="google-pay">Google Pay</option>
+                <option value="cash-app-pay">Cash App Pay</option>
+                <option value="paypal">PayPal</option>
+                <option value="venmo">Venmo</option>
+                <option value="link">Link</option>
+                <option value="invoice">Invoice</option>
+                <option value="cash">Cash</option>
+                <option value="bnpl">BNPL</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Deposit requested
+              </span>
+              <input
+                className="form-input"
+                inputMode="decimal"
+                onChange={(event) => setDepositRequestedAmount(event.target.value)}
+                placeholder="0.00"
+                value={depositRequestedAmount}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Amount collected
+              </span>
+              <input
+                className="form-input"
+                inputMode="decimal"
+                onChange={(event) => setAmountCollected(event.target.value)}
+                placeholder="0.00"
+                value={amountCollected}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Balance due
+              </span>
+              <input
+                className="form-input"
+                inputMode="decimal"
+                onChange={(event) => setBalanceDueAmount(event.target.value)}
+                placeholder="0.00"
+                value={balanceDueAmount}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Collected at
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setCollectedAt(event.target.value)}
+                placeholder="2026-04-13T16:10:00-07:00"
+                value={collectedAt}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Payment summary
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setPaymentSummary(event.target.value)}
+                placeholder="Saved card paid in driveway / invoice sent to office manager / waiting for deposit"
+                value={paymentSummary}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-background/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+            Warranty or comeback
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Own issues early. A comeback is a trust event before it is a margin event.
+          </p>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Warranty status
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) =>
+                  setWarrantyStatus(
+                    event.target.value as "none" | "monitoring" | "open" | "resolved",
+                  )
+                }
+                value={warrantyStatus}
+              >
+                <option value="none">None</option>
+                <option value="monitoring">Monitoring</option>
+                <option value="open">Open</option>
+                <option value="resolved">Resolved</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Callback due
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setWarrantyCallbackDueAt(event.target.value)}
+                placeholder="2026-04-15T09:00:00-07:00"
+                value={warrantyCallbackDueAt}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Issue summary
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setWarrantyIssueSummary(event.target.value)}
+                placeholder="What broke trust or what needs to be checked?"
+                value={warrantyIssueSummary}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Resolution summary
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setWarrantyResolutionSummary(event.target.value)}
+                placeholder="What is the fix, owner, and communication plan?"
+                value={warrantyResolutionSummary}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-background/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+            Recurring account health
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Track whether this promise belongs to a repeatable account lane, not just a one-off job.
+          </p>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Account status
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) =>
+                  setRecurringAccountStatus(
+                    event.target.value as
+                      | "not-account"
+                      | "lead"
+                      | "pitched"
+                      | "trial-active"
+                      | "active"
+                      | "at-risk",
+                  )
+                }
+                value={recurringAccountStatus}
+              >
+                <option value="not-account">Not account work</option>
+                <option value="lead">Lead</option>
+                <option value="pitched">Pitched</option>
+                <option value="trial-active">Trial active</option>
+                <option value="active">Active</option>
+                <option value="at-risk">At risk</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Account name
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setAccountName(event.target.value)}
+                placeholder="Contractor fleet / church vehicles / property manager"
+                value={accountName}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Vehicle count
+              </span>
+              <input
+                className="form-input"
+                inputMode="numeric"
+                onChange={(event) => setVehicleCount(event.target.value)}
+                placeholder="3"
+                value={vehicleCount}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Cadence
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setCadenceLabel(event.target.value)}
+                placeholder="Monthly PM / quarterly inspections"
+                value={cadenceLabel}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Billing terms
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setBillingTerms(event.target.value)}
+                placeholder="Card on file / Net 15 / same-day invoice"
+                value={billingTerms}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Next touch due
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setNextTouchDueAt(event.target.value)}
+                placeholder="2026-04-18T09:00:00-07:00"
+                value={nextTouchDueAt}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Account summary
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setRecurringSummary(event.target.value)}
+                placeholder="Why this account matters, who approves work, and what we need next."
+                value={recurringSummary}
+              />
+            </label>
           </div>
         </div>
 

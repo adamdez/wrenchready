@@ -6,6 +6,7 @@ import {
   mergePromiseNotesWithCloseout,
 } from "@/lib/promise-crm/closeout-recapture";
 import { getPromiseOutboundSnapshot } from "@/lib/promise-crm/outbound-drafts";
+import { getOutboundTransportPolicy } from "@/lib/promise-crm/outbound-transport";
 import {
   extractCommercialOutcome,
   isConvertedWork,
@@ -23,6 +24,11 @@ import {
   normalizePromiseCustomerApproval,
 } from "@/lib/promise-crm/customer-access";
 import {
+  appendOutboundEvent,
+  extractPromiseOutboundHistory,
+  mergePromiseNotesWithOutboundHistory,
+} from "@/lib/promise-crm/outbound-history";
+import {
   extractFollowThroughResolution,
   getLatestFollowThroughResolution,
   mergeFollowThroughResolutionHistory,
@@ -36,6 +42,17 @@ import {
   normalizePromiseEconomics,
 } from "@/lib/promise-crm/economics";
 import {
+  extractPromiseExecutionOps,
+  getExecutionPacketCompleteness,
+  mergeFieldExecutionPacket,
+  mergePaymentCollection,
+  mergePromiseNotesWithExecutionOps,
+  mergeRecurringAccount,
+  mergeWarrantyCase,
+  normalizePromiseJobStage,
+} from "@/lib/promise-crm/execution-ops";
+import { getProofDisciplineForPromise } from "@/lib/promise-crm/proof-discipline";
+import {
   computeReadinessScore,
   extractPromiseReadinessState,
   getDefaultCustomerCertainty,
@@ -45,10 +62,16 @@ import {
   normalizePromiseCustomerCertainty,
   normalizePromiseDayReadiness,
 } from "@/lib/promise-crm/promise-readiness";
+import {
+  recurringAccountOutreachScripts,
+  recurringAccountStarterOffer,
+} from "@/lib/promise-crm/recurring-accounts";
 import { evaluateIntake, type IntakeEvaluation } from "@/lib/promise-crm/intake";
 import { inboundRecords, promiseRecords } from "@/lib/promise-crm/mock-data";
 import { hasPromiseCrmSupabase, supabaseRestRequest } from "@/lib/promise-crm/supabase";
 import type {
+  CollectionSnapshot,
+  FieldExecutionSnapshot,
   FollowThroughSummary,
   FollowThroughTask,
   InboundRecord,
@@ -58,6 +81,7 @@ import type {
   OwnerDailyPriority,
   OwnerExecutionMetrics,
   OwnerExecutionSnapshot,
+  ProofDisciplineSnapshot,
   PromiseBoardMetrics,
   PromiseCloseout,
   CloseoutRecaptureSnapshot,
@@ -66,8 +90,17 @@ import type {
   PromiseDayReadiness,
   PromiseEconomicsRollup,
   PromiseEconomicsSnapshot,
+  PromiseFieldExecutionPacket,
+  PromiseJobStage,
+  PromiseOutboundEvent,
+  PromisePaymentCollection,
   PromiseRecord,
+  PromiseRecurringAccount,
+  PromiseWarrantyCase,
+  RecurringAccountStarterSnapshot,
   TomorrowReadinessSnapshot,
+  WarrantySnapshot,
+  WeeklyRecaptureScorecard,
   WrenchReadyOwner,
 } from "@/lib/promise-crm/types";
 
@@ -115,6 +148,7 @@ type UpdatePromiseInput = {
   owner?: PromiseRecord["owner"];
   readinessRisk?: PromiseRecord["readinessRisk"];
   status?: PromiseRecord["status"];
+  jobStage?: PromiseJobStage;
   serviceScope?: string;
   scheduledWindowLabel?: string;
   readinessSummary?: string;
@@ -129,6 +163,11 @@ type UpdatePromiseInput = {
   customerApproval?: PromiseCustomerApproval | null;
   customerCertainty?: PromiseCustomerCertainty | null;
   dayReadiness?: PromiseDayReadiness | null;
+  fieldExecution?: PromiseFieldExecutionPacket | null;
+  paymentCollection?: PromisePaymentCollection | null;
+  warrantyCase?: PromiseWarrantyCase | null;
+  recurringAccount?: PromiseRecurringAccount | null;
+  outboundEvent?: PromiseOutboundEvent | null;
 };
 
 type SupabaseInboundRow = {
@@ -377,14 +416,26 @@ function mapPromiseRow(row: SupabasePromiseRow): PromiseRecord {
   const { economics, visibleNotes: notesWithoutEconomics } = extractPromiseEconomics(row.notes || []);
   const { commercialOutcome, visibleNotes: notesWithoutOutcome } =
     extractCommercialOutcome(notesWithoutEconomics);
+  const {
+    jobStage,
+    fieldExecution,
+    paymentCollection,
+    warrantyCase,
+    recurringAccount,
+    visibleNotes: notesWithoutExecutionOps,
+  } = extractPromiseExecutionOps(notesWithoutOutcome);
   const { followThroughHistory, followThroughResolution, visibleNotes } =
-    extractFollowThroughResolution(notesWithoutOutcome);
+    extractFollowThroughResolution(notesWithoutExecutionOps);
   const { closeout, visibleNotes: notesWithoutCloseout } = extractPromiseCloseout(visibleNotes);
+  const {
+    outboundHistory,
+    visibleNotes: notesWithoutOutboundHistory,
+  } = extractPromiseOutboundHistory(notesWithoutCloseout);
   const {
     customerAccess,
     customerApproval,
     visibleNotes: visibleNotesWithoutCustomerState,
-  } = extractPromiseCustomerState(notesWithoutCloseout, row.id);
+  } = extractPromiseCustomerState(notesWithoutOutboundHistory, row.id);
   const {
     customerCertainty,
     dayReadiness,
@@ -426,13 +477,19 @@ function mapPromiseRow(row: SupabasePromiseRow): PromiseRecord {
     nextAction: row.next_action,
     topRisks: row.top_risks || [],
     notes: visibleNotesWithoutReadinessState,
+    jobStage,
     customerCertainty,
     dayReadiness,
+    fieldExecution,
+    paymentCollection,
+    warrantyCase,
+    recurringAccount,
     customerAccess,
     customerApproval,
     economics,
     commercialOutcome,
     closeout,
+    outboundHistory,
     followThroughDueAt: row.follow_through_due_at || undefined,
     followThroughResolution,
     followThroughHistory,
@@ -1244,13 +1301,16 @@ export async function createPromiseFromInbound(input: CreatePromiseInput) {
         ? ["This promise still needs active risk reduction before it is safe to keep."]
         : [],
     notes: [
-      ...mergePromiseNotesWithReadinessState(
-        mergePromiseNotesWithCustomerState(
-          ["Promoted from inbound record.", ...inbound.notes],
-          customerAccess,
+      ...mergePromiseNotesWithExecutionOps(
+        mergePromiseNotesWithReadinessState(
+          mergePromiseNotesWithCustomerState(
+            ["Promoted from inbound record.", ...inbound.notes],
+            customerAccess,
+          ),
+          getDefaultCustomerCertainty(),
+          getDefaultDayReadiness(),
         ),
-        getDefaultCustomerCertainty(),
-        getDefaultDayReadiness(),
+        "scheduled",
       ),
     ],
     follow_through_due_at: null,
@@ -1395,6 +1455,10 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
       : ensurePromiseCustomerApproval(normalizePromiseCustomerApproval(updates.customerApproval));
   const nextCloseout =
     mergePromiseCloseout(current.closeout, updates.closeout);
+  const nextOutboundHistory =
+    updates.outboundEvent === undefined
+      ? current.outboundHistory
+      : appendOutboundEvent(current.outboundHistory, updates.outboundEvent);
   const nextCustomerCertainty =
     updates.customerCertainty === undefined
       ? current.customerCertainty
@@ -1403,6 +1467,18 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
     updates.dayReadiness === undefined
       ? current.dayReadiness
       : normalizePromiseDayReadiness(updates.dayReadiness);
+  const nextJobStage =
+    updates.jobStage === undefined ? current.jobStage : normalizePromiseJobStage(updates.jobStage);
+  const nextFieldExecution = mergeFieldExecutionPacket(current.fieldExecution, updates.fieldExecution);
+  const nextPaymentCollection = mergePaymentCollection(
+    current.paymentCollection,
+    updates.paymentCollection,
+  );
+  const nextWarrantyCase = mergeWarrantyCase(current.warrantyCase, updates.warrantyCase);
+  const nextRecurringAccount = mergeRecurringAccount(
+    current.recurringAccount,
+    updates.recurringAccount,
+  );
 
   const patch = {
     owner: updates.owner ?? current.owner,
@@ -1414,30 +1490,40 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
     readiness_summary: updates.readinessSummary ?? current.readinessSummary,
     next_action: updates.nextAction ?? current.nextAction,
     top_risks: updates.topRisks ?? current.topRisks,
-    notes: mergePromiseNotesWithReadinessState(
-      mergePromiseNotesWithCustomerState(
-        mergePromiseNotesWithCloseout(
-          mergePromiseNotesWithCommercialOutcome(
-            mergePromiseNotesWithFollowThroughResolution(
-              mergePromiseNotesWithEconomics(
-                appendNoteList(current.notes, updates.noteToAdd),
-                updates.economics === undefined
-                  ? current.economics
-                  : normalizePromiseEconomics(updates.economics),
+    notes: mergePromiseNotesWithExecutionOps(
+      mergePromiseNotesWithReadinessState(
+        mergePromiseNotesWithCustomerState(
+          mergePromiseNotesWithOutboundHistory(
+            mergePromiseNotesWithCloseout(
+              mergePromiseNotesWithCommercialOutcome(
+                mergePromiseNotesWithFollowThroughResolution(
+                  mergePromiseNotesWithEconomics(
+                    appendNoteList(current.notes, updates.noteToAdd),
+                    updates.economics === undefined
+                      ? current.economics
+                      : normalizePromiseEconomics(updates.economics),
+                  ),
+                  nextFollowThroughHistory,
+                ),
+                updates.commercialOutcome === undefined
+                  ? current.commercialOutcome
+                  : normalizeCommercialOutcome(updates.commercialOutcome),
               ),
-              nextFollowThroughHistory,
+              nextCloseout,
             ),
-            updates.commercialOutcome === undefined
-              ? current.commercialOutcome
-              : normalizeCommercialOutcome(updates.commercialOutcome),
+            nextOutboundHistory,
           ),
-          nextCloseout,
+          current.customerAccess,
+          nextCustomerApproval,
         ),
-        current.customerAccess,
-        nextCustomerApproval,
+        nextCustomerCertainty,
+        nextDayReadiness,
       ),
-      nextCustomerCertainty,
-      nextDayReadiness,
+      nextJobStage,
+      nextFieldExecution,
+      nextPaymentCollection,
+      nextWarrantyCase,
+      nextRecurringAccount,
     ),
     follow_through_due_at:
       updates.followThroughDueAt === undefined
@@ -1462,16 +1548,25 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
       topRisks: patch.top_risks,
       notes: extractPromiseReadinessState(
         extractPromiseCustomerState(
-          extractPromiseCloseout(
-            extractFollowThroughResolution(
-              extractCommercialOutcome(extractPromiseEconomics(patch.notes).visibleNotes).visibleNotes,
+          extractPromiseOutboundHistory(
+            extractPromiseCloseout(
+              extractFollowThroughResolution(
+                extractPromiseExecutionOps(
+                  extractCommercialOutcome(extractPromiseEconomics(patch.notes).visibleNotes).visibleNotes,
+                ).visibleNotes,
+              ).visibleNotes,
             ).visibleNotes,
           ).visibleNotes,
           current.id,
         ).visibleNotes,
       ).visibleNotes,
+      jobStage: nextJobStage,
       customerCertainty: nextCustomerCertainty,
       dayReadiness: nextDayReadiness,
+      fieldExecution: nextFieldExecution,
+      paymentCollection: nextPaymentCollection,
+      warrantyCase: nextWarrantyCase,
+      recurringAccount: nextRecurringAccount,
       customerAccess: current.customerAccess,
       customerApproval: nextCustomerApproval,
       economics:
@@ -1483,6 +1578,7 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
           ? current.commercialOutcome
           : normalizeCommercialOutcome(updates.commercialOutcome),
       closeout: nextCloseout,
+      outboundHistory: nextOutboundHistory,
       followThroughDueAt: patch.follow_through_due_at || undefined,
       followThroughResolution: nextFollowThroughResolution,
       followThroughHistory: nextFollowThroughHistory,
@@ -1519,16 +1615,25 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
       topRisks: patch.top_risks,
       notes: extractPromiseReadinessState(
         extractPromiseCustomerState(
-          extractPromiseCloseout(
-            extractFollowThroughResolution(
-              extractCommercialOutcome(extractPromiseEconomics(patch.notes).visibleNotes).visibleNotes,
+          extractPromiseOutboundHistory(
+            extractPromiseCloseout(
+              extractFollowThroughResolution(
+                extractPromiseExecutionOps(
+                  extractCommercialOutcome(extractPromiseEconomics(patch.notes).visibleNotes).visibleNotes,
+                ).visibleNotes,
+              ).visibleNotes,
             ).visibleNotes,
           ).visibleNotes,
           current.id,
         ).visibleNotes,
       ).visibleNotes,
+      jobStage: nextJobStage,
       customerCertainty: nextCustomerCertainty,
       dayReadiness: nextDayReadiness,
+      fieldExecution: nextFieldExecution,
+      paymentCollection: nextPaymentCollection,
+      warrantyCase: nextWarrantyCase,
+      recurringAccount: nextRecurringAccount,
       customerAccess: current.customerAccess,
       customerApproval: nextCustomerApproval,
       economics:
@@ -1540,6 +1645,7 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
           ? current.commercialOutcome
           : normalizeCommercialOutcome(updates.commercialOutcome),
       closeout: nextCloseout,
+      outboundHistory: nextOutboundHistory,
       followThroughDueAt: patch.follow_through_due_at || undefined,
       followThroughResolution: nextFollowThroughResolution,
       followThroughHistory: nextFollowThroughHistory,
@@ -1607,6 +1713,18 @@ export async function getCloseoutRecaptureSnapshot(): Promise<CloseoutRecaptureS
 
 export async function getOutboundQueueSnapshot(): Promise<OutboundQueueSnapshot> {
   const promises = await getPromiseRecords();
+  const recentActivity = promises
+    .flatMap((promise) =>
+      (promise.outboundHistory || []).map((event) => ({
+        ...event,
+        promiseId: promise.id,
+        customerName: promise.customer.name,
+        serviceScope: promise.serviceScope,
+        owner: promise.owner,
+      })),
+    )
+    .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime())
+    .slice(0, 12);
 
   const items = promises
     .flatMap((promise) => {
@@ -1617,6 +1735,7 @@ export async function getOutboundQueueSnapshot(): Promise<OutboundQueueSnapshot>
         outbound.closeoutRecap.status !== "not-ready" &&
         promise.closeout?.customerRecap?.status !== "sent"
       ) {
+        const transport = getOutboundTransportPolicy("closeout-recap", outbound.closeoutRecap.channel);
         drafts.push({
           promiseId: promise.id,
           customerName: promise.customer.name,
@@ -1632,10 +1751,12 @@ export async function getOutboundQueueSnapshot(): Promise<OutboundQueueSnapshot>
           reason: outbound.closeoutRecap.reason,
           dueAt: promise.closeout?.completedAt,
           recapStatus: promise.closeout?.customerRecap?.status || "not-ready",
+          transport,
         });
       }
 
       if (promise.closeout?.reviewRequest?.status === "ready") {
+        const transport = getOutboundTransportPolicy("review-ask", outbound.reviewAsk.channel);
         drafts.push({
           promiseId: promise.id,
           customerName: promise.customer.name,
@@ -1651,10 +1772,15 @@ export async function getOutboundQueueSnapshot(): Promise<OutboundQueueSnapshot>
           reason: outbound.reviewAsk.reason,
           dueAt: promise.closeout?.reviewRequest?.dueAt,
           reviewStatus: promise.closeout?.reviewRequest?.status || "not-ready",
+          transport,
         });
       }
 
       if (promise.closeout?.maintenanceReminder?.status === "seeded") {
+        const transport = getOutboundTransportPolicy(
+          "maintenance-reminder",
+          outbound.reminderSeed.channel,
+        );
         drafts.push({
           promiseId: promise.id,
           customerName: promise.customer.name,
@@ -1670,6 +1796,7 @@ export async function getOutboundQueueSnapshot(): Promise<OutboundQueueSnapshot>
           reason: outbound.reminderSeed.reason,
           dueAt: promise.closeout?.maintenanceReminder?.dueAt,
           reminderStatus: promise.closeout?.maintenanceReminder?.status || "not-seeded",
+          transport,
         });
       }
 
@@ -1683,24 +1810,445 @@ export async function getOutboundQueueSnapshot(): Promise<OutboundQueueSnapshot>
       return a.customerName.localeCompare(b.customerName);
     });
 
-  const sentToday = promises.reduce((count, promise) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const recapSent = promise.closeout?.customerRecap?.sentAt?.startsWith(today);
-    const reviewSent = promise.closeout?.reviewRequest?.sentAt?.startsWith(today);
-    return count + (recapSent ? 1 : 0) + (reviewSent ? 1 : 0);
-  }, 0);
+  const deliveredCount = recentActivity.filter((event) => event.status === "delivered").length;
+  const respondedCount = recentActivity.filter((event) => event.status === "responded").length;
+  const convertedCount = recentActivity.filter((event) => event.status === "converted").length;
+  const failedCount = recentActivity.filter((event) => event.status === "failed").length;
 
   return {
     generatedAt: new Date().toISOString(),
     summary: {
       total: items.length,
-      sendReady: items.filter((item) => item.status === "send-ready").length,
+      sendReady: items.filter((item) => item.status === "send-ready" && item.transport.enabled).length,
       draftOnly: items.filter((item) => item.status === "draft").length,
+      held: items.filter((item) => !item.transport.enabled).length,
       recapReady: items.filter((item) => item.channelType === "closeout-recap").length,
       reviewReady: items.filter((item) => item.channelType === "review-ask").length,
       reminderReady: items.filter((item) => item.channelType === "maintenance-reminder").length,
-      sentToday,
+      deliveredToday: deliveredCount,
+      responded: respondedCount,
+      converted: convertedCount,
+      failed: failedCount,
     },
     items,
+    recentActivity,
+  };
+}
+
+export async function getWeeklyRecaptureScorecard(): Promise<WeeklyRecaptureScorecard> {
+  const [promises, outbound] = await Promise.all([
+    getPromiseRecords(),
+    getOutboundQueueSnapshot(),
+  ]);
+  const completedPromises = promises.filter(
+    (record) => record.status === "completed" || record.status === "follow-through-due",
+  );
+  const completedWithEconomics = completedPromises
+    .map((record) => computePromiseEconomics(record.economics))
+    .filter((value): value is NonNullable<typeof value> => Boolean(value));
+  const promisesWithDeposits = promises.filter(
+    (record) => (record.paymentCollection?.depositRequestedAmount || 0) > 0,
+  );
+  const depositsCollected = promisesWithDeposits.filter(
+    (record) => (record.paymentCollection?.amountCollected || 0) > 0,
+  );
+  const warrantyTracked = promises.filter(
+    (record) =>
+      record.warrantyCase &&
+      record.warrantyCase.status !== "none",
+  );
+  const recurringTracked = promises.filter(
+    (record) =>
+      record.recurringAccount &&
+      record.recurringAccount.status !== "not-account",
+  );
+
+  const metrics = {
+    completedVisits: completedPromises.length,
+    closeoutsDone: completedPromises.filter((record) => Boolean(record.closeout)).length,
+    closeoutRate:
+      completedPromises.length > 0
+        ? completedPromises.filter((record) => Boolean(record.closeout)).length / completedPromises.length
+        : 0,
+    proofReady: completedPromises.filter(
+      (record) => getProofDisciplineForPromise(record).proofScore >= 70,
+    ).length,
+    reviewReady: completedPromises.filter(
+      (record) => record.closeout?.reviewRequest?.status === "ready",
+    ).length,
+    reviewCompleted: completedPromises.filter(
+      (record) => record.closeout?.reviewRequest?.status === "completed",
+    ).length,
+    recapsSent: completedPromises.filter(
+      (record) => record.closeout?.customerRecap?.status === "sent",
+    ).length,
+    recapResponses: outbound.recentActivity.filter(
+      (event) => event.channelType === "closeout-recap" && event.status === "responded",
+    ).length,
+    reminderSeeded: completedPromises.filter(
+      (record) => record.closeout?.maintenanceReminder?.status === "seeded",
+    ).length,
+    reminderConversions: outbound.recentActivity.filter(
+      (event) => event.channelType === "maintenance-reminder" && event.status === "converted",
+    ).length,
+    nextVisitCaptured: completedPromises.filter((record) => Boolean(getNextProbableVisit(record))).length,
+    nextVisitConversions: outbound.recentActivity.filter(
+      (event) =>
+        event.status === "converted" &&
+        (event.conversionType === "next-visit-requested" ||
+          event.conversionType === "scheduled-next-visit"),
+    ).length,
+    netProfitInView: completedWithEconomics.reduce(
+      (sum, economics) => sum + economics.netProfitEstimateAmount,
+      0,
+    ),
+    depositsRequested: promisesWithDeposits.length,
+    depositsCollected: depositsCollected.length,
+    collectionRate:
+      promisesWithDeposits.length > 0 ? depositsCollected.length / promisesWithDeposits.length : 0,
+    balanceOpen: promises.reduce(
+      (sum, record) => sum + (record.paymentCollection?.balanceDueAmount || 0),
+      0,
+    ),
+    callbackOpen: warrantyTracked.filter((record) => record.warrantyCase?.status === "open").length,
+    callbackResolved: warrantyTracked.filter(
+      (record) => record.warrantyCase?.status === "resolved",
+    ).length,
+    callbackRate:
+      warrantyTracked.length > 0
+        ? warrantyTracked.filter((record) => record.warrantyCase?.status === "resolved").length /
+          warrantyTracked.length
+        : 0,
+    recurringLeads: recurringTracked.filter(
+      (record) => record.recurringAccount?.status === "lead" || record.recurringAccount?.status === "pitched",
+    ).length,
+    recurringTrialActive: recurringTracked.filter(
+      (record) => record.recurringAccount?.status === "trial-active",
+    ).length,
+    recurringActive: recurringTracked.filter(
+      (record) => record.recurringAccount?.status === "active",
+    ).length,
+    recurringAtRisk: recurringTracked.filter(
+      (record) => record.recurringAccount?.status === "at-risk",
+    ).length,
+  };
+
+  const priorities: WeeklyRecaptureScorecard["priorities"] = [];
+
+  if (metrics.closeoutRate < 0.8) {
+    priorities.push({
+      title: "Finish closeout on every completed visit",
+      detail: "The machine is still leaking learning because completed work is not always becoming structured recap.",
+      tone: "risk",
+    });
+  }
+  if (metrics.reviewCompleted < metrics.recapsSent) {
+    priorities.push({
+      title: "Push review asks through the last mile",
+      detail: "Recaps are landing more often than review conversion. The ask flow needs operator attention.",
+      tone: "trust",
+    });
+  }
+  if (metrics.nextVisitConversions < metrics.nextVisitCaptured) {
+    priorities.push({
+      title: "Turn next probable visits into scheduled work",
+      detail: "The machine knows the next visit more often than it is actually earning it.",
+      tone: "growth",
+    });
+  }
+  if (metrics.collectionRate < 1 && metrics.depositsRequested > 0) {
+    priorities.push({
+      title: "Tighten deposit collection before the visit feels locked",
+      detail: "Approved work is getting ahead of collected money. Protect the promise by making deposits land earlier.",
+      tone: "risk",
+    });
+  }
+  if (metrics.callbackOpen > 0) {
+    priorities.push({
+      title: "Close callback issues faster",
+      detail: "Open warranty or comeback work is a trust leak. Keep it visible until the customer feels it is finished.",
+      tone: "trust",
+    });
+  }
+  if (metrics.recurringLeads > metrics.recurringActive) {
+    priorities.push({
+      title: "Move recurring-account leads into a real lane",
+      detail: "The account story gets stronger when leads become trials and trials become active cadence.",
+      tone: "growth",
+    });
+  }
+  if (metrics.proofReady < metrics.completedVisits) {
+    priorities.push({
+      title: "Tighten proof discipline",
+      detail: "Good visits are still ending without reusable proof or permission-safe assets.",
+      tone: "focus",
+    });
+  }
+
+  if (priorities.length === 0) {
+    priorities.push({
+      title: "Keep the recapture machine consistent",
+      detail: "The current weekly signal is healthy. Protect the habit and keep measuring the full loop.",
+      tone: "focus",
+    });
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    windowLabel: "Last 7-day operating view",
+    metrics,
+    priorities,
+  };
+}
+
+export async function getProofDisciplineSnapshot(): Promise<ProofDisciplineSnapshot> {
+  const promises = await getPromiseRecords();
+  const completedPromises = promises.filter(
+    (record) => record.status === "completed" || record.status === "follow-through-due",
+  );
+  const tasks = completedPromises
+    .map((record) => {
+      const proof = getProofDisciplineForPromise(record);
+      return {
+        promiseId: record.id,
+        customerName: record.customer.name,
+        owner: record.owner,
+        serviceScope: record.serviceScope,
+        territory: record.location.territory,
+        proofScore: proof.proofScore,
+        needsPermission: proof.needsPermission,
+        approvedAssets: proof.approvedAssets,
+        blockers: proof.blockers,
+        nextStep: proof.nextStep,
+      };
+    })
+    .filter((task) => task.proofScore < 100 || task.needsPermission)
+    .sort((a, b) => a.proofScore - b.proofScore);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    summary: {
+      completedVisits: completedPromises.length,
+      proofReady: completedPromises.filter(
+        (record) => getProofDisciplineForPromise(record).proofScore >= 70,
+      ).length,
+      proofWeak: tasks.length,
+      permissionSafeAssets: completedPromises.reduce(
+        (sum, record) => sum + getProofDisciplineForPromise(record).approvedAssets,
+        0,
+      ),
+    },
+    tasks,
+  };
+}
+
+export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAccountStarterSnapshot> {
+  const [inbound, promises] = await Promise.all([getInboundRecords(), getPromiseRecords()]);
+  const candidates = [
+    ...inbound
+      .filter(
+        (record) =>
+          record.marketingRole === "hero-b2b" ||
+          /fleet|company|contractor|property manager|nonprofit|church/i.test(
+            [
+              record.requestedService,
+              record.symptomSummary,
+              record.notes.join(" "),
+            ].join(" "),
+          ),
+      )
+      .map((record) => ({
+        sourceType: "inbound" as const,
+        sourceId: record.id,
+        customerName: record.customer.name,
+        owner: record.owner,
+        lane: record.marketingOffer || record.requestedService,
+        territory: record.location.territory,
+        whyThisFits:
+          "This lead already sounds like multi-vehicle or account-based work instead of one-off consumer-only demand.",
+        nextStep: "Reach out with the uptime starter offer and ask about vehicle count, cadence, and approval owner.",
+      })),
+    ...promises
+      .filter((record) =>
+        /fleet|company|contractor|property manager|nonprofit|church/i.test(
+          [record.serviceScope, record.notes.join(" ")].join(" "),
+        ),
+      )
+      .map((record) => ({
+        sourceType: "promise" as const,
+        sourceId: record.id,
+        customerName: record.customer.name,
+        owner: record.owner,
+        lane: record.serviceScope,
+        territory: record.location.territory,
+        whyThisFits:
+          "The promise record already hints at recurring, clustered, or account-style work worth turning into a lane.",
+        nextStep: "Use the starter script and propose one recurring maintenance or inspection pattern.",
+      })),
+  ].slice(0, 12);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    starterOffer: recurringAccountStarterOffer,
+    outreachScripts: recurringAccountOutreachScripts,
+    candidates,
+    activeAccounts: Array.from(
+      new Map(
+        promises
+          .map((record) => record.recurringAccount)
+          .filter(
+            (account): account is NonNullable<PromiseRecord["recurringAccount"]> =>
+              Boolean(account && account.status !== "not-account"),
+          )
+          .map((account) => [account.accountName || JSON.stringify(account), account]),
+      ).values(),
+    ),
+  };
+}
+
+export async function getFieldExecutionSnapshot(): Promise<FieldExecutionSnapshot> {
+  const promises = await getPromiseRecords();
+  const tasks = promises
+    .filter((record) => record.status !== "completed")
+    .map((record) => {
+      const completeness = getExecutionPacketCompleteness(record);
+      return {
+        promiseId: record.id,
+        customerName: record.customer.name,
+        owner: record.owner,
+        territory: record.location.territory,
+        serviceScope: record.serviceScope,
+        scheduledWindowLabel: record.scheduledWindow.label,
+        jobStage: record.jobStage,
+        ...completeness,
+        nextStep:
+          completeness.missingPartsChecklist ||
+          completeness.missingPhotosChecklist ||
+          completeness.missingInspectionChecklist
+            ? "Finish the execution packet before the visit gets tighter."
+            : "Packet is usable. Keep stage and readiness current through the visit.",
+      };
+    })
+    .sort((a, b) => a.customerName.localeCompare(b.customerName));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    total: tasks.length,
+    needsPacket: tasks.filter(
+      (task) =>
+        task.missingInspectionChecklist ||
+        task.missingPartsChecklist ||
+        task.missingPhotosChecklist,
+    ).length,
+    confirmedToday: tasks.filter((task) => task.jobStage === "confirmed").length,
+    onSiteNow: tasks.filter(
+      (task) => task.jobStage === "on-site" || task.jobStage === "en-route",
+    ).length,
+    tasks,
+  };
+}
+
+export async function getCollectionSnapshot(): Promise<CollectionSnapshot> {
+  const promises = await getPromiseRecords();
+  const tasks = promises
+    .filter(
+      (record) =>
+        record.paymentCollection &&
+        record.paymentCollection.status !== "paid" &&
+        record.paymentCollection.status !== "not-requested",
+    )
+    .map((record) => ({
+      promiseId: record.id,
+      customerName: record.customer.name,
+      owner: record.owner,
+      territory: record.location.territory,
+      serviceScope: record.serviceScope,
+      status: record.paymentCollection?.status || "not-requested",
+      method: record.paymentCollection?.method,
+      amountCollected: record.paymentCollection?.amountCollected,
+      balanceDueAmount: record.paymentCollection?.balanceDueAmount,
+      depositRequestedAmount: record.paymentCollection?.depositRequestedAmount,
+      invoiceReference: record.paymentCollection?.invoiceReference,
+      writeOffReason: record.paymentCollection?.writeOffReason,
+      balanceCheckoutReady:
+        (record.paymentCollection?.status === "partial" ||
+          record.paymentCollection?.status === "awaiting-payment") &&
+        (record.paymentCollection?.balanceDueAmount || 0) > 0,
+      collectionPriority: (
+        record.paymentCollection?.status === "written-off"
+          ? "low"
+          : (record.paymentCollection?.balanceDueAmount || 0) >= 150
+            ? "high"
+            : record.paymentCollection?.status === "awaiting-payment"
+              ? "medium"
+              : "low"
+      ) as "high" | "medium" | "low",
+      nextStep:
+        record.paymentCollection?.status === "deposit-requested"
+          ? "Confirm the deposit landed before treating the promise as secure."
+          : record.paymentCollection?.status === "partial"
+            ? "Collect the remaining balance and record the final method."
+            : record.paymentCollection?.status === "written-off"
+              ? "Review why value leaked and whether this should reopen as an issue."
+            : "Collect payment and lock the job as truly complete.",
+    }))
+    .sort((a, b) => {
+      const priorityRank: Record<"high" | "medium" | "low", number> = {
+        high: 0,
+        medium: 1,
+        low: 2,
+      };
+      const rankGap = priorityRank[a.collectionPriority] - priorityRank[b.collectionPriority];
+      if (rankGap !== 0) return rankGap;
+      return (b.balanceDueAmount || 0) - (a.balanceDueAmount || 0);
+    });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    totalOpen: tasks.length,
+    awaitingPayment: tasks.filter((task) => task.status === "awaiting-payment").length,
+    partial: tasks.filter((task) => task.status === "partial").length,
+    paid: promises.filter((record) => record.paymentCollection?.status === "paid").length,
+    writtenOff: tasks.filter((task) => task.status === "written-off").length,
+    totalBalanceOpen: tasks.reduce((sum, task) => sum + (task.balanceDueAmount || 0), 0),
+    readyForBalanceCheckout: tasks.filter((task) => task.balanceCheckoutReady).length,
+    tasks,
+  };
+}
+
+export async function getWarrantySnapshot(): Promise<WarrantySnapshot> {
+  const promises = await getPromiseRecords();
+  const tasks = promises
+    .filter(
+      (record) =>
+        record.warrantyCase &&
+        record.warrantyCase.status !== "none" &&
+        record.warrantyCase.status !== "resolved",
+    )
+    .map((record) => ({
+      promiseId: record.id,
+      customerName: record.customer.name,
+      owner: record.owner,
+      territory: record.location.territory,
+      serviceScope: record.serviceScope,
+      status: record.warrantyCase?.status || "none",
+      issueSummary: record.warrantyCase?.issueSummary,
+      callbackDueAt: record.warrantyCase?.callbackDueAt,
+      nextStep:
+        record.warrantyCase?.status === "open"
+          ? "Own the callback plan before trust leakage becomes a public problem."
+          : "Monitor and close the loop with the customer before this becomes a comeback.",
+    }))
+    .sort((a, b) =>
+      new Date(a.callbackDueAt || "9999-12-31").getTime() -
+      new Date(b.callbackDueAt || "9999-12-31").getTime(),
+    );
+
+  return {
+    generatedAt: new Date().toISOString(),
+    open: tasks.filter((task) => task.status === "open").length,
+    monitoring: tasks.filter((task) => task.status === "monitoring").length,
+    resolved: promises.filter((record) => record.warrantyCase?.status === "resolved").length,
+    tasks,
   };
 }

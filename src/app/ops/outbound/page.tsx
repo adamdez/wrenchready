@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, MessageSquareShare, Send, TimerReset } from "lucide-react";
+import { ArrowLeft, MessageSquareReply, MessageSquareShare, Send, TimerReset } from "lucide-react";
 import { OutboundActionForm } from "@/components/outbound-action-form";
+import { OutboundResultForm } from "@/components/outbound-result-form";
 import { getOutboundQueueSnapshot } from "@/lib/promise-crm/server";
 import type { OutboundQueueItem } from "@/lib/promise-crm/types";
 
@@ -59,12 +60,16 @@ function QueueCard({ item }: { item: OutboundQueueItem }) {
           {item.preferredChannel}
         </span>
         <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+          {item.transport.mode === "webhook" ? "Transport ready" : "Transport held"}
+        </span>
+        <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
           Due {formatBoardTime(item.dueAt)}
         </span>
       </div>
 
       <p className="mt-4 text-sm font-medium text-foreground">{item.headline}</p>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.reason}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{item.transport.reason}</p>
 
       {item.subject ? (
         <p className="mt-3 text-xs text-muted-foreground">Subject: {item.subject}</p>
@@ -79,10 +84,17 @@ function QueueCard({ item }: { item: OutboundQueueItem }) {
   );
 }
 
+function activityLabel(status: string) {
+  if (status === "delivered") return "Delivered";
+  if (status === "responded") return "Responded";
+  if (status === "converted") return "Converted";
+  return "Failed";
+}
+
 export default async function OutboundQueuePage() {
   const snapshot = await getOutboundQueueSnapshot();
-  const sendReady = snapshot.items.filter((item) => item.status === "send-ready");
-  const drafts = snapshot.items.filter((item) => item.status === "draft");
+  const sendReady = snapshot.items.filter((item) => item.status === "send-ready" && item.transport.enabled);
+  const drafts = snapshot.items.filter((item) => item.status === "draft" || !item.transport.enabled);
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -106,7 +118,7 @@ export default async function OutboundQueuePage() {
           This queue is the send layer on top of closeout. It keeps the next message visible instead of assuming someone will remember it.
         </p>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Total queued</p>
             <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.total}</p>
@@ -120,12 +132,16 @@ export default async function OutboundQueuePage() {
             <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.draftOnly}</p>
           </div>
           <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Sent today</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.sentToday}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Transport held</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.held}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Delivered</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.deliveredToday}</p>
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <div className="mt-4 grid gap-4 md:grid-cols-5">
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Recaps</p>
             <p className="mt-2 text-xl font-semibold text-foreground">{snapshot.summary.recapReady}</p>
@@ -137,6 +153,14 @@ export default async function OutboundQueuePage() {
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Reminder seeds</p>
             <p className="mt-2 text-xl font-semibold text-foreground">{snapshot.summary.reminderReady}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Responded</p>
+            <p className="mt-2 text-xl font-semibold text-foreground">{snapshot.summary.responded}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Converted</p>
+            <p className="mt-2 text-xl font-semibold text-foreground">{snapshot.summary.converted}</p>
           </div>
         </div>
       </section>
@@ -176,7 +200,7 @@ export default async function OutboundQueuePage() {
               </div>
               <h2 className="mt-4 text-xl font-bold text-foreground">Drafts waiting on ops</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                These still need cleaner closeout, a ready state, or a send decision.
+                These still need cleaner closeout, a ready state, or a transport channel that is truly live.
               </p>
             </div>
             <span className="rounded-full border border-border bg-background/70 px-3 py-1 text-sm font-semibold text-foreground">
@@ -193,6 +217,72 @@ export default async function OutboundQueuePage() {
             )}
           </div>
         </section>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <MessageSquareReply className="h-5 w-5" />
+            </div>
+            <h2 className="mt-4 text-xl font-bold text-foreground">Recent outbound activity</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Use this to mark what actually happened after the send, not just that a draft existed.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          {snapshot.recentActivity.length > 0 ? (
+            snapshot.recentActivity.map((event) => (
+              <div key={event.id} className="rounded-2xl border border-border bg-background/60 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <Link
+                      href={`/ops/promises/${event.promiseId}`}
+                      className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
+                    >
+                      {event.customerName}
+                    </Link>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {event.serviceScope} / {event.owner}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+                    {activityLabel(event.status)}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+                    {event.channelType}
+                  </span>
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+                    {event.channel}
+                  </span>
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+                    {formatBoardTime(event.recordedAt)}
+                  </span>
+                </div>
+
+                <p className="mt-3 text-sm font-medium text-foreground">{event.headline}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{event.summary || "No result note recorded."}</p>
+
+                {event.status === "delivered" || event.status === "responded" ? (
+                  <OutboundResultForm
+                    promiseId={event.promiseId}
+                    channelType={event.channelType}
+                    owner={event.owner}
+                  />
+                ) : null}
+              </div>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
+              No outbound history yet.
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

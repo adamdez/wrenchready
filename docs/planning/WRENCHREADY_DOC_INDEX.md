@@ -8,6 +8,7 @@ Primary folder:
 `C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning`
 
 - [WRENCHREADY_PROJECT_STATUS_MEMO.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\WRENCHREADY_PROJECT_STATUS_MEMO.md)
+- [WRENCHREADY_DOCTRINE_MEMO.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\WRENCHREADY_DOCTRINE_MEMO.md)
 - [WRENCHREADY_SERVICE_CLASSIFICATION_FRAMEWORK.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\WRENCHREADY_SERVICE_CLASSIFICATION_FRAMEWORK.md)
 - [WRENCHREADY_PROMISE_CRM_SUPABASE.sql](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\WRENCHREADY_PROMISE_CRM_SUPABASE.sql)
 - [WEBHOOKS_AND_INTEGRATIONS.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\WEBHOOKS_AND_INTEGRATIONS.md)
@@ -24,6 +25,20 @@ Primary folder:
 - The follow-through queue is now stage-aware for review asks, reminder seeds, deferred work, and open closeout at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\follow-through\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\follow-through\page.tsx)
 - Promise detail now includes generated outbound drafts plus proof-capture summaries at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\promises\[id]\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\promises\[id]\page.tsx)
 - The outbound send queue is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\outbound\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\outbound\page.tsx)
+- The outbound layer now also tracks delivered, responded, converted, and failed results on the same promise record, with recent activity visible in the queue and on promise detail
+- Weekly recapture scorecard is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\recapture\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\recapture\page.tsx)
+- Proof-discipline view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\proof\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\proof\page.tsx)
+- Recurring-account starter lane is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\accounts\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\accounts\page.tsx)
+- Weekly operating cadence is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\cadence\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\cadence\page.tsx)
+- Systems-readiness view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\systems\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\systems\page.tsx)
+- Field-execution view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\field\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\field\page.tsx)
+- Collections view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\collections\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\collections\page.tsx)
+- Warranty lane is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\warranty\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\warranty\page.tsx)
+- Customer deposit checkout is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\customer-deposit-checkout.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\customer-deposit-checkout.tsx) with the public route at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\wrenchready\status\[token]\deposit\route.ts](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\wrenchready\status\[token]\deposit\route.ts)
+- Customer remaining-balance checkout is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\customer-balance-checkout.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\customer-balance-checkout.tsx) with the public route at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\wrenchready\status\[token]\balance\route.ts](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\wrenchready\status\[token]\balance\route.ts)
+- Stripe deposit capture webhook is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\webhook\stripe\route.ts](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\webhook\stripe\route.ts)
+- Direct outbound email transport is now wired through [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\lib\email.ts](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\lib\email.ts) and [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\emails\promise-outbound-email.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\emails\promise-outbound-email.tsx)
+- Weekly recapture now includes deposit collection, callback resolution, and recurring-account progression at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\recapture\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\recapture\page.tsx)
 
 ## Research / strategy / pricing folder
 

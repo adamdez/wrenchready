@@ -1,5 +1,6 @@
 import { getNextProbableVisit } from "@/lib/promise-crm/closeout-recapture";
 import { getPlaybookRecommendation } from "@/lib/promise-crm/playbooks";
+import { getGoogleReviewUrl } from "@/lib/review-destination";
 import type {
   PromiseOutboundDraft,
   PromiseOutboundSnapshot,
@@ -63,6 +64,7 @@ function buildReviewAskDraft(promise: PromiseRecord): PromiseOutboundDraft {
     reliefQuote ||
     promise.closeout?.proofCapture?.promiseThatMatteredMost ||
     promise.closeout?.proofCapture?.bookingReason;
+  const reviewUrl = review.reviewUrl || getGoogleReviewUrl();
 
   return {
     status: review.status === "ready" ? "send-ready" : "draft",
@@ -73,8 +75,8 @@ function buildReviewAskDraft(promise: PromiseRecord): PromiseOutboundDraft {
       `Hi ${customerName},`,
       "",
       ask,
-      review.reviewUrl ? "" : "",
-      review.reviewUrl ? `Review link: ${review.reviewUrl}` : "",
+      reviewUrl ? "" : "",
+      reviewUrl ? `Review link: ${reviewUrl}` : "",
       proofHook ? `What mattered most on this visit: ${proofHook}` : "",
       followUp ? `Operator note: ${followUp}` : "",
     ]

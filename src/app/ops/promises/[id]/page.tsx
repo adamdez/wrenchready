@@ -14,6 +14,7 @@ import {
   UserRound,
   Wrench,
 } from "lucide-react";
+import { OutboundResultForm } from "@/components/outbound-result-form";
 import { PromiseStatusForm } from "@/components/promise-status-form";
 import { getNextProbableVisit } from "@/lib/promise-crm/closeout-recapture";
 import { computePromiseEconomics } from "@/lib/promise-crm/economics";
@@ -74,6 +75,45 @@ function maintenanceReminderLabel(value?: MaintenanceReminderStatus) {
   if (value === "seeded") return "Seeded";
   if (value === "scheduled") return "Scheduled";
   return "Not seeded";
+}
+
+function jobStageLabel(value?: string) {
+  if (value === "triage-needed") return "Triage needed";
+  if (value === "quoted") return "Quoted";
+  if (value === "scheduled") return "Scheduled";
+  if (value === "confirmed") return "Confirmed";
+  if (value === "en-route") return "En route";
+  if (value === "on-site") return "On site";
+  if (value === "waiting-approval") return "Waiting approval";
+  if (value === "completed") return "Completed";
+  if (value === "collected") return "Collected";
+  if (value === "warranty-issue") return "Warranty issue";
+  return "Not staged";
+}
+
+function paymentStatusLabel(value?: string) {
+  if (value === "deposit-requested") return "Deposit requested";
+  if (value === "awaiting-payment") return "Awaiting payment";
+  if (value === "partial") return "Partial";
+  if (value === "paid") return "Paid";
+  if (value === "written-off") return "Written off";
+  return "Not requested";
+}
+
+function warrantyStatusLabel(value?: string) {
+  if (value === "monitoring") return "Monitoring";
+  if (value === "open") return "Open";
+  if (value === "resolved") return "Resolved";
+  return "None";
+}
+
+function recurringStatusLabel(value?: string) {
+  if (value === "lead") return "Lead";
+  if (value === "pitched") return "Pitched";
+  if (value === "trial-active") return "Trial active";
+  if (value === "active") return "Active";
+  if (value === "at-risk") return "At risk";
+  return "Not account work";
 }
 
 function followThroughReasonLabel(value?: string) {
@@ -184,6 +224,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
             </div>
             <p className="mt-3 text-sm text-muted-foreground">{promise.owner}</p>
             <p className="mt-1 text-sm text-muted-foreground">Risk: {promise.readinessRisk}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Stage: {jobStageLabel(promise.jobStage)}</p>
           </div>
         </div>
       </section>
@@ -259,6 +300,144 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {promise.customerApproval.summary || "No customer-facing summary recorded"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border bg-card/50 p-6">
+            <h2 className="text-xl font-bold text-foreground">Field execution packet</h2>
+            {promise.fieldExecution ? (
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-background/60 p-4 md:col-span-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                    Service goal
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {promise.fieldExecution.serviceGoal || "No service goal recorded"}
+                  </p>
+                </div>
+                {[
+                  ["Parts checklist", promise.fieldExecution.partsChecklist],
+                  ["Photos required", promise.fieldExecution.photosRequired],
+                  ["Inspection checklist", promise.fieldExecution.inspectionChecklist],
+                  ["Honest add-on focus", promise.fieldExecution.upsellFocus],
+                  ["Closeout steps", promise.fieldExecution.closeoutSteps],
+                ].map(([label, items]) => (
+                  <div key={label as string} className="rounded-2xl border border-border bg-background/60 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                      {label as string}
+                    </p>
+                    {Array.isArray(items) && items.length > 0 ? (
+                      <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        {items.map((item) => (
+                          <li key={`${label}-${item}`} className="flex gap-2">
+                            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-3 text-sm text-muted-foreground">Not captured.</p>
+                    )}
+                  </div>
+                ))}
+                <div className="rounded-2xl border border-border bg-background/60 p-4 md:col-span-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                    Notes template
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {promise.fieldExecution.notesTemplate || "No notes template recorded"}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                No field packet captured yet.
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-3xl border border-border bg-card/50 p-6">
+            <h2 className="text-xl font-bold text-foreground">Collection and warranty truth</h2>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-background/60 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Collection
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {paymentStatusLabel(promise.paymentCollection?.status)}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Method: {promise.paymentCollection?.method || "Not captured"}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Balance due: {formatCurrency(promise.paymentCollection?.balanceDueAmount)}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {promise.paymentCollection?.paymentSummary || "No collection summary recorded"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-background/60 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Warranty / comeback
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {warrantyStatusLabel(promise.warrantyCase?.status)}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {promise.warrantyCase?.issueSummary || "No warranty issue recorded"}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Callback due: {promise.warrantyCase?.callbackDueAt || "Not scheduled"}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {promise.warrantyCase?.resolutionSummary || "No resolution summary recorded"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border bg-card/50 p-6">
+            <h2 className="text-xl font-bold text-foreground">Recurring account health</h2>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-background/60 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Account status
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {recurringStatusLabel(promise.recurringAccount?.status)}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {promise.recurringAccount?.accountName || "No account linked"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-background/60 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Cadence and terms
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {promise.recurringAccount?.cadenceLabel || "No cadence recorded"}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {promise.recurringAccount?.billingTerms || "No billing terms recorded"}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Vehicle count: {promise.recurringAccount?.vehicleCount ?? "Unknown"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-background/60 p-4 md:col-span-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Next touch
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {promise.recurringAccount?.nextTouchDueAt || "No next touch due"}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {promise.recurringAccount?.summary || "No recurring account summary recorded"}
                 </p>
               </div>
             </div>
@@ -759,6 +938,53 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 </ul>
               </div>
             ) : null}
+
+            <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                Outbound history
+              </p>
+              {promise.outboundHistory && promise.outboundHistory.length > 0 ? (
+                <div className="mt-3 space-y-3">
+                  {promise.outboundHistory
+                    .slice()
+                    .reverse()
+                    .map((event) => (
+                      <div key={event.id} className="rounded-xl border border-border/70 bg-card/50 p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{event.headline}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {event.channelType} / {event.status} / {event.channel}
+                            </p>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {new Intl.DateTimeFormat("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            }).format(new Date(event.recordedAt))}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {event.summary || "No outbound summary recorded."}
+                        </p>
+                        {event.status === "delivered" || event.status === "responded" ? (
+                          <OutboundResultForm
+                            promiseId={promise.id}
+                            channelType={event.channelType}
+                            owner={promise.owner}
+                          />
+                        ) : null}
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No outbound history recorded yet.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </section>

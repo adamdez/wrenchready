@@ -1,0 +1,21 @@
+﻿{
+    "format": {
+        "filename": "C:\\Users\\adamd\\.cursor\\projects\\c-Users-adamd-Desktop-Simon-wrenchreadymobile-com\\assets\\rotor-clip-v8-raw.mp4",
+        "nb_streams": 1,
+        "nb_programs": 0,
+        "nb_stream_groups": 0,
+        "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+        "format_long_name": "QuickTime / MOV",
+        "start_time": "0.000000",
+        "duration": "5.041667",
+        "size": "4746935",
+        "bit_rate": "7532326",
+        "probe_score": 100,
+        "tags": {
+            "minor_version": "512",
+            "major_brand": "isom",
+            "compatible_brands": "isomiso2avc1mp41",
+            "encoder": "Lavf60.16.100"
+        }
+    }
+}

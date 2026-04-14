@@ -60,10 +60,13 @@ export function OutboundActionForm({ item }: OutboundActionFormProps) {
       ) : null}
 
       <div className="flex flex-wrap gap-2">
+        <div className="rounded-full border border-border px-3 py-2 text-[11px] text-muted-foreground">
+          {item.transport.destinationLabel}
+        </div>
         <button
           type="button"
           onClick={() => void queueSend()}
-          disabled={status === "sending"}
+          disabled={status === "sending" || !item.transport.enabled}
           className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground transition-all hover:bg-secondary disabled:opacity-50"
         >
           {status === "sending" ? (
@@ -76,6 +79,7 @@ export function OutboundActionForm({ item }: OutboundActionFormProps) {
           Queue delivery
         </button>
       </div>
+      <p className="mt-3 text-xs text-muted-foreground">{item.transport.nextStep}</p>
     </div>
   );
 }

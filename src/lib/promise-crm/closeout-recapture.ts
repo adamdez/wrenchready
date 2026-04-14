@@ -6,6 +6,7 @@ import type {
   PromiseRecord,
   PromiseRecapItem,
 } from "@/lib/promise-crm/types";
+import { getGoogleReviewUrl } from "@/lib/review-destination";
 
 const CLOSEOUT_PREFIX = "__closeout::";
 
@@ -57,7 +58,9 @@ function normalizeReviewRequest(value: unknown): PromiseCloseout["reviewRequest"
         : undefined,
     summary: typeof candidate.summary === "string" ? candidate.summary.trim() || undefined : undefined,
     reviewUrl:
-      typeof candidate.reviewUrl === "string" ? candidate.reviewUrl.trim() || undefined : undefined,
+      typeof candidate.reviewUrl === "string"
+        ? candidate.reviewUrl.trim() || undefined
+        : getGoogleReviewUrl(),
   } as const;
 
   return normalized.status !== "not-ready" ||
@@ -165,6 +168,12 @@ function normalizeProofAsset(value: unknown): PromiseProofAsset | undefined {
     label,
     url: typeof candidate.url === "string" ? candidate.url.trim() || undefined : undefined,
     note: typeof candidate.note === "string" ? candidate.note.trim() || undefined : undefined,
+    permissionStatus:
+      candidate.permissionStatus === "customer-approved" ||
+      candidate.permissionStatus === "internal-only" ||
+      candidate.permissionStatus === "unknown"
+        ? candidate.permissionStatus
+        : undefined,
   };
 }
 

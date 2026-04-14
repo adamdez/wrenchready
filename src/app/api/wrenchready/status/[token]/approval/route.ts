@@ -62,12 +62,20 @@ export async function POST(request: Request, context: RouteContext) {
       body.decision === "approved" ? "approved" : "declined";
     const respondedAt = new Date().toISOString();
     const customerMessage = body.customerMessage?.trim() || undefined;
+    const depositRequestedAmount = promise.paymentCollection?.depositRequestedAmount;
+    const needsDeposit =
+      decisionStatus === "approved" &&
+      depositRequestedAmount !== undefined &&
+      depositRequestedAmount > 0 &&
+      promise.paymentCollection?.status !== "paid";
 
     const updated = await updatePromiseRecord(promise.id, {
       status: "follow-through-due",
       nextAction:
-        decisionStatus === "approved"
-          ? "Customer approved the next step. Confirm schedule, parts, and visit timing."
+        needsDeposit
+          ? "Customer approved the next step. Collect the deposit, then confirm schedule, parts, and visit timing."
+          : decisionStatus === "approved"
+            ? "Customer approved the next step. Confirm schedule, parts, and visit timing."
           : "Customer declined for now. Send recap, park the work clearly, and set the right follow-through path.",
       followThroughDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       customerApproval: {
@@ -76,6 +84,17 @@ export async function POST(request: Request, context: RouteContext) {
         respondedAt,
         customerMessage,
       },
+      paymentCollection:
+        needsDeposit
+          ? {
+              ...promise.paymentCollection,
+              status:
+                promise.paymentCollection?.status === "partial" ? "partial" : "deposit-requested",
+              paymentSummary:
+                promise.paymentCollection?.paymentSummary ||
+                "Customer approved the work. Deposit is the next step before the visit is treated as secure.",
+            }
+          : undefined,
       commercialOutcome:
         decisionStatus === "approved"
           ? {

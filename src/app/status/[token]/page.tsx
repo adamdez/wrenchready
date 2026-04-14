@@ -14,6 +14,8 @@ import {
   Wrench,
 } from "lucide-react";
 import { CustomerNextStepRequest } from "@/components/customer-next-step-request";
+import { CustomerBalanceCheckout } from "@/components/customer-balance-checkout";
+import { CustomerDepositCheckout } from "@/components/customer-deposit-checkout";
 import { CustomerPromiseApproval } from "@/components/customer-promise-approval";
 import {
   getCloseoutRecapItems,
@@ -26,6 +28,7 @@ import { siteConfig } from "@/data/site";
 
 type CustomerStatusPageProps = {
   params: Promise<{ token: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export const metadata: Metadata = {
@@ -71,8 +74,12 @@ function toneClasses(tone: ReturnType<typeof buildCustomerStatusView>["tone"]) {
   return "border-primary/20 bg-primary/10 text-primary";
 }
 
-export default async function CustomerStatusPage({ params }: CustomerStatusPageProps) {
+export default async function CustomerStatusPage({
+  params,
+  searchParams,
+}: CustomerStatusPageProps) {
   const { token } = await params;
+  const resolvedSearchParams = (await searchParams) || {};
   const promise = await getPromiseRecordByCustomerToken(token);
 
   if (!promise) {
@@ -88,6 +95,10 @@ export default async function CustomerStatusPage({ params }: CustomerStatusPageP
     promise.customerApproval.requestedService ||
     promise.commercialOutcome?.convertedService ||
     promise.serviceScope;
+  const depositState =
+    typeof resolvedSearchParams.deposit === "string" ? resolvedSearchParams.deposit : undefined;
+  const balanceState =
+    typeof resolvedSearchParams.balance === "string" ? resolvedSearchParams.balance : undefined;
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -162,6 +173,24 @@ export default async function CustomerStatusPage({ params }: CustomerStatusPageP
 
       <section className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
+          {depositState || balanceState ? (
+            <div
+              className={`rounded-3xl border p-5 text-sm ${
+                (depositState || balanceState) === "success"
+                  ? "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+                  : "border-[--wr-gold]/20 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
+              }`}
+            >
+              {depositState === "success"
+                ? "Your secure deposit checkout completed. WrenchReady will update the visit record as payment settles."
+                : balanceState === "success"
+                  ? "Your remaining-balance checkout completed. WrenchReady will update the visit record as payment settles."
+                  : depositState === "cancelled"
+                    ? "Deposit checkout was cancelled before payment completed. You can reopen it anytime from this page."
+                    : "Balance checkout was cancelled before payment completed. You can reopen it anytime from this page."}
+            </div>
+          ) : null}
+
           <div className="rounded-3xl border border-border bg-card/50 p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -201,6 +230,17 @@ export default async function CustomerStatusPage({ params }: CustomerStatusPageP
           </div>
 
           <CustomerPromiseApproval token={token} approval={promise.customerApproval} />
+          <CustomerDepositCheckout
+            token={token}
+            amount={promise.paymentCollection?.depositRequestedAmount}
+            alreadyCollected={promise.paymentCollection?.amountCollected}
+            status={promise.paymentCollection?.status}
+          />
+          <CustomerBalanceCheckout
+            token={token}
+            balanceDueAmount={promise.paymentCollection?.balanceDueAmount}
+            status={promise.paymentCollection?.status}
+          />
           <CustomerNextStepRequest
             token={token}
             recommendedService={recommendedService}
@@ -405,6 +445,19 @@ export default async function CustomerStatusPage({ params }: CustomerStatusPageP
                       ? "Sent"
                       : "Not queued yet"}
                 </p>
+                {promise.closeout?.reviewRequest?.reviewUrl ? (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Review link:{" "}
+                    <a
+                      className="text-primary underline-offset-4 hover:underline"
+                      href={promise.closeout.reviewRequest.reviewUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Open Google review
+                    </a>
+                  </p>
+                ) : null}
                 <p className="mt-2 text-sm text-muted-foreground">
                   Reminder:{" "}
                   {promise.closeout?.maintenanceReminder?.dueLabel ||

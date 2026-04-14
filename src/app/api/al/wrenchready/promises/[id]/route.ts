@@ -94,10 +94,22 @@ type UpdatePromisePayload = {
   paymentCollection?: {
     status?: string;
     method?: string;
+    processor?: string;
     depositRequestedAmount?: number;
+    depositRequestedAt?: string;
+    depositSessionId?: string;
+    depositCheckoutUrl?: string;
+    depositPaidAt?: string;
+    balanceRequestedAt?: string;
+    balanceSessionId?: string;
+    balanceCheckoutUrl?: string;
+    balancePaidAt?: string;
+    lastPaymentReference?: string;
     amountCollected?: number;
     balanceDueAmount?: number;
     collectedAt?: string;
+    invoiceReference?: string;
+    writeOffReason?: string;
     paymentSummary?: string;
   } | null;
   warrantyCase?: {
@@ -330,11 +342,26 @@ function isPaymentCollectionPayload(value: unknown) {
   return (
     (candidate.status === undefined || typeof candidate.status === "string") &&
     (candidate.method === undefined || typeof candidate.method === "string") &&
+    (candidate.processor === undefined || typeof candidate.processor === "string") &&
     (candidate.depositRequestedAmount === undefined ||
       typeof candidate.depositRequestedAmount === "number") &&
+    (candidate.depositRequestedAt === undefined || typeof candidate.depositRequestedAt === "string") &&
+    (candidate.depositSessionId === undefined || typeof candidate.depositSessionId === "string") &&
+    (candidate.depositCheckoutUrl === undefined ||
+      typeof candidate.depositCheckoutUrl === "string") &&
+    (candidate.depositPaidAt === undefined || typeof candidate.depositPaidAt === "string") &&
+    (candidate.balanceRequestedAt === undefined || typeof candidate.balanceRequestedAt === "string") &&
+    (candidate.balanceSessionId === undefined || typeof candidate.balanceSessionId === "string") &&
+    (candidate.balanceCheckoutUrl === undefined ||
+      typeof candidate.balanceCheckoutUrl === "string") &&
+    (candidate.balancePaidAt === undefined || typeof candidate.balancePaidAt === "string") &&
+    (candidate.lastPaymentReference === undefined ||
+      typeof candidate.lastPaymentReference === "string") &&
     (candidate.amountCollected === undefined || typeof candidate.amountCollected === "number") &&
     (candidate.balanceDueAmount === undefined || typeof candidate.balanceDueAmount === "number") &&
     (candidate.collectedAt === undefined || typeof candidate.collectedAt === "string") &&
+    (candidate.invoiceReference === undefined || typeof candidate.invoiceReference === "string") &&
+    (candidate.writeOffReason === undefined || typeof candidate.writeOffReason === "string") &&
     (candidate.paymentSummary === undefined || typeof candidate.paymentSummary === "string")
   );
 }
