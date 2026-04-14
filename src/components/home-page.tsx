@@ -291,21 +291,23 @@ export function HomePage() {
     <>
       {/* ── HERO ── */}
       <section id="home" className="relative min-h-[80vh] overflow-hidden sm:min-h-[92vh]">
-        {/* Mobile: static image (saves bandwidth, keeps Simon visible) */}
+        {/* Mobile: portrait video (9:16, optimized for phones) */}
         <div className="absolute inset-0 -z-20 md:hidden">
-          <Image
-            src="/wrenchready-hero-service.webp"
-            alt="WrenchReady mobile mechanic working on a vehicle"
-            fill
-            priority
-            className="object-cover object-[65%_center]"
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-black/60" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/20" />
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster="/wrenchready-hero-service.webp"
+            className="h-full w-full object-cover"
+          >
+            <source src="/wrenchready-hero-loop-mobile.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-black/55" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/15" />
         </div>
 
-        {/* Desktop: video background */}
+        {/* Desktop: landscape video (16:9) */}
         <div className="absolute inset-0 -z-20 hidden md:block">
           <video
             autoPlay

@@ -57,10 +57,15 @@ public/wrenchready-clip-*.mp4
 public/wrenchready-hero-loop-orig.mp4
 public/wrenchready-v3-*.mp4
 public/wrenchready-hero-v2-*.png
+public/wrenchready-portrait-*.mp4
+public/wrenchready-portrait-*.png
 gen-clips*.py
 poll-clips*.py
 download-v3.py
 stitch-hero*.py
+stitch-portrait*.py
+stitch-final*.py
 fal-*-tasks.json
+fal-*-task.json
 
 .env*.local
