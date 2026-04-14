@@ -337,16 +337,6 @@ export function HomePage() {
               />
             </FadeIn>
 
-            <FadeIn delay={0.1}>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/90 backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--wr-teal] opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[--wr-teal]" />
-                </span>
-                Mobile Car Repair &bull; Spokane County, WA
-              </span>
-            </FadeIn>
-
             <AnimatedHeading
               text="Mobile car repair in Spokane with clear quotes and no surprise scope."
               gradient

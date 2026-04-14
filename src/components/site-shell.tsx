@@ -15,20 +15,20 @@ type SiteShellProps = {
 function BrandMark() {
   return (
     <Link className="group flex items-center gap-3 transition-transform hover:scale-[1.02]" href="/">
-      <span
-        className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-extrabold tracking-tight text-white transition-shadow group-hover:shadow-lg group-hover:shadow-[--wr-blue]/20"
-        style={{
-          background: "linear-gradient(135deg, var(--wr-blue), var(--wr-teal))",
-        }}
-      >
-        WR
-      </span>
+      <Image
+        src="/wr-logo-full.png"
+        alt="WrenchReady"
+        width={200}
+        height={80}
+        className="h-9 w-auto"
+        priority
+      />
       <span className="hidden sm:block">
-        <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--wr-teal)" }}>
-          WrenchReady
+        <span className="block text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-display)" }}>
+          WrenchReady Mobile
         </span>
-        <span className="block text-sm font-semibold text-foreground">
-          Mobile
+        <span className="block text-[0.6rem] font-medium text-muted-foreground">
+          Spokane&apos;s Premier Mobile Auto Service
         </span>
       </span>
     </Link>
