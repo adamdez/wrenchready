@@ -33,6 +33,10 @@ export type IntakeEvaluation = {
   serviceClass: ServiceClass;
   acceptancePolicy: AcceptancePolicy;
   pricingGuardrails: string[];
+  screeningQuestions: string[];
+  redFlagTriggers: string[];
+  dispatchGate: string;
+  wedgePromise: string;
   nextAction: string;
 };
 

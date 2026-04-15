@@ -22,15 +22,28 @@ export function CloseoutQualityActionForm({
   const [customerConditionSummary, setCustomerConditionSummary] = useState(
     closeout?.customerConditionSummary || "",
   );
+  const [customerRecapSummary, setCustomerRecapSummary] = useState(
+    closeout?.customerRecap?.summary || "",
+  );
   const [reviewStatus, setReviewStatus] = useState<"not-ready" | "ready" | "sent" | "completed">(
     closeout?.reviewRequest?.status || "ready",
+  );
+  const [reviewSummary, setReviewSummary] = useState(
+    closeout?.reviewRequest?.summary || "",
   );
   const [reminderStatus, setReminderStatus] = useState<"not-seeded" | "seeded" | "scheduled">(
     closeout?.maintenanceReminder?.status || "seeded",
   );
+  const [reminderSummary, setReminderSummary] = useState(
+    closeout?.maintenanceReminder?.summary || "",
+  );
   const [nextVisitService, setNextVisitService] = useState(
     closeout?.nextProbableVisit?.service || "",
   );
+  const [nextVisitReason, setNextVisitReason] = useState(
+    closeout?.nextProbableVisit?.reason || "",
+  );
+  const [proofNotes, setProofNotes] = useState(closeout?.proofCapture?.proofNotes || "");
   const [feedback, setFeedback] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -46,19 +59,37 @@ export function CloseoutQualityActionForm({
           closeout: {
             workPerformedSummary: workPerformedSummary.trim() || undefined,
             customerConditionSummary: customerConditionSummary.trim() || undefined,
+            customerRecap: {
+              ...closeout?.customerRecap,
+              status:
+                customerRecapSummary.trim() || reviewStatus !== "not-ready" || reminderStatus !== "not-seeded"
+                  ? "ready"
+                  : closeout?.customerRecap?.status || "not-ready",
+              summary: customerRecapSummary.trim() || undefined,
+            },
             reviewRequest: {
               ...closeout?.reviewRequest,
               status: reviewStatus,
+              summary: reviewSummary.trim() || undefined,
             },
             maintenanceReminder: {
               ...closeout?.maintenanceReminder,
               status: reminderStatus,
               service: closeout?.maintenanceReminder?.service || nextVisitService.trim() || undefined,
+              summary: reminderSummary.trim() || undefined,
             },
             nextProbableVisit: {
               ...closeout?.nextProbableVisit,
               service: nextVisitService.trim() || undefined,
-              reason: closeout?.nextProbableVisit?.reason || "Keep the next visit visible from the recapture queue.",
+              reason:
+                nextVisitReason.trim() ||
+                closeout?.nextProbableVisit?.reason ||
+                "Keep the next visit visible from the recapture queue.",
+            },
+            proofCapture: {
+              ...closeout?.proofCapture,
+              proofNotes: proofNotes.trim() || undefined,
+              assets: closeout?.proofCapture?.assets || [],
             },
           },
           noteToAdd: `Closeout quality improved from recapture queue by ${owner}.`,
@@ -93,6 +124,10 @@ export function CloseoutQualityActionForm({
           <span className="text-xs font-medium text-muted-foreground">Customer condition summary</span>
           <textarea className="form-textarea" onChange={(e) => setCustomerConditionSummary(e.target.value)} value={customerConditionSummary} />
         </label>
+        <label className="space-y-2 lg:col-span-2">
+          <span className="text-xs font-medium text-muted-foreground">Customer recap summary</span>
+          <textarea className="form-textarea" onChange={(e) => setCustomerRecapSummary(e.target.value)} value={customerRecapSummary} />
+        </label>
         <label className="space-y-2">
           <span className="text-xs font-medium text-muted-foreground">Review status</span>
           <select className="form-input" onChange={(e) => setReviewStatus(e.target.value as typeof reviewStatus)} value={reviewStatus}>
@@ -103,6 +138,10 @@ export function CloseoutQualityActionForm({
           </select>
         </label>
         <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Review ask summary</span>
+          <textarea className="form-textarea" onChange={(e) => setReviewSummary(e.target.value)} value={reviewSummary} />
+        </label>
+        <label className="space-y-2">
           <span className="text-xs font-medium text-muted-foreground">Reminder status</span>
           <select className="form-input" onChange={(e) => setReminderStatus(e.target.value as typeof reminderStatus)} value={reminderStatus}>
             <option value="not-seeded">Not seeded</option>
@@ -110,9 +149,21 @@ export function CloseoutQualityActionForm({
             <option value="scheduled">Scheduled</option>
           </select>
         </label>
+        <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Reminder summary</span>
+          <textarea className="form-textarea" onChange={(e) => setReminderSummary(e.target.value)} value={reminderSummary} />
+        </label>
         <label className="space-y-2 lg:col-span-2">
           <span className="text-xs font-medium text-muted-foreground">Next probable visit service</span>
           <input className="form-input" onChange={(e) => setNextVisitService(e.target.value)} value={nextVisitService} />
+        </label>
+        <label className="space-y-2 lg:col-span-2">
+          <span className="text-xs font-medium text-muted-foreground">Next probable visit reason</span>
+          <textarea className="form-textarea" onChange={(e) => setNextVisitReason(e.target.value)} value={nextVisitReason} />
+        </label>
+        <label className="space-y-2 lg:col-span-2">
+          <span className="text-xs font-medium text-muted-foreground">Proof notes</span>
+          <textarea className="form-textarea" onChange={(e) => setProofNotes(e.target.value)} value={proofNotes} />
         </label>
       </div>
       {feedback ? <p className="mt-3 text-sm text-muted-foreground">{feedback}</p> : null}

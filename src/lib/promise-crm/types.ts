@@ -409,6 +409,10 @@ export type InboundRecord = {
   serviceClass?: ServiceClass;
   acceptancePolicy?: AcceptancePolicy;
   pricingGuardrails?: string[];
+  screeningQuestions?: string[];
+  redFlagTriggers?: string[];
+  dispatchGate?: string;
+  wedgePromise?: string;
   symptomSummary: string;
   owner: RecordOwner;
   readinessRisk: ReadinessRisk;

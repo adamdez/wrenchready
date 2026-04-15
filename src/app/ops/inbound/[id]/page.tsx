@@ -200,6 +200,27 @@ export default async function InboundDetailPage({ params }: InboundDetailPagePro
                 </p>
               </div>
             </div>
+
+            {inbound.wedgePromise || inbound.dispatchGate ? (
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-background/60 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                    Wedge promise
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {inbound.wedgePromise || "This lane still needs a sharper promise."}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border bg-background/60 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                    Dispatch gate
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {inbound.dispatchGate || "Human screening should hold this until the promise is believable."}
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-3xl border border-border bg-card/50 p-6">
@@ -222,6 +243,34 @@ export default async function InboundDetailPage({ params }: InboundDetailPagePro
                   <li key={rule} className="flex gap-2">
                     <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                     {rule}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {inbound.screeningQuestions?.length ? (
+            <div className="rounded-3xl border border-border bg-card/50 p-6">
+              <h2 className="text-xl font-bold text-foreground">Wedge screening questions</h2>
+              <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+                {inbound.screeningQuestions.map((question) => (
+                  <li key={question} className="flex gap-2">
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                    {question}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {inbound.redFlagTriggers?.length ? (
+            <div className="rounded-3xl border border-border bg-card/50 p-6">
+              <h2 className="text-xl font-bold text-foreground">Red flags before dispatch</h2>
+              <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+                {inbound.redFlagTriggers.map((trigger) => (
+                  <li key={trigger} className="flex gap-2">
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                    {trigger}
                   </li>
                 ))}
               </ul>

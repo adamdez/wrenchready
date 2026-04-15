@@ -80,7 +80,43 @@ export function InboundTriageForm({ inbound }: InboundTriageFormProps) {
           Marketed as: {inbound.marketingOffer || inbound.requestedService} /{" "}
           {inbound.marketingRole || "Needs role"}
         </p>
+        {inbound.dispatchGate ? <p className="mt-2">Gate: {inbound.dispatchGate}</p> : null}
       </div>
+
+      {inbound.screeningQuestions?.length ? (
+        <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4 text-sm text-muted-foreground">
+          <p className="font-semibold text-foreground">Ask before you promise</p>
+          <ul className="mt-3 space-y-2">
+            {inbound.screeningQuestions.map((question) => (
+              <li key={question} className="flex gap-2">
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                {question}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {inbound.redFlagTriggers?.length ? (
+        <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4 text-sm text-muted-foreground">
+          <p className="font-semibold text-foreground">Slow down if you hear</p>
+          <ul className="mt-3 space-y-2">
+            {inbound.redFlagTriggers.map((trigger) => (
+              <li key={trigger} className="flex gap-2">
+                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                {trigger}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {inbound.wedgePromise ? (
+        <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-muted-foreground">
+          <p className="font-semibold text-foreground">Promise standard</p>
+          <p className="mt-2">{inbound.wedgePromise}</p>
+        </div>
+      ) : null}
 
       {message ? (
         <div

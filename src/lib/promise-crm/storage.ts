@@ -402,6 +402,22 @@ function mapInboundRow(row: SupabaseInboundRow): InboundRecord {
       rawPayload && "pricingGuardrails" in rawPayload
         ? (rawPayload.pricingGuardrails as string[])
         : evaluation.pricingGuardrails,
+    screeningQuestions:
+      rawPayload && "screeningQuestions" in rawPayload
+        ? (rawPayload.screeningQuestions as string[])
+        : evaluation.screeningQuestions,
+    redFlagTriggers:
+      rawPayload && "redFlagTriggers" in rawPayload
+        ? (rawPayload.redFlagTriggers as string[])
+        : evaluation.redFlagTriggers,
+    dispatchGate:
+      rawPayload && "dispatchGate" in rawPayload
+        ? (rawPayload.dispatchGate as string)
+        : evaluation.dispatchGate,
+    wedgePromise:
+      rawPayload && "wedgePromise" in rawPayload
+        ? (rawPayload.wedgePromise as string)
+        : evaluation.wedgePromise,
     symptomSummary: row.symptom_summary,
     owner: row.owner,
     readinessRisk: row.readiness_risk,
@@ -1426,6 +1442,10 @@ export async function createInboundRecord(
       serviceClass: evaluation.serviceClass,
       acceptancePolicy: evaluation.acceptancePolicy,
       pricingGuardrails: evaluation.pricingGuardrails,
+      screeningQuestions: evaluation.screeningQuestions,
+      redFlagTriggers: evaluation.redFlagTriggers,
+      dispatchGate: evaluation.dispatchGate,
+      wedgePromise: evaluation.wedgePromise,
     },
   };
 
