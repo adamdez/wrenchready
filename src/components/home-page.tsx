@@ -5,7 +5,7 @@ import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
 import { SectionOrbs } from "@/components/motion/gradient-orbs";
 import { AnimatedHeading } from "@/components/motion/animated-text";
 import { homeFaqs, launchWedges, siteConfig } from "@/data/site";
-import { demoTestimonials } from "@/data/demo-testimonials";
+import type { PublicProofStory } from "@/lib/promise-crm/types";
 import {
   Shield,
   Clock,
@@ -333,7 +333,11 @@ function IntakeForm() {
    HOMEPAGE
    ═══════════════════════════════════════════════════════════════ */
 
-export function HomePage() {
+type HomePageProps = {
+  publicProofStories?: PublicProofStory[];
+};
+
+export function HomePage({ publicProofStories = [] }: HomePageProps) {
   return (
     <>
       {/* ── HERO ── */}
@@ -659,40 +663,86 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── SOCIAL PROOF / TESTIMONIALS ── */}
+      {/* ── SOCIAL PROOF / REAL PROOF ── */}
         <section id="reviews" className="relative border-y border-border">
           <SectionOrbs variant="gold" />
           <div className="shell section-space">
             <SectionHeading
               eyebrow="What Customers Notice"
-              title="Clear communication, honest screening, and work that does not turn into a guessing game."
-              copy=""
+              title="Clear communication, honest screening, and proof from kept promises."
+              copy={
+                publicProofStories.length > 0
+                  ? "These stories are pulled from completed visits with permission-safe proof, not demo copy."
+                  : "We only publish proof that is safe to reuse. The operating system is already capturing it, and this section will keep getting stronger as more permission-safe stories are approved."
+              }
               tint="gold"
             />
 
-            <Stagger className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" staggerDelay={0.08}>
-              {demoTestimonials.map((t) => (
-                <StaggerItem key={t.id}>
-                  <div className="flex h-full flex-col rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm transition-colors hover:border-[--wr-gold]/20">
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: t.stars }).map((_, i) => (
-                        <Star key={i} className="h-4 w-4 fill-[--wr-gold] text-[--wr-gold]" />
-                      ))}
-                    </div>
-                    <h3 className="mt-3 text-sm font-bold text-foreground">{t.headline}</h3>
-                    <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
-                      &ldquo;{t.quote}&rdquo;
-                    </p>
-                    <div className="mt-4 border-t border-border pt-3">
-                      <p className="text-sm font-semibold text-foreground">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {t.neighborhood} &middot; {t.vehicle} &middot; {t.service}
-                      </p>
-                    </div>
-                  </div>
-                </StaggerItem>
-              ))}
-            </Stagger>
+            {publicProofStories.length > 0 ? (
+              <>
+                <Stagger className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" staggerDelay={0.08}>
+                  {publicProofStories.map((story) => (
+                    <StaggerItem key={story.promiseId}>
+                      <div className="flex h-full flex-col rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm transition-colors hover:border-[--wr-gold]/20">
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} className="h-4 w-4 fill-[--wr-gold] text-[--wr-gold]" />
+                          ))}
+                        </div>
+                        <h3 className="mt-3 text-sm font-bold text-foreground">{story.headline}</h3>
+                        <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                          &ldquo;{story.quote}&rdquo;
+                        </p>
+                        <div className="mt-4 space-y-2 border-t border-border pt-3">
+                          <p className="text-xs font-medium uppercase tracking-[0.14em] text-[--wr-gold]">
+                            {story.promiseThatMatteredMost}
+                          </p>
+                          <p className="text-sm font-semibold text-foreground">{story.customerLabel}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {story.territoryLabel} &middot; {story.vehicleLabel} &middot; {story.serviceLabel}
+                          </p>
+                          {story.nextVisitLabel ? (
+                            <p className="text-xs text-muted-foreground">
+                              Next likely visit: <span className="font-medium text-foreground">{story.nextVisitLabel}</span>
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </StaggerItem>
+                  ))}
+                </Stagger>
+                <div className="mt-8 flex justify-center">
+                  <Link
+                    href="/results"
+                    className="inline-flex items-center gap-2 rounded-full border border-[--wr-gold]/20 bg-[--wr-gold]/10 px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-[--wr-gold]/15"
+                  >
+                    See More Real Results
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <div className="mt-12 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-3xl border border-border bg-card/50 p-7 backdrop-blur-sm">
+                  <p className="text-sm font-semibold text-foreground">
+                    We do not publish fabricated testimonials.
+                  </p>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    WrenchReady is now collecting recap-backed proof, approved photos, and real customer language directly from the promise record. Public stories only appear here when they are permission-safe.
+                  </p>
+                </div>
+                <div className="rounded-3xl border border-[--wr-gold]/15 bg-[--wr-gold]/5 p-7">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[--wr-gold]">
+                    Trust Standard
+                  </p>
+                  <ul className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
+                    <li>Real proof only.</li>
+                    <li>Approval before reuse.</li>
+                    <li>Recap, photos, and next-step truth tied to the same visit.</li>
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

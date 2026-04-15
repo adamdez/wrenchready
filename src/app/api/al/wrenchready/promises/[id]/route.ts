@@ -237,7 +237,11 @@ function isProofAssetPayload(value: unknown) {
     typeof candidate.label === "string" &&
     (candidate.kind === undefined || typeof candidate.kind === "string") &&
     (candidate.note === undefined || typeof candidate.note === "string") &&
-    (candidate.url === undefined || typeof candidate.url === "string")
+    (candidate.url === undefined || typeof candidate.url === "string") &&
+    (candidate.permissionStatus === undefined ||
+      candidate.permissionStatus === "unknown" ||
+      candidate.permissionStatus === "internal-only" ||
+      candidate.permissionStatus === "customer-approved")
   );
 }
 

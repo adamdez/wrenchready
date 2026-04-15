@@ -1,6 +1,7 @@
 import { StructuredData } from "@/components/structured-data";
 import { HomePage } from "@/components/home-page";
-import { homeFaqs, reviews, services, siteConfig } from "@/data/site";
+import { homeFaqs, services, siteConfig } from "@/data/site";
+import { getPublicProofSnapshot } from "@/lib/promise-crm/server";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
@@ -20,75 +21,6 @@ export const metadata = buildMetadata({
   ],
 });
 
-const businessStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "AutomotiveBusiness",
-  name: siteConfig.name,
-  url: siteConfig.domain,
-  description: siteConfig.description,
-  email: siteConfig.contact.email,
-  telephone: siteConfig.contact.phoneDisplay,
-  priceRange: "$$",
-  image: absoluteUrl("/opengraph-image"),
-  geo: {
-    "@type": "GeoCoordinates",
-    latitude: 47.6588,
-    longitude: -117.426,
-  },
-  address: {
-    "@type": "PostalAddress",
-    addressLocality: siteConfig.city,
-    addressRegion: siteConfig.stateCode,
-    addressCountry: "US",
-  },
-  areaServed: siteConfig.areaServed.map((city) => ({
-    "@type": "City",
-    name: city,
-    containedInPlace: {
-      "@type": "State",
-      name: siteConfig.state,
-    },
-  })),
-  availableService: services.map((service) => ({
-    "@type": "Service",
-    name: service.name,
-    url: absoluteUrl(`/services/${service.slug}`),
-    description: service.teaser,
-    offers: {
-      "@type": "Offer",
-      priceCurrency: "USD",
-      price: service.priceFrom.replace(/[^0-9]/g, ""),
-      priceSpecification: {
-        "@type": "UnitPriceSpecification",
-        priceCurrency: "USD",
-        price: service.priceFrom.replace(/[^0-9]/g, ""),
-        unitText: "starting price",
-      },
-    },
-  })),
-  ...(reviews.length > 0
-    ? {
-        aggregateRating: {
-          "@type": "AggregateRating",
-          ratingValue: "5.0",
-          reviewCount: String(reviews.length),
-          bestRating: "5",
-          worstRating: "1",
-        },
-        review: reviews.map((r) => ({
-          "@type": "Review",
-          reviewRating: {
-            "@type": "Rating",
-            ratingValue: String(r.rating),
-            bestRating: "5",
-          },
-          author: { "@type": "Person", name: r.name },
-          reviewBody: r.text,
-        })),
-      }
-    : {}),
-};
-
 const faqStructuredData = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -102,11 +34,86 @@ const faqStructuredData = {
   })),
 };
 
-export default function Home() {
+export default async function Home() {
+  const publicProof = await getPublicProofSnapshot();
+  const publicReviews = publicProof.stories.map((story) => ({
+    name: story.customerLabel,
+    text: story.quote,
+  }));
+
+  const businessStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "AutomotiveBusiness",
+    name: siteConfig.name,
+    url: siteConfig.domain,
+    description: siteConfig.description,
+    email: siteConfig.contact.email,
+    telephone: siteConfig.contact.phoneDisplay,
+    priceRange: "$$",
+    image: absoluteUrl("/opengraph-image"),
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: 47.6588,
+      longitude: -117.426,
+    },
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: siteConfig.city,
+      addressRegion: siteConfig.stateCode,
+      addressCountry: "US",
+    },
+    areaServed: siteConfig.areaServed.map((city) => ({
+      "@type": "City",
+      name: city,
+      containedInPlace: {
+        "@type": "State",
+        name: siteConfig.state,
+      },
+    })),
+    availableService: services.map((service) => ({
+      "@type": "Service",
+      name: service.name,
+      url: absoluteUrl(`/services/${service.slug}`),
+      description: service.teaser,
+      offers: {
+        "@type": "Offer",
+        priceCurrency: "USD",
+        price: service.priceFrom.replace(/[^0-9]/g, ""),
+        priceSpecification: {
+          "@type": "UnitPriceSpecification",
+          priceCurrency: "USD",
+          price: service.priceFrom.replace(/[^0-9]/g, ""),
+          unitText: "starting price",
+        },
+      },
+    })),
+    ...(publicReviews.length > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: "5.0",
+            reviewCount: String(publicReviews.length),
+            bestRating: "5",
+            worstRating: "1",
+          },
+          review: publicReviews.map((review) => ({
+            "@type": "Review",
+            reviewRating: {
+              "@type": "Rating",
+              ratingValue: "5",
+              bestRating: "5",
+            },
+            author: { "@type": "Person", name: review.name },
+            reviewBody: review.text,
+          })),
+        }
+      : {}),
+  };
+
   return (
     <>
       <StructuredData data={[businessStructuredData, faqStructuredData]} />
-      <HomePage />
+      <HomePage publicProofStories={publicProof.stories} />
     </>
   );
 }

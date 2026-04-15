@@ -13,6 +13,23 @@ It combines the main lessons from:
 
 The goal is to keep the strategy, the software, and the daily operating standard aligned.
 
+## Core source files for this doctrine
+
+These are the primary source documents behind the current WrenchReady spine and should stay attached to future planning and build referrals:
+
+- [wrenchready-central-conversation-handoff.md](C:\Users\adamd\Documents\New%20project\src\data\wrenchready-central-conversation-handoff.md)
+- [promise-economics-benchmark-10.md](C:\Users\adamd\Documents\New%20project\src\data\promise-economics-benchmark-10.md)
+- [build-now-operating-priorities.md](C:\Users\adamd\Documents\New%20project\src\data\build-now-operating-priorities.md)
+- [build-order-reset.md](C:\Users\adamd\Documents\New%20project\src\data\build-order-reset.md)
+- [wrenchready-pricing-packet.md](C:\Users\adamd\Documents\New%20project\src\data\wrenchready-pricing-packet.md)
+- [spokane-owner-income-model.md](C:\Users\adamd\Documents\New%20project\src\data\spokane-owner-income-model.md)
+
+Secondary growth overlays that should inform proof, review, retention, and referral work without displacing the core spine:
+
+- [ztf-business-gap-analysis.md](C:\Users\adamd\Desktop\ztf-business-gap-analysis.md)
+- [ztf-business-priority-backlog.md](C:\Users\adamd\Desktop\ztf-business-priority-backlog.md)
+- [ztf-resource-catalog.md](C:\Users\adamd\Desktop\ztf-resource-catalog.md)
+
 ## The business in one sentence
 
 WrenchReady is not mainly a mobile mechanic website.
@@ -152,6 +169,7 @@ The software center is still the Promise CRM and its surrounding operating views
 - proposal and trial discipline inside the recurring-account lane
 - closeout quality measurement, not just closeout completion
 - queue-first field, warranty, and recapture actions so operators can improve the system where the work is surfaced
+- public proof stories sourced from permission-safe closeouts instead of fabricated testimonials
 
 This is the right center because it is the shortest path from:
 

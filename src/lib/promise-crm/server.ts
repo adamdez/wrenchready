@@ -12,6 +12,7 @@ export {
   getOutboundQueueSnapshot,
   getOwnerExecutionOverview,
   getOwnerExecutionSnapshot,
+  getPublicProofSnapshot,
   getProofDisciplineSnapshot,
   getPromiseBoardMetrics,
   getPromiseEconomicsRollup,

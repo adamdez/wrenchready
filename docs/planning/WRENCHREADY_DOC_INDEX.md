@@ -53,20 +53,37 @@ Primary folder:
 - Weekly recapture now includes deposit collection, callback resolution, and recurring-account progression at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\recapture\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\recapture\page.tsx)
 - Weekly recapture now also measures closeout quality and permission-safe proof, not just whether a closeout record exists
 - Weekly recapture now also includes a weak-closeout queue with inline quality-improvement actions
+- Public proof stories now come from permission-safe Promise CRM closeouts instead of fabricated testimonials, with the public results page at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\results\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\results\page.tsx)
 
 ## Research / strategy / pricing folder
 
 Primary folder:
 `C:\Users\adamd\Documents\New project\src\data`
 
+### Core source set for the current spine
+
+These are the primary non-code source documents that shaped the current build doctrine and should be treated as the main reference set:
+
 - [wrenchready-central-conversation-handoff.md](C:\Users\adamd\Documents\New%20project\src\data\wrenchready-central-conversation-handoff.md)
 - [promise-economics-benchmark-10.md](C:\Users\adamd\Documents\New%20project\src\data\promise-economics-benchmark-10.md)
+- [build-now-operating-priorities.md](C:\Users\adamd\Documents\New%20project\src\data\build-now-operating-priorities.md)
+- [build-order-reset.md](C:\Users\adamd\Documents\New%20project\src\data\build-order-reset.md)
+- [wrenchready-pricing-packet.md](C:\Users\adamd\Documents\New%20project\src\data\wrenchready-pricing-packet.md)
+- [spokane-owner-income-model.md](C:\Users\adamd\Documents\New%20project\src\data\spokane-owner-income-model.md)
+
+### Secondary growth overlays
+
+These are not the core operating spine, but they are useful for trust, review, proof, repeat-revenue, and referral growth decisions:
+
+- [ztf-business-gap-analysis.md](C:\Users\adamd\Desktop\ztf-business-gap-analysis.md)
+- [ztf-business-priority-backlog.md](C:\Users\adamd\Desktop\ztf-business-priority-backlog.md)
+- [ztf-resource-catalog.md](C:\Users\adamd\Desktop\ztf-resource-catalog.md)
+
+### Additional research / pricing references
+
 - [wrenchready-pricing-research.md](C:\Users\adamd\Documents\New%20project\src\data\wrenchready-pricing-research.md)
 - [wrenchready-pe-pricing-architecture.md](C:\Users\adamd\Documents\New%20project\src\data\wrenchready-pe-pricing-architecture.md)
 - [pricing-model-agent-handoff.md](C:\Users\adamd\Documents\New%20project\src\data\pricing-model-agent-handoff.md)
-- [spokane-owner-income-model.md](C:\Users\adamd\Documents\New%20project\src\data\spokane-owner-income-model.md)
-- [build-now-operating-priorities.md](C:\Users\adamd\Documents\New%20project\src\data\build-now-operating-priorities.md)
-- [build-order-reset.md](C:\Users\adamd\Documents\New%20project\src\data\build-order-reset.md)
 - [pe-radar-scorecard.json](C:\Users\adamd\Documents\New%20project\src\data\pe-radar-scorecard.json)
 - [al-platform-contract.json](C:\Users\adamd\Documents\New%20project\src\data\al-platform-contract.json)
 - [wrenchready-module-v1.json](C:\Users\adamd\Documents\New%20project\src\data\wrenchready-module-v1.json)

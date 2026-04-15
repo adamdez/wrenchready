@@ -81,6 +81,7 @@ import type {
   OwnerDailyPriority,
   OwnerExecutionMetrics,
   OwnerExecutionSnapshot,
+  PublicProofSnapshot,
   ProofDisciplineSnapshot,
   PromiseBoardMetrics,
   PromiseCloseout,
@@ -2416,6 +2417,102 @@ export async function getProofDisciplineSnapshot(): Promise<ProofDisciplineSnaps
       ),
     },
     tasks,
+  };
+}
+
+function getPublicCustomerLabel(name: string, territory: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return `${territory} customer`;
+  const parts = trimmed.split(/\s+/);
+  const firstName = parts[0];
+  const lastInitial = parts.length > 1 ? `${parts[parts.length - 1][0]}.` : "";
+  return `${firstName} ${lastInitial}`.trim();
+}
+
+function getVehicleLabel(record: PromiseRecord) {
+  const { year, make, model } = record.vehicle;
+  return [year || undefined, make, model].filter(Boolean).join(" ");
+}
+
+function getPublicProofHeadline(record: PromiseRecord) {
+  const proof = record.closeout?.proofCapture;
+  const nextVisit = getNextProbableVisit(record);
+  if (proof?.promiseThatMatteredMost) {
+    return proof.promiseThatMatteredMost;
+  }
+  if (nextVisit?.service) {
+    return `${nextVisit.service} with a clear next step`;
+  }
+  return `${record.serviceScope} with clear communication`;
+}
+
+function getPublicProofQuote(record: PromiseRecord) {
+  const proof = record.closeout?.proofCapture;
+  if (proof?.customerReliefQuote) {
+    return proof.customerReliefQuote;
+  }
+  if (proof?.proofNotes) {
+    return proof.proofNotes;
+  }
+  if (record.closeout?.customerConditionSummary) {
+    return record.closeout.customerConditionSummary;
+  }
+  return record.closeout?.workPerformedSummary || "Clear communication and follow-through mattered.";
+}
+
+export async function getPublicProofSnapshot(): Promise<PublicProofSnapshot> {
+  const promises = await getPromiseRecords();
+  const completedPromises = promises.filter(
+    (record) => record.status === "completed" || record.status === "follow-through-due",
+  );
+
+  const stories = completedPromises
+    .map((record) => {
+      const proof = record.closeout?.proofCapture;
+      if (!proof) return null;
+
+      const approvedAssets =
+        proof.assets?.filter((asset) => asset.permissionStatus === "customer-approved") || [];
+
+      if (
+        approvedAssets.length === 0 ||
+        !proof.customerReliefQuote ||
+        !proof.promiseThatMatteredMost
+      ) {
+        return null;
+      }
+
+      const nextVisit = getNextProbableVisit(record);
+
+      return {
+        promiseId: record.id,
+        headline: getPublicProofHeadline(record),
+        quote: getPublicProofQuote(record),
+        customerLabel: getPublicCustomerLabel(record.customer.name, record.location.territory),
+        territoryLabel: record.location.city || record.location.territory,
+        vehicleLabel: getVehicleLabel(record),
+        serviceLabel: record.serviceScope,
+        proofAssetCount: proof.assets.length,
+        approvedAssetCount: approvedAssets.length,
+        promiseThatMatteredMost: proof.promiseThatMatteredMost,
+        bookingReason: proof.bookingReason,
+        nextVisitLabel: nextVisit?.service,
+      };
+    })
+    .filter((story): story is NonNullable<typeof story> => story !== null)
+    .slice(0, 6);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    summary: {
+      completedVisits: completedPromises.length,
+      publicStories: stories.length,
+      permissionSafeAssets: completedPromises.reduce(
+        (sum, record) => sum + getProofDisciplineForPromise(record).approvedAssets,
+        0,
+      ),
+    },
+    stories,
   };
 }
 

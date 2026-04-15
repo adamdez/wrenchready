@@ -834,6 +834,31 @@ export type ProofDisciplineSnapshot = {
   tasks: ProofDisciplineTask[];
 };
 
+export type PublicProofStory = {
+  promiseId: string;
+  headline: string;
+  quote: string;
+  customerLabel: string;
+  territoryLabel: string;
+  vehicleLabel: string;
+  serviceLabel: string;
+  proofAssetCount: number;
+  approvedAssetCount: number;
+  promiseThatMatteredMost?: string;
+  bookingReason?: string;
+  nextVisitLabel?: string;
+};
+
+export type PublicProofSnapshot = {
+  generatedAt: string;
+  summary: {
+    completedVisits: number;
+    publicStories: number;
+    permissionSafeAssets: number;
+  };
+  stories: PublicProofStory[];
+};
+
 export type RecurringAccountStarterCandidate = {
   sourceType: "inbound" | "promise";
   sourceId: string;
