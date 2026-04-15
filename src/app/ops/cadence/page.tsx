@@ -284,6 +284,13 @@ export default async function OperatingCadencePage() {
           Check systems and access needs
           <ArrowRight className="h-4 w-4" />
         </Link>
+        <Link
+          href="/ops/management"
+          className="mt-6 ml-3 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+        >
+          Open management review
+          <ArrowRight className="h-4 w-4" />
+        </Link>
       </section>
     </div>
   );

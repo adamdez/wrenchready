@@ -318,6 +318,12 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
   const [inspectionChecklist, setInspectionChecklist] = useState(
     formatList(promise.fieldExecution?.inspectionChecklist),
   );
+  const [handoffChecklist, setHandoffChecklist] = useState(
+    formatList(promise.fieldExecution?.handoffChecklist),
+  );
+  const [comebackPreventionSteps, setComebackPreventionSteps] = useState(
+    formatList(promise.fieldExecution?.comebackPreventionSteps),
+  );
   const [notesTemplate, setNotesTemplate] = useState(
     promise.fieldExecution?.notesTemplate || "",
   );
@@ -351,11 +357,23 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
   const [warrantyStatus, setWarrantyStatus] = useState<
     "none" | "monitoring" | "open" | "resolved"
   >(promise.warrantyCase?.status || "none");
+  const [warrantySeverity, setWarrantySeverity] = useState<
+    "watch" | "trust-risk" | "down-unit"
+  >(promise.warrantyCase?.severity || "watch");
+  const [warrantyRootCause, setWarrantyRootCause] = useState<
+    "parts" | "installation" | "diagnosis" | "expectation-gap" | "unknown"
+  >(promise.warrantyCase?.rootCause || "unknown");
   const [warrantyIssueSummary, setWarrantyIssueSummary] = useState(
     promise.warrantyCase?.issueSummary || "",
   );
   const [warrantyCallbackDueAt, setWarrantyCallbackDueAt] = useState(
     promise.warrantyCase?.callbackDueAt || "",
+  );
+  const [warrantyMakeGoodPlan, setWarrantyMakeGoodPlan] = useState(
+    promise.warrantyCase?.makeGoodPlan || "",
+  );
+  const [warrantyPreventionStep, setWarrantyPreventionStep] = useState(
+    promise.warrantyCase?.preventionStep || "",
   );
   const [warrantyResolutionSummary, setWarrantyResolutionSummary] = useState(
     promise.warrantyCase?.resolutionSummary || "",
@@ -519,6 +537,8 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
             partsChecklist: parseList(partsChecklist),
             photosRequired: parseList(photosRequired),
             inspectionChecklist: parseList(inspectionChecklist),
+            handoffChecklist: parseList(handoffChecklist),
+            comebackPreventionSteps: parseList(comebackPreventionSteps),
             notesTemplate: notesTemplate.trim() || undefined,
             upsellFocus: parseList(upsellFocus),
             closeoutSteps: parseList(closeoutSteps),
@@ -534,8 +554,12 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
           },
           warrantyCase: {
             status: warrantyStatus,
+            severity: warrantySeverity,
+            rootCause: warrantyRootCause,
             issueSummary: warrantyIssueSummary.trim() || undefined,
             callbackDueAt: warrantyCallbackDueAt.trim() || undefined,
+            makeGoodPlan: warrantyMakeGoodPlan.trim() || undefined,
+            preventionStep: warrantyPreventionStep.trim() || undefined,
             resolutionSummary: warrantyResolutionSummary.trim() || undefined,
           },
           recurringAccount: {
@@ -1414,6 +1438,30 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
 
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Handoff checklist
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setHandoffChecklist(event.target.value)}
+                placeholder="Walk customer through work performed&#10;Confirm payment path&#10;Explain next-step watch items"
+                value={handoffChecklist}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Comeback prevention
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setComebackPreventionSteps(event.target.value)}
+                placeholder="Retorque after road test&#10;Recheck charging voltage&#10;Document customer operating note"
+                value={comebackPreventionSteps}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
                 Honest add-on focus
               </span>
               <textarea
@@ -1607,6 +1655,25 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
 
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Severity
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) =>
+                  setWarrantySeverity(
+                    event.target.value as "watch" | "trust-risk" | "down-unit",
+                  )
+                }
+                value={warrantySeverity}
+              >
+                <option value="watch">Watch</option>
+                <option value="trust-risk">Trust risk</option>
+                <option value="down-unit">Down unit</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
                 Callback due
               </span>
               <input
@@ -1615,6 +1682,32 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
                 placeholder="2026-04-15T09:00:00-07:00"
                 value={warrantyCallbackDueAt}
               />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Root cause
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) =>
+                  setWarrantyRootCause(
+                    event.target.value as
+                      | "parts"
+                      | "installation"
+                      | "diagnosis"
+                      | "expectation-gap"
+                      | "unknown",
+                  )
+                }
+                value={warrantyRootCause}
+              >
+                <option value="unknown">Unknown</option>
+                <option value="parts">Parts</option>
+                <option value="installation">Installation</option>
+                <option value="diagnosis">Diagnosis</option>
+                <option value="expectation-gap">Expectation gap</option>
+              </select>
             </label>
 
             <label className="block space-y-2 md:col-span-2">
@@ -1626,6 +1719,30 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
                 onChange={(event) => setWarrantyIssueSummary(event.target.value)}
                 placeholder="What broke trust or what needs to be checked?"
                 value={warrantyIssueSummary}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Make-good plan
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setWarrantyMakeGoodPlan(event.target.value)}
+                placeholder="What exactly are we doing for the customer, by when, and who owns it?"
+                value={warrantyMakeGoodPlan}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Prevention step
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setWarrantyPreventionStep(event.target.value)}
+                placeholder="What should change in screening, field execution, or closeout so this does not repeat?"
+                value={warrantyPreventionStep}
               />
             </label>
 

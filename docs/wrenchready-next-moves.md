@@ -161,6 +161,25 @@ Current status:
 - now built into the operator playbooks and reinforced by closeout / recapture structure
 - still needs field habit and measurement
 
+### 5C. Field packet and comeback prevention discipline
+
+The visit packet should not stop at parts, inspection, and photos.
+
+It also needs:
+- handoff checklist
+- comeback-prevention steps
+- closeout readiness before the job cools off
+
+Why it matters:
+- fewer callbacks
+- cleaner customer handoff
+- less trust leakage after technically good visits
+- better operating repeatability
+
+Current status:
+- now built into the field packet and field-execution view
+- still needs stronger daily use in real ops
+
 ### 5A. Review Ask Scripts
 
 The business now needs lane-specific review language, not one generic message.
@@ -244,6 +263,20 @@ Current status:
 - duplicate Stripe completion events now resolve as duplicates instead of double-counting the payment
 - collections queue now has inline actions for status, method, invoice reference, write-off reason, and notes
 - still needs live-mode Stripe keys before real customer charges should go through
+
+### 6B. Warranty recovery discipline
+
+Callbacks should be run like trust recovery, not just an annoying side issue.
+
+That means each warranty/comeback item should know:
+- severity
+- root cause
+- make-good plan
+- prevention step
+
+Current status:
+- now built into the warranty record and warranty worklist
+- still needs disciplined real-world usage and weekly review
 
 ### 7. Fleet / B2B Starter Offer
 

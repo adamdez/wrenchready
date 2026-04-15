@@ -87,6 +87,8 @@ type UpdatePromisePayload = {
     partsChecklist?: string[];
     photosRequired?: string[];
     inspectionChecklist?: string[];
+    handoffChecklist?: string[];
+    comebackPreventionSteps?: string[];
     notesTemplate?: string;
     upsellFocus?: string[];
     closeoutSteps?: string[];
@@ -114,8 +116,12 @@ type UpdatePromisePayload = {
   } | null;
   warrantyCase?: {
     status?: string;
+    severity?: string;
+    rootCause?: string;
     issueSummary?: string;
     callbackDueAt?: string;
+    makeGoodPlan?: string;
+    preventionStep?: string;
     resolutionSummary?: string;
   } | null;
   recurringAccount?: {
@@ -346,6 +352,9 @@ function isFieldExecutionPayload(value: unknown) {
     (candidate.photosRequired === undefined || isStringArray(candidate.photosRequired)) &&
     (candidate.inspectionChecklist === undefined ||
       isStringArray(candidate.inspectionChecklist)) &&
+    (candidate.handoffChecklist === undefined || isStringArray(candidate.handoffChecklist)) &&
+    (candidate.comebackPreventionSteps === undefined ||
+      isStringArray(candidate.comebackPreventionSteps)) &&
     (candidate.notesTemplate === undefined || typeof candidate.notesTemplate === "string") &&
     (candidate.upsellFocus === undefined || isStringArray(candidate.upsellFocus)) &&
     (candidate.closeoutSteps === undefined || isStringArray(candidate.closeoutSteps))
@@ -403,8 +412,12 @@ function isWarrantyCasePayload(value: unknown) {
 
   return (
     (candidate.status === undefined || typeof candidate.status === "string") &&
+    (candidate.severity === undefined || typeof candidate.severity === "string") &&
+    (candidate.rootCause === undefined || typeof candidate.rootCause === "string") &&
     (candidate.issueSummary === undefined || typeof candidate.issueSummary === "string") &&
     (candidate.callbackDueAt === undefined || typeof candidate.callbackDueAt === "string") &&
+    (candidate.makeGoodPlan === undefined || typeof candidate.makeGoodPlan === "string") &&
+    (candidate.preventionStep === undefined || typeof candidate.preventionStep === "string") &&
     (candidate.resolutionSummary === undefined ||
       typeof candidate.resolutionSummary === "string")
   );

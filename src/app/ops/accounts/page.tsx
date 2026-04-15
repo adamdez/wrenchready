@@ -109,6 +109,18 @@ export default async function RecurringAccountsPage() {
           </div>
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Ready to pitch
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.readyToPitch}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Ready to activate
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.readyToActivate}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
               Est. monthly
             </p>
             <p className="mt-2 text-2xl font-bold text-foreground">
@@ -138,6 +150,9 @@ export default async function RecurringAccountsPage() {
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               Active monthly {formatCurrency(snapshot.summary.activeMonthlyValueEstimate)}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Ready to pitch {snapshot.summary.readyToPitch} / ready to activate {snapshot.summary.readyToActivate}
             </p>
           </div>
           <div className="rounded-3xl border border-border bg-background/60 p-5">

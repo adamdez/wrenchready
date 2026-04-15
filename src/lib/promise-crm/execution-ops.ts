@@ -7,6 +7,8 @@ import type {
   PromiseRecurringAccountActivityKind,
   PromiseRecurringAccount,
   PromiseRecord,
+  PromiseWarrantyRootCause,
+  PromiseWarrantySeverity,
   PromiseWarrantyCase,
 } from "@/lib/promise-crm/types";
 
@@ -109,6 +111,8 @@ export function normalizeFieldExecutionPacket(
     partsChecklist: normalizeStringList(value.partsChecklist),
     photosRequired: normalizeStringList(value.photosRequired),
     inspectionChecklist: normalizeStringList(value.inspectionChecklist),
+    handoffChecklist: normalizeStringList(value.handoffChecklist),
+    comebackPreventionSteps: normalizeStringList(value.comebackPreventionSteps),
     notesTemplate: toOptionalString(value.notesTemplate),
     upsellFocus: normalizeStringList(value.upsellFocus),
     closeoutSteps: normalizeStringList(value.closeoutSteps),
@@ -119,6 +123,8 @@ export function normalizeFieldExecutionPacket(
     normalized.partsChecklist.length > 0 ||
     normalized.photosRequired.length > 0 ||
     normalized.inspectionChecklist.length > 0 ||
+    normalized.handoffChecklist.length > 0 ||
+    normalized.comebackPreventionSteps.length > 0 ||
     normalized.notesTemplate ||
     normalized.upsellFocus.length > 0 ||
     normalized.closeoutSteps.length > 0;
@@ -138,6 +144,9 @@ export function mergeFieldExecutionPacket(
     partsChecklist: updates.partsChecklist ?? current?.partsChecklist ?? [],
     photosRequired: updates.photosRequired ?? current?.photosRequired ?? [],
     inspectionChecklist: updates.inspectionChecklist ?? current?.inspectionChecklist ?? [],
+    handoffChecklist: updates.handoffChecklist ?? current?.handoffChecklist ?? [],
+    comebackPreventionSteps:
+      updates.comebackPreventionSteps ?? current?.comebackPreventionSteps ?? [],
     notesTemplate: updates.notesTemplate ?? current?.notesTemplate,
     upsellFocus: updates.upsellFocus ?? current?.upsellFocus ?? [],
     closeoutSteps: updates.closeoutSteps ?? current?.closeoutSteps ?? [],
@@ -264,16 +273,40 @@ export function normalizeWarrantyCase(
       ? value.status
       : "none";
 
+  const severity: PromiseWarrantySeverity | undefined =
+    value.severity === "watch" ||
+    value.severity === "trust-risk" ||
+    value.severity === "down-unit"
+      ? value.severity
+      : undefined;
+
+  const rootCause: PromiseWarrantyRootCause | undefined =
+    value.rootCause === "parts" ||
+    value.rootCause === "installation" ||
+    value.rootCause === "diagnosis" ||
+    value.rootCause === "expectation-gap" ||
+    value.rootCause === "unknown"
+      ? value.rootCause
+      : undefined;
+
   const normalized: PromiseWarrantyCase = {
     status,
+    severity,
+    rootCause,
     issueSummary: toOptionalString(value.issueSummary),
     callbackDueAt: toOptionalString(value.callbackDueAt),
+    makeGoodPlan: toOptionalString(value.makeGoodPlan),
+    preventionStep: toOptionalString(value.preventionStep),
     resolutionSummary: toOptionalString(value.resolutionSummary),
   };
 
   return normalized.status !== "none" ||
+    normalized.severity ||
+    normalized.rootCause ||
     normalized.issueSummary ||
     normalized.callbackDueAt ||
+    normalized.makeGoodPlan ||
+    normalized.preventionStep ||
     normalized.resolutionSummary
     ? normalized
     : undefined;
@@ -288,8 +321,12 @@ export function mergeWarrantyCase(
 
   return normalizeWarrantyCase({
     status: updates.status ?? current?.status ?? "none",
+    severity: updates.severity ?? current?.severity,
+    rootCause: updates.rootCause ?? current?.rootCause,
     issueSummary: updates.issueSummary ?? current?.issueSummary,
     callbackDueAt: updates.callbackDueAt ?? current?.callbackDueAt,
+    makeGoodPlan: updates.makeGoodPlan ?? current?.makeGoodPlan,
+    preventionStep: updates.preventionStep ?? current?.preventionStep,
     resolutionSummary: updates.resolutionSummary ?? current?.resolutionSummary,
   });
 }
@@ -486,10 +523,24 @@ export function mergePromiseNotesWithExecutionOps(
 
 export function getExecutionPacketCompleteness(promise: PromiseRecord) {
   const packet = promise.fieldExecution;
+  const closeout = promise.closeout;
+  const completionFlags = [
+    packet && packet.partsChecklist.length > 0,
+    packet && packet.photosRequired.length > 0,
+    packet && packet.inspectionChecklist.length > 0,
+    packet && packet.handoffChecklist.length > 0,
+    packet && packet.comebackPreventionSteps.length > 0,
+  ].filter(Boolean).length;
 
   return {
+    completionScore: Math.round((completionFlags / 5) * 100),
     missingPartsChecklist: !packet || packet.partsChecklist.length === 0,
     missingPhotosChecklist: !packet || packet.photosRequired.length === 0,
     missingInspectionChecklist: !packet || packet.inspectionChecklist.length === 0,
+    missingHandoffChecklist: !packet || packet.handoffChecklist.length === 0,
+    missingComebackPrevention: !packet || packet.comebackPreventionSteps.length === 0,
+    closeoutNotReady:
+      promise.jobStage === "completed" &&
+      (!closeout?.workPerformedSummary || !closeout?.customerConditionSummary),
   };
 }

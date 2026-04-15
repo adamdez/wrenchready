@@ -184,6 +184,8 @@ export type PromiseFieldExecutionPacket = {
   partsChecklist: string[];
   photosRequired: string[];
   inspectionChecklist: string[];
+  handoffChecklist: string[];
+  comebackPreventionSteps: string[];
   notesTemplate?: string;
   upsellFocus: string[];
   closeoutSteps: string[];
@@ -234,11 +236,22 @@ export type PromisePaymentCollection = {
 };
 
 export type PromiseWarrantyCaseStatus = "none" | "monitoring" | "open" | "resolved";
+export type PromiseWarrantySeverity = "watch" | "trust-risk" | "down-unit";
+export type PromiseWarrantyRootCause =
+  | "parts"
+  | "installation"
+  | "diagnosis"
+  | "expectation-gap"
+  | "unknown";
 
 export type PromiseWarrantyCase = {
   status: PromiseWarrantyCaseStatus;
+  severity?: PromiseWarrantySeverity;
+  rootCause?: PromiseWarrantyRootCause;
   issueSummary?: string;
   callbackDueAt?: string;
+  makeGoodPlan?: string;
+  preventionStep?: string;
   resolutionSummary?: string;
 };
 
@@ -428,9 +441,14 @@ export type FieldExecutionTask = {
   serviceScope: string;
   scheduledWindowLabel: string;
   jobStage: PromiseJobStage;
+  completionScore: number;
   missingPartsChecklist: boolean;
   missingPhotosChecklist: boolean;
   missingInspectionChecklist: boolean;
+  missingHandoffChecklist: boolean;
+  missingComebackPrevention: boolean;
+  closeoutNotReady: boolean;
+  taskPriority: "high" | "medium" | "low";
   nextStep: string;
 };
 
@@ -438,8 +456,11 @@ export type FieldExecutionSnapshot = {
   generatedAt: string;
   total: number;
   needsPacket: number;
+  packetReady: number;
   confirmedToday: number;
   onSiteNow: number;
+  comebackPreventionWeak: number;
+  closeoutAtRisk: number;
   tasks: FieldExecutionTask[];
 };
 
@@ -480,8 +501,13 @@ export type WarrantyTask = {
   territory: string;
   serviceScope: string;
   status: PromiseWarrantyCaseStatus;
+  severity?: PromiseWarrantySeverity;
+  rootCause?: PromiseWarrantyRootCause;
   issueSummary?: string;
   callbackDueAt?: string;
+  overdue: boolean;
+  makeGoodPlanMissing: boolean;
+  preventionMissing: boolean;
   nextStep: string;
 };
 
@@ -490,6 +516,10 @@ export type WarrantySnapshot = {
   open: number;
   monitoring: number;
   resolved: number;
+  overdue: number;
+  trustRisk: number;
+  downUnit: number;
+  preventionMissing: number;
   tasks: WarrantyTask[];
 };
 
@@ -804,6 +834,8 @@ export type RecurringAccountStarterSnapshot = {
     trialActive: number;
     active: number;
     atRisk: number;
+    readyToPitch: number;
+    readyToActivate: number;
     totalVehicles: number;
     totalMonthlyValueEstimate: number;
     activeMonthlyValueEstimate: number;

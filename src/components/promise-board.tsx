@@ -342,6 +342,13 @@ export function PromiseBoard(props: PromiseBoardProps) {
                 Wedge focus
                 <ArrowRight className="h-4 w-4" />
               </Link>
+              <Link
+                href="/ops/management"
+                className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+              >
+                Management review
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
 

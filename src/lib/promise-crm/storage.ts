@@ -2340,6 +2340,25 @@ function getRecurringAccountHealthScore(account: PromiseRecurringAccount) {
   return Math.max(0, Math.min(100, score));
 }
 
+function isRecurringAccountReadyToPitch(account: PromiseRecurringAccount) {
+  return (
+    account.status === "lead" &&
+    !!account.accountName &&
+    !!account.primaryContactName &&
+    !!account.summary
+  );
+}
+
+function isRecurringAccountReadyToActivate(account: PromiseRecurringAccount) {
+  return (
+    (account.status === "pitched" || account.status === "trial-active") &&
+    !!account.decisionMakerConfirmed &&
+    !!account.pricingShared &&
+    !!account.serviceMixDefined &&
+    !!account.clusterWindowDefined
+  );
+}
+
 function getRecurringAccountRecommendedAction(account: PromiseRecurringAccount, overdue: boolean) {
   if (overdue) {
     return "Clear the overdue touch now and either move the account forward or record the real blocker.";
@@ -2503,6 +2522,14 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
       trialActive,
       active,
       atRisk,
+      readyToPitch: trackedPromises.filter((record) =>
+        record.recurringAccount ? isRecurringAccountReadyToPitch(record.recurringAccount) : false,
+      ).length,
+      readyToActivate: trackedPromises.filter((record) =>
+        record.recurringAccount
+          ? isRecurringAccountReadyToActivate(record.recurringAccount)
+          : false,
+      ).length,
       totalVehicles: trackedPromises.reduce(
         (sum, record) => sum + (record.recurringAccount?.vehicleCount || 0),
         0,
@@ -2541,6 +2568,15 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
         } to clear`,
         `${pitched} pitched account${pitched === 1 ? "" : "s"} ready to move toward trial`,
         `${active} active recurring account${active === 1 ? "" : "s"} worth protecting this week`,
+        `${trackedPromises.filter((record) =>
+          record.recurringAccount
+            ? isRecurringAccountReadyToPitch(record.recurringAccount)
+            : false,
+        ).length} lead${trackedPromises.filter((record) =>
+          record.recurringAccount
+            ? isRecurringAccountReadyToPitch(record.recurringAccount)
+            : false,
+        ).length === 1 ? "" : "s"} ready for a real pitch`,
       ],
     },
     worklist,
@@ -2553,6 +2589,17 @@ export async function getFieldExecutionSnapshot(): Promise<FieldExecutionSnapsho
     .filter((record) => record.status !== "completed")
     .map((record) => {
       const completeness = getExecutionPacketCompleteness(record);
+      const taskPriority: "high" | "medium" | "low" =
+        completeness.closeoutNotReady ||
+        completeness.missingComebackPrevention ||
+        completeness.missingHandoffChecklist
+          ? "high"
+          : completeness.missingInspectionChecklist ||
+              completeness.missingPartsChecklist ||
+              completeness.missingPhotosChecklist
+            ? "medium"
+            : "low";
+
       return {
         promiseId: record.id,
         customerName: record.customer.name,
@@ -2562,15 +2609,29 @@ export async function getFieldExecutionSnapshot(): Promise<FieldExecutionSnapsho
         scheduledWindowLabel: record.scheduledWindow.label,
         jobStage: record.jobStage,
         ...completeness,
+        taskPriority,
         nextStep:
-          completeness.missingPartsChecklist ||
-          completeness.missingPhotosChecklist ||
-          completeness.missingInspectionChecklist
-            ? "Finish the execution packet before the visit gets tighter."
+          completeness.closeoutNotReady
+            ? "Finish the closeout summary before this completed visit goes cold."
+            : completeness.missingComebackPrevention || completeness.missingHandoffChecklist
+              ? "Add the handoff and comeback-prevention steps before this visit gets tighter."
+              : completeness.missingPartsChecklist ||
+                  completeness.missingPhotosChecklist ||
+                  completeness.missingInspectionChecklist
+                ? "Finish the execution packet before the visit gets tighter."
             : "Packet is usable. Keep stage and readiness current through the visit.",
       };
     })
-    .sort((a, b) => a.customerName.localeCompare(b.customerName));
+    .sort((a, b) => {
+      const priorityRank: Record<"high" | "medium" | "low", number> = {
+        high: 0,
+        medium: 1,
+        low: 2,
+      };
+      const rankGap = priorityRank[a.taskPriority] - priorityRank[b.taskPriority];
+      if (rankGap !== 0) return rankGap;
+      return a.customerName.localeCompare(b.customerName);
+    });
 
   return {
     generatedAt: new Date().toISOString(),
@@ -2579,12 +2640,16 @@ export async function getFieldExecutionSnapshot(): Promise<FieldExecutionSnapsho
       (task) =>
         task.missingInspectionChecklist ||
         task.missingPartsChecklist ||
-        task.missingPhotosChecklist,
+        task.missingPhotosChecklist ||
+        task.missingHandoffChecklist,
     ).length,
+    packetReady: tasks.filter((task) => task.completionScore >= 80).length,
     confirmedToday: tasks.filter((task) => task.jobStage === "confirmed").length,
     onSiteNow: tasks.filter(
       (task) => task.jobStage === "on-site" || task.jobStage === "en-route",
     ).length,
+    comebackPreventionWeak: tasks.filter((task) => task.missingComebackPrevention).length,
+    closeoutAtRisk: tasks.filter((task) => task.closeoutNotReady).length,
     tasks,
   };
 }
@@ -2659,6 +2724,7 @@ export async function getCollectionSnapshot(): Promise<CollectionSnapshot> {
 
 export async function getWarrantySnapshot(): Promise<WarrantySnapshot> {
   const promises = await getPromiseRecords();
+  const now = Date.now();
   const tasks = promises
     .filter(
       (record) =>
@@ -2666,30 +2732,55 @@ export async function getWarrantySnapshot(): Promise<WarrantySnapshot> {
         record.warrantyCase.status !== "none" &&
         record.warrantyCase.status !== "resolved",
     )
-    .map((record) => ({
-      promiseId: record.id,
-      customerName: record.customer.name,
-      owner: record.owner,
-      territory: record.location.territory,
-      serviceScope: record.serviceScope,
-      status: record.warrantyCase?.status || "none",
-      issueSummary: record.warrantyCase?.issueSummary,
-      callbackDueAt: record.warrantyCase?.callbackDueAt,
-      nextStep:
-        record.warrantyCase?.status === "open"
-          ? "Own the callback plan before trust leakage becomes a public problem."
-          : "Monitor and close the loop with the customer before this becomes a comeback.",
-    }))
-    .sort((a, b) =>
-      new Date(a.callbackDueAt || "9999-12-31").getTime() -
-      new Date(b.callbackDueAt || "9999-12-31").getTime(),
-    );
+    .map((record) => {
+      const callbackDueAt = record.warrantyCase?.callbackDueAt;
+      const overdue = callbackDueAt ? new Date(callbackDueAt).getTime() < now : false;
+      const makeGoodPlanMissing = !record.warrantyCase?.makeGoodPlan;
+      const preventionMissing = !record.warrantyCase?.preventionStep;
+
+      return {
+        promiseId: record.id,
+        customerName: record.customer.name,
+        owner: record.owner,
+        territory: record.location.territory,
+        serviceScope: record.serviceScope,
+        status: record.warrantyCase?.status || "none",
+        severity: record.warrantyCase?.severity,
+        rootCause: record.warrantyCase?.rootCause,
+        issueSummary: record.warrantyCase?.issueSummary,
+        callbackDueAt,
+        overdue,
+        makeGoodPlanMissing,
+        preventionMissing,
+        nextStep:
+          overdue
+            ? "This callback is overdue. Own the make-good plan now before trust damage compounds."
+            : makeGoodPlanMissing
+              ? "Define the make-good plan clearly so the customer and the team know the recovery path."
+              : preventionMissing
+                ? "Record the prevention step so this issue teaches the system something."
+                : record.warrantyCase?.status === "open"
+                  ? "Own the callback plan before trust leakage becomes a public problem."
+                  : "Monitor and close the loop with the customer before this becomes a comeback.",
+      };
+    })
+    .sort((a, b) => {
+      if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
+      return (
+        new Date(a.callbackDueAt || "9999-12-31").getTime() -
+        new Date(b.callbackDueAt || "9999-12-31").getTime()
+      );
+    });
 
   return {
     generatedAt: new Date().toISOString(),
     open: tasks.filter((task) => task.status === "open").length,
     monitoring: tasks.filter((task) => task.status === "monitoring").length,
     resolved: promises.filter((record) => record.warrantyCase?.status === "resolved").length,
+    overdue: tasks.filter((task) => task.overdue).length,
+    trustRisk: tasks.filter((task) => task.severity === "trust-risk").length,
+    downUnit: tasks.filter((task) => task.severity === "down-unit").length,
+    preventionMissing: tasks.filter((task) => task.preventionMissing).length,
     tasks,
   };
 }

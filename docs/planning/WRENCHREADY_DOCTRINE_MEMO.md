@@ -148,6 +148,7 @@ The software center is still the Promise CRM and its surrounding operating views
 - operating cadence
 - systems readiness
 - wedge focus
+- management review
 
 This is the right center because it is the shortest path from:
 

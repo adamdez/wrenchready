@@ -35,6 +35,8 @@ Primary folder:
 - Weekly operating cadence now includes a recurring-growth ritual with tracked/active/trial signal, touch discipline, trial conversion, and focus areas
 - Wedge-focus view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\wedges\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\wedges\page.tsx)
 - The public homepage and request flow now explicitly keep `No-start help` and `Brake help` as the primary launch wedges instead of broad generic positioning
+- Management review is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\management\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\management\page.tsx)
+- The field packet now includes handoff and comeback-prevention checklists, and the warranty lane now includes severity, root cause, make-good plan, and prevention-step truth
 - Systems-readiness view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\systems\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\systems\page.tsx)
 - Field-execution view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\field\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\field\page.tsx)
 - Collections view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\collections\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\collections\page.tsx)
