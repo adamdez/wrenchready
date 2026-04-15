@@ -227,7 +227,7 @@ export const homeFaqs: Faq[] = [
   {
     question: "How quickly can I get an appointment?",
     answer:
-      "Send us your vehicle, what you need, parking notes, and your preferred day. We will follow up with availability.",
+      "Most requests get a response within 15 minutes during service hours. Send us the vehicle, what you need, parking details, and your preferred day — we will follow up with availability and a clear next step.",
   },
   {
     question: "Is WrenchReady Mobile licensed and insured?",
@@ -259,7 +259,7 @@ export const services: Service[] = [
     teaser:
       "Fresh oil, the right filter, and a simple inspection so routine maintenance stays convenient without turning into a shop day.",
     metaDescription:
-      "Book a mobile oil change in Spokane, WA when routine maintenance fits the route. Oil service stays available as a support lane, with inspection notes and next-step recommendations.",
+      "Book a mobile oil change in Spokane, WA. Fresh oil, the right filter, and a quick inspection — routine maintenance at your driveway or workplace with clear notes on what to watch next.",
     priceFrom: "From $85",
     duration: "45-60 minutes",
     idealFor: [
@@ -279,10 +279,10 @@ export const services: Service[] = [
       "Best for routine maintenance, repeat customers, or bundling with a second job on the same visit.",
     ],
     whyItWins: [
-      "High search frequency with strong local relevance",
-      "Great fit for home and office convenience messaging",
-      "Natural path into repeat maintenance reminders and deferred work",
-      "Better as a retention lane than a hero offer",
+      "Routine maintenance without a shop trip",
+      "Easy to bundle with another service on the same visit",
+      "Builds a maintenance rhythm so nothing gets missed",
+      "Best for repeat customers and route-friendly scheduling",
     ],
     faqs: [
       {
@@ -337,10 +337,10 @@ export const services: Service[] = [
       "You leave with a clear answer on what was done and whether anything else needs attention.",
     ],
     whyItWins: [
-      "Strong urgency intent from real search behavior",
-      "High-value service lane with immediate practical benefit",
-      "Excellent message match for future Google Ads",
-      "Easy to explain before-and-after value on the page",
+      "Brake noise creates real urgency — customers want a fast, clear answer",
+      "One of the highest-value mobile jobs with obvious before-and-after results",
+      "Most pad-and-rotor work fits a driveway or parking lot perfectly",
+      "Inspection-first approach builds trust and avoids unnecessary parts",
     ],
     faqs: [
       {
@@ -395,10 +395,10 @@ export const services: Service[] = [
       "If the battery is not the problem, we will say that before swapping anything.",
     ],
     whyItWins: [
-      "Strong emergency search intent",
-      "Simple, high-clarity promise for the landing page",
-      "Fast turnaround that matches mobile convenience",
-      "Natural bridge into charging-system and starter follow-up",
+      "The car is already stuck — mobile service meets the problem where it is",
+      "Simple, clear promise: test first, replace only if the battery is the issue",
+      "Fast turnaround keeps the disruption to under an hour in most cases",
+      "If the problem is the starter or alternator, you find out before wasting money on the wrong part",
     ],
     faqs: [
       {
@@ -453,10 +453,10 @@ export const services: Service[] = [
       "If the next step is not a good mobile fit, we will tell you that early.",
     ],
     whyItWins: [
-      "High-intent search traffic with strong conversion value",
-      "Better fit for symptom-based searches than generic repair pages",
-      "Excellent bridge into repair approval and follow-up work",
-      "Natural opportunity to establish authority and honesty",
+      "Customers with a warning light need a clear answer, not a parts swap",
+      "Paid diagnostics set the right expectation: testing is the service",
+      "Findings often lead to a repair that can be handled the same visit or scheduled next",
+      "Plain-English explanations build the kind of trust that earns repeat work",
     ],
     faqs: [
       {
@@ -511,10 +511,10 @@ export const services: Service[] = [
       "The goal is a practical driveway inspection, not a rushed thumbs-up or a sales pitch.",
     ],
     whyItWins: [
-      "Excellent trust builder for a young brand",
-      "Strong long-tail organic intent",
-      "Creates referral opportunities even when no repair is sold that day",
-      "Builds authority for future maintenance work after the purchase",
+      "Buyers get an honest second opinion at the seller's location before committing",
+      "Even when no repair happens, the inspection builds trust for future work",
+      "One of the best referral-generating services — buyers tell friends",
+      "A good inspection often leads to follow-up maintenance after the purchase",
     ],
     faqs: [
       {
@@ -548,11 +548,11 @@ export const locations: Location[] = [
     slug: "spokane",
     name: "Spokane",
     seoTitle: "Mobile Mechanic in Spokane, WA",
-    headline: "Mobile car repair for Spokane drivers who need less downtime and clearer answers.",
+    headline: "Mobile mechanic for Spokane — less downtime, clearer answers.",
     teaser:
-      "From neighborhood driveways to workday parking lots, Spokane is the launch market for WrenchReady Mobile's no-start, brake, diagnostic, and inspection lanes. Oil changes stay available when they fit the route.",
+      "From neighborhood driveways to workday parking lots, Spokane is our home base. We handle no-starts, brakes, diagnostics, and inspections on site — with oil changes available when they fit the route.",
     metaDescription:
-      "Looking for a mobile mechanic in Spokane, WA? WrenchReady Mobile is building focused service routes for battery, brake, diagnostic, and inspection work, with maintenance only when it fits the route.",
+      "Looking for a mobile mechanic in Spokane, WA? WrenchReady Mobile comes to your driveway or workplace for batteries, brakes, diagnostics, and inspections — with clear quotes and honest screening.",
     neighborhoods: ["Downtown Spokane", "North Spokane", "East Central", "Audubon"],
     routeHighlights: [
       "Residential driveways, office lots, and central parking make mobile service practical here.",
@@ -563,7 +563,7 @@ export const locations: Location[] = [
     painPoints: [
       "Shop drop-offs can eat half a workday when the repair is routine.",
       "Parking, commute timing, and family schedules make short mobile visits far more practical.",
-      "Drivers need a simple explanation of fit fast, not a vague promise that every job can be handled anywhere.",
+      "Spokane drivers want a straight answer about whether mobile service fits their job — not a vague promise that everything works everywhere.",
     ],
     serviceSlugs: [
       "battery-replacement",
@@ -576,7 +576,7 @@ export const locations: Location[] = [
       {
         question: "Do you cover all of Spokane?",
         answer:
-          "The site starts with Spokane routes that make sense operationally, not with vague everywhere-service claims. Send the address and the appointment request flow will help confirm fit.",
+          "We cover most of Spokane and focus on routes that let us show up on time. Send the address and we will confirm whether your location fits the current schedule.",
       },
       {
         question: "Can service happen at my workplace in Spokane?",
@@ -584,9 +584,9 @@ export const locations: Location[] = [
           "Often yes, especially for maintenance, batteries, and many brake jobs. Parking restrictions and employer rules should be included with the request.",
       },
       {
-        question: "Is Spokane the main launch market?",
+        question: "Is Spokane your primary service area?",
         answer:
-          "Yes. Spokane is the proving ground for the business model, which is why this city has the deepest service coverage from the start.",
+          "Yes. Spokane is our home base, which means the tightest routes, fastest response times, and the deepest service coverage.",
       },
     ],
     keywords: [
@@ -601,11 +601,11 @@ export const locations: Location[] = [
     slug: "spokane-valley",
     name: "Spokane Valley",
     seoTitle: "Mobile Mechanic in Spokane Valley, WA",
-    headline: "Mobile mechanic for Spokane Valley families.",
+    headline: "Mobile mechanic for Spokane Valley — no drive to Spokane needed.",
     teaser:
-      "No-start, brake, battery, and diagnostic work without the drive to Spokane. Routine maintenance still exists, but only as a support lane when the route fits.",
+      "No-start, brake, battery, and diagnostic work at your home or workplace in the Valley. Routine maintenance is also available when it fits the schedule.",
     metaDescription:
-      "Need a mobile mechanic in Spokane Valley, WA? WrenchReady Mobile is building focused local service routes for battery, brake, diagnostic, and inspection work.",
+      "Need a mobile mechanic in Spokane Valley, WA? WrenchReady Mobile handles batteries, brakes, diagnostics, and inspections at your home or workplace in the Valley.",
     neighborhoods: ["Veradale", "Dishman", "Greenacres", "Opportunity"],
     routeHighlights: [
       "Residential density helps keep arrival windows tighter.",
@@ -616,7 +616,7 @@ export const locations: Location[] = [
     painPoints: [
       "Commuters in Spokane Valley often need maintenance handled without sacrificing the workday.",
       "Two-car and three-car households benefit from a mechanic that can service the vehicle where it already sits.",
-      "A location-specific page keeps Valley traffic from landing on a generic Spokane promise.",
+      "Valley drivers want an honest answer about whether mobile service fits their address and schedule — not a vague promise.",
     ],
     serviceSlugs: [
       "battery-replacement",
@@ -629,17 +629,17 @@ export const locations: Location[] = [
       {
         question: "Do Spokane Valley appointments usually happen at home?",
         answer:
-          "Many do, because the Valley has strong driveway and neighborhood access. Office-lot service can also work when the location details are shared early.",
+          "Many do — the Valley has great driveway and neighborhood access. Office-lot service also works well when you share the parking details early.",
       },
       {
         question: "Will you travel from Spokane into the Valley for a small job?",
         answer:
-          "That depends on route density and timing. The page exists so Valley requests can be screened against realistic route availability.",
+          "That depends on the day's schedule and how many other appointments are nearby. Send the details and we will tell you honestly whether the trip makes sense for your job.",
       },
       {
-        question: "Why does Spokane Valley have its own page?",
+        question: "Is Spokane Valley service different from Spokane?",
         answer:
-          "Because search intent, travel time, and service expectations are different enough that the area deserves its own local copy and conversion path.",
+          "Travel time, parking, and the kinds of jobs we see are different enough that Valley appointments get their own scheduling. Send the address and we will confirm fit for your area.",
       },
     ],
     keywords: [
@@ -654,11 +654,11 @@ export const locations: Location[] = [
     slug: "liberty-lake",
     name: "Liberty Lake",
     seoTitle: "Mobile Mechanic in Liberty Lake, WA",
-    headline: "Mobile mechanic for Liberty Lake.",
+    headline: "Mobile mechanic in Liberty Lake — service without losing your afternoon.",
     teaser:
-      "Quick service without losing your whole afternoon. Batteries, brakes, diagnostics, and inspections in your driveway or office lot, with maintenance when it fits the route.",
+      "Batteries, brakes, diagnostics, and inspections at your driveway or office lot in Liberty Lake. Maintenance is available when it fits the schedule.",
     metaDescription:
-      "Looking for a mobile mechanic in Liberty Lake, WA? WrenchReady Mobile covers battery, brake, diagnostic, and inspection jobs on site, with maintenance as a support lane.",
+      "Looking for a mobile mechanic in Liberty Lake, WA? WrenchReady Mobile covers battery, brake, diagnostic, and inspection jobs on site, with routine maintenance also available.",
     neighborhoods: ["River District", "Legacy Ridge", "Meadowwood", "Liberty Lake Village"],
     routeHighlights: [
       "Home driveways and workplace lots make on-site service practical.",
@@ -669,7 +669,7 @@ export const locations: Location[] = [
     painPoints: [
       "Liberty Lake drivers often value time certainty as much as the repair itself.",
       "A quick mobile visit can be easier than reshuffling work or school pickup around a shop drop-off.",
-      "The page stays honest about routing because tighter scheduling still matters even in high-value areas.",
+      "Tighter scheduling still matters even in Liberty Lake — we confirm route fit before booking so the arrival window is reliable.",
     ],
     serviceSlugs: [
       "battery-replacement",
@@ -682,7 +682,7 @@ export const locations: Location[] = [
       {
         question: "Is Liberty Lake part of the regular service area?",
         answer:
-          "Yes, for qualifying requests that fit the route and service lane. Liberty Lake is important enough to have its own page, but the business still screens for schedule fit first.",
+          "Yes. Liberty Lake is part of the regular Spokane County service area. We confirm route fit when you book so the arrival window is reliable.",
       },
       {
         question: "Are workplace appointments possible in Liberty Lake?",
@@ -707,11 +707,11 @@ export const locations: Location[] = [
     slug: "south-hill",
     name: "South Hill",
     seoTitle: "Mobile Mechanic in South Hill Spokane, WA",
-    headline: "Mobile mechanic for South Hill families.",
+    headline: "Mobile mechanic on South Hill — driveway service for families.",
     teaser:
-      "We come to your driveway for no-starts, brakes, batteries, diagnostics, and inspections. No school-run logistics or waiting rooms, and oil changes stay in a support lane.",
+      "We come to your driveway for no-starts, brakes, batteries, diagnostics, and inspections. No school-run logistics or waiting rooms. Oil changes available when they fit the schedule.",
     metaDescription:
-      "Need a mobile mechanic on South Hill in Spokane, WA? WrenchReady Mobile is building focused routes for battery, brake, diagnostic, and inspection work, with maintenance when it fits.",
+      "Need a mobile mechanic on South Hill in Spokane, WA? WrenchReady Mobile comes to your driveway for batteries, brakes, diagnostics, and inspections. Maintenance available when it fits the schedule.",
     neighborhoods: ["Lincoln Heights", "Moran Prairie", "Comstock", "Manito"],
     routeHighlights: [
       "Residential driveways make at-home service practical.",
@@ -721,8 +721,8 @@ export const locations: Location[] = [
     ],
     painPoints: [
       "Families on South Hill do not want a routine service to turn into a full afternoon of logistics.",
-      "A local page helps signal that the service understands neighborhood access and real schedule pressure.",
-      "Clear scope matters because not every repair in a hilly residential area is a great mobile fit.",
+      "Driveway access, hill grades, and street parking all affect how mobile service works — we factor that in before scheduling.",
+      "Not every repair in a hilly residential area is a great mobile fit, and we will tell you that upfront.",
     ],
     serviceSlugs: [
       "battery-replacement",
@@ -735,12 +735,12 @@ export const locations: Location[] = [
       {
         question: "Do at-home appointments work well on South Hill?",
         answer:
-          "Yes, many of the neighborhood setups are exactly why a focused South Hill page makes sense. Safe driveway access and clear parking notes still matter.",
+          "Yes, most South Hill neighborhoods have great driveway access for mobile service. Just mention the parking setup and any hill-grade concerns when you book.",
       },
       {
-        question: "Why separate South Hill from Spokane on the site?",
+        question: "Is South Hill service different from the rest of Spokane?",
         answer:
-          "Because the service promise is slightly different. South Hill pages lean into residential convenience and repeat household maintenance needs.",
+          "The scheduling and access are a little different. South Hill has more residential driveways and family households, so appointment windows and the kinds of jobs we see tend to center on at-home convenience and repeat maintenance.",
       },
       {
         question: "Can you handle brakes and batteries on South Hill?",
@@ -768,10 +768,10 @@ export const locations: Location[] = [
       "Book a mobile mechanic in Downtown Spokane, WA. Battery, diagnostic, brake, and inspection work at your office lot or parking garage during the workday.",
     neighborhoods: ["West End", "Riverside", "Davenport District"],
     routeHighlights: [
-      "Concentrated demand within a walkable core reduces windshield time",
-      "Office-lot access enables weekday lunch-hour and end-of-day appointments",
-      "Parking structures with adequate clearance support most routine service",
-      "High foot traffic area builds word-of-mouth referrals faster",
+      "Central location keeps arrival windows tight for downtown appointments",
+      "Office-lot access makes weekday lunch-hour and end-of-day service practical",
+      "Parking structures with adequate clearance work for most routine service",
+      "Quick turnaround jobs like battery swaps and oil changes fit the downtown schedule well",
     ],
     painPoints: [
       "Leaving the office to drop off a car at a shop means lost productivity and an expensive rideshare back.",
@@ -826,9 +826,9 @@ export const locations: Location[] = [
     neighborhoods: ["Five Mile", "Indian Trail", "Shadle-Garland"],
     routeHighlights: [
       "Residential layouts with easy driveway access for on-site work",
-      "After-work and Saturday demand from family households",
-      "Efficient route clustering with other North Side appointments",
-      "Strong repeat-booking potential from multi-vehicle homes",
+      "After-work and Saturday appointments work well for family households",
+      "North Side appointments group naturally for tighter arrival windows",
+      "Multi-vehicle homes benefit most from repeat driveway visits",
     ],
     painPoints: [
       "Driving south into downtown or the Valley for a routine service eats an hour of family time each way.",
@@ -992,7 +992,7 @@ export const locations: Location[] = [
     neighborhoods: ["Dishman Hills", "Sprague at Bowdish", "Bowdish Corridor"],
     routeHighlights: [
       "Dense residential streets keep appointment-to-appointment travel tight",
-      "Proximity to Sprague corridor makes it a natural route hub",
+      "Close to the Sprague corridor, so appointments fit easily into the day",
       "Commuter households want fast turnaround without losing the vehicle",
       "Strong demand for batteries and brakes from high-mileage commuter cars",
     ],
@@ -1100,7 +1100,7 @@ export const locations: Location[] = [
       "Newer developments with wide driveways and clean garage access",
       "Professional households book higher-value diagnostic and inspection work",
       "Quiet streets and planned layouts make on-site service seamless",
-      "Liberty Lake route anchoring makes additional nearby stops more viable",
+      "Liberty Lake appointments pair well with nearby stops in the same trip",
     ],
     painPoints: [
       "Professionals here value their time at a premium — a two-hour shop detour is not worth it for a 45-minute oil change.",
@@ -1178,7 +1178,7 @@ export const locations: Location[] = [
         question:
           "Do you service SUVs and crossovers?",
         answer:
-          "They are the most common vehicles in this neighborhood and a great fit for our service lanes. Mention the year, make, and model when requesting so we confirm everything upfront.",
+          "They are the most common vehicles in this neighborhood and a great fit for mobile service. Mention the year, make, and model when requesting so we confirm everything upfront.",
       },
       {
         question:
@@ -1211,7 +1211,7 @@ export const locations: Location[] = [
       "Established homes with mature landscaping and easy street access",
       "Aging vehicles benefit from proactive maintenance and early diagnostics",
       "Owners in this neighborhood value long-term reliability over flash",
-      "Strong repeat-booking opportunity from maintenance-conscious households",
+      "Maintenance-conscious households benefit from regular driveway visits",
     ],
     painPoints: [
       "Older vehicles need more frequent attention, and each shop trip adds friction that makes people skip maintenance.",
@@ -1265,7 +1265,7 @@ export const locations: Location[] = [
       "Mobile mechanic in Lincoln Heights, South Hill Spokane. Oil changes, brakes, batteries & inspections at your home. Family-friendly driveway service.",
     neighborhoods: ["Lincoln Heights Village", "29th Avenue corridor", "Regal Street area"],
     routeHighlights: [
-      "Central South Hill location makes it a natural anchor for neighborhood routes",
+      "Central South Hill location keeps arrival windows tight for the area",
       "Family vehicles with steady maintenance needs create reliable repeat demand",
       "Driveway-friendly residential lots with clear access in most seasons",
       "Pre-purchase inspections pair well with the active used-car market nearby",
@@ -1323,7 +1323,7 @@ export const locations: Location[] = [
     neighborhoods: ["Moran Vista", "Palouse Highway area", "57th Avenue corridor"],
     routeHighlights: [
       "Newer subdivisions with flat, wide driveways ideal for mobile work",
-      "Growing population drives steady new-customer acquisition",
+      "New households moving in means more families discovering mobile service",
       "Young families with multiple vehicles create strong repeat potential",
       "Southern South Hill position anchors routes toward Palouse Highway",
     ],

@@ -48,7 +48,7 @@ const trustChips = [
   { icon: <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Licensed & insured" },
   { icon: <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Photo-backed findings" },
   { icon: <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Approval before added work" },
-  { icon: <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Focused Spokane routes" },
+  { icon: <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Spokane County mobile service" },
 ];
 
 const trustStrip = [
@@ -57,7 +57,7 @@ const trustStrip = [
   { icon: <Shield className="h-4 w-4" />, text: "Approval before added work" },
   { icon: <Clock className="h-4 w-4" />, text: "Real status updates" },
   { icon: <Star className="h-4 w-4" />, text: "Licensed & insured" },
-  { icon: <MapPin className="h-4 w-4" />, text: "Focused Spokane routes" },
+  { icon: <MapPin className="h-4 w-4" />, text: "Spokane County mobile service" },
 ];
 
 const coreServices = [
@@ -338,7 +338,7 @@ export function HomePage() {
             </FadeIn>
 
             <AnimatedHeading
-              text="Mobile car repair in Spokane with clear quotes and no surprise scope."
+              text="Mobile mechanic in Spokane — clear quotes, honest screening, no surprise scope."
               gradient
               className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl"
               delay={0.15}
@@ -346,7 +346,7 @@ export function HomePage() {
 
             <FadeIn delay={0.35}>
               <p className="max-w-xl text-base font-medium leading-snug text-white/80 sm:text-xl">
-                Dead battery, brake noise, warning lights, or a car that will not start? We come to your home or work, tell you what fits mobile service, and explain the next step before work begins.
+                Dead battery, brake noise, warning lights, or a car that won&apos;t start? We come to your driveway or workplace anywhere in Spokane County, explain what fits mobile service, and give you a clear next step before work begins.
               </p>
             </FadeIn>
 
@@ -440,8 +440,8 @@ export function HomePage() {
         <div className="shell section-space">
           <SectionHeading
             eyebrow="What We Handle Best"
-            title="The vehicle problems that need a clear answer quickly."
-            copy="WrenchReady is built around the kinds of jobs that fit mobile service well, can be screened honestly, and can usually be completed without turning into a shop-day hassle."
+            title="Mobile auto repair in Spokane for the problems that need a clear answer fast."
+            copy="WrenchReady is built around the jobs that fit mobile service well — work that can be screened honestly and completed in your driveway without turning into a shop-day hassle."
             tint="blue"
           />
 
@@ -861,16 +861,16 @@ export function HomePage() {
             <div>
               <SectionHeading
                 eyebrow="Get Started"
-                title="Tell us what the car is doing. We'll tell you the right next step."
-                copy="Send the year, make, and model, where the car is parked, and what is going on. If it is a good fit for mobile service, we will follow up with the right first step — quote, diagnostic visit, or a clear answer that it belongs in a shop."
+                title="Tell us what the car is doing. We respond fast."
+                copy="Send the year, make, and model, where the vehicle is parked, and what is going on. Most requests get a response within 15 minutes during service hours — with a clear next step: quote, diagnostic visit, or an honest answer that the job belongs in a shop."
                 tint="blue"
               />
               <FadeIn delay={0.3}>
                 <div className="mt-8 space-y-4">
                   {[
-                    { icon: <ClipboardCheck />, text: "Every request is reviewed before an appointment is confirmed" },
-                    { icon: <Zap />, text: "We follow up as soon as the request is reviewed" },
-                    { icon: <Shield />, text: "Licensed, insured, and fully transparent. Price and scope explained before you commit." },
+                    { icon: <Zap />, text: "Most requests get a response within 15 minutes during service hours" },
+                    { icon: <ClipboardCheck />, text: "Every request is screened before an appointment is confirmed" },
+                    { icon: <Shield />, text: "Licensed, insured, and fully transparent — price and scope explained before you commit" },
                   ].map((item) => (
                     <div key={item.text} className="flex items-start gap-3">
                       <span className="mt-0.5 h-5 w-5 shrink-0 text-[--wr-teal]">{item.icon}</span>
@@ -898,7 +898,7 @@ export function HomePage() {
               <div className="rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm sm:p-8">
                 <h3 className="text-lg font-bold text-foreground">Start your request</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Tell us what you are driving and what is going on. We will follow up with the right next step.
+                  Tell us what you are driving and what is going on. We will get back to you with a clear next step.
                 </p>
                 <div className="mt-6">
                   <IntakeForm />
@@ -941,7 +941,7 @@ export function HomePage() {
             </div>
             <div>
               <p className="text-base leading-relaxed text-muted-foreground">
-                Send the year, make, and model, where the car is parked, and what is going on. If it is a good fit for mobile service, we will follow up with the right first step — quote, diagnostic visit, or a clear answer that it belongs in a shop.
+                Send the year, make, and model, where the vehicle is parked, and what is going on. Most requests get a response within 15 minutes during service hours — with a quote, diagnostic visit, or an honest answer that the job belongs in a shop.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button

@@ -4,9 +4,9 @@ import { homeFaqs, reviews, services, siteConfig } from "@/data/site";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Mobile Car Repair in Spokane | Batteries, Brakes, Diagnostics | WrenchReady",
+  title: "Mobile Mechanic in Spokane, WA — Batteries, Brakes & Diagnostics | WrenchReady",
   description:
-    "WrenchReady brings mobile car repair to your home or work in Spokane. Dead battery, brake problems, warning lights, and paid diagnostics with clear quotes and real status updates.",
+    "WrenchReady is a mobile mechanic in Spokane, WA. We come to your driveway or workplace for batteries, brakes, diagnostics, and inspections — clear quotes and approval before added work.",
   path: "/",
   keywords: [
     "mobile mechanic Spokane WA",

@@ -21,7 +21,7 @@ const bodyFont = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.domain),
   title: {
-    default: "Mobile Mechanic in Spokane, WA",
+    default: "Mobile Mechanic in Spokane, WA | WrenchReady",
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,

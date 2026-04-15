@@ -54,7 +54,7 @@ export function ServicesPageClient() {
       <section className="shell section-space">
         <SectionHeading
           eyebrow="All Services"
-          title="Clear scope and honest pricing for every lane."
+          title="Clear scope and honest pricing for every service."
           copy="Use these pages to see what is included, where the work makes sense, and what the next step looks like."
         />
         <Stagger className="mt-12 grid gap-6 lg:grid-cols-2" staggerDelay={0.08}>

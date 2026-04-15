@@ -86,8 +86,8 @@ export function LocationsPageClient() {
           <div className="shell section-space">
             <SectionHeading
               eyebrow="Neighborhoods"
-              title="Hyper-local pages for every neighborhood we cover."
-              copy="Some neighborhoods get their own page because access, parking, and daily use cases are a little different."
+              title="Specific coverage across Spokane County neighborhoods."
+              copy="Access, parking, and scheduling look different in each neighborhood — here is what mobile service looks like in each one."
             />
             <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" staggerDelay={0.05}>
               {neighborhoodLocations.map((location) => (

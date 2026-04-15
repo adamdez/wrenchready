@@ -171,7 +171,7 @@ export function ServicePageClient({
           <div className="shell section-space">
             <SectionHeading
               eyebrow="Related Services"
-              title="Other mobile service lanes"
+              title="Other mobile services we offer"
               copy="Customers booking one service often need another."
             />
             <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" staggerDelay={0.08}>

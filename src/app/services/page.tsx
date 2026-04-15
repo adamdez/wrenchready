@@ -2,9 +2,9 @@ import { ServicesPageClient } from "@/components/services-page-client";
 import { buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Mobile Service Lanes in Spokane",
+  title: "Mobile Auto Repair Services in Spokane, WA | WrenchReady",
   description:
-    "Explore WrenchReady Mobile service lanes for Spokane drivers: no-start and battery work, brakes, paid diagnostics, pre-purchase inspections, and routine maintenance when it fits the route.",
+    "WrenchReady Mobile handles batteries, brakes, paid diagnostics, pre-purchase inspections, and routine maintenance for Spokane drivers — at your driveway or workplace.",
   path: "/services",
   keywords: [
     "mobile auto repair Spokane",
