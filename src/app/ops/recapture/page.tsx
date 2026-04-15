@@ -102,6 +102,18 @@ export default async function RecapturePage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Permission-safe proof</p>
             <p className="mt-2 text-xl font-semibold text-foreground">{scorecard.metrics.proofPermissionReady}</p>
           </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Won / lost proposals</p>
+            <p className="mt-2 text-xl font-semibold text-foreground">
+              {scorecard.metrics.proposalsWon} / {scorecard.metrics.proposalsLost}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Trial outcomes</p>
+            <p className="mt-2 text-xl font-semibold text-foreground">
+              {scorecard.metrics.successfulTrials} / {scorecard.metrics.failedTrials}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -150,6 +162,16 @@ export default async function RecapturePage() {
                     </li>
                   ))}
                 </ul>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {task.gapLabels.map((gap) => (
+                    <span
+                      key={`${task.promiseId}-${gap}`}
+                      className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground"
+                    >
+                      {gap.replace(/-/g, " ")}
+                    </span>
+                  ))}
+                </div>
                 <CloseoutQualityActionForm
                   closeout={task.closeout}
                   owner={task.owner}
@@ -221,6 +243,12 @@ export default async function RecapturePage() {
             <p className="mt-2 text-xl font-semibold text-foreground">{scorecard.metrics.recurringActive}</p>
             <p className="mt-2 text-sm text-muted-foreground">
               {scorecard.metrics.recurringLeads} leads / {scorecard.metrics.recurringTrialActive} trials / {scorecard.metrics.recurringAtRisk} at risk
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Won {scorecard.metrics.proposalsWon} / lost {scorecard.metrics.proposalsLost} / stalled {scorecard.metrics.proposalsStalled}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Trials successful {scorecard.metrics.successfulTrials} / failed {scorecard.metrics.failedTrials} / extended {scorecard.metrics.extendedTrials}
             </p>
           </div>
         </div>

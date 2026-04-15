@@ -12,6 +12,8 @@ import type {
   PromiseProofAsset,
   PromiseRecapItem,
   PromiseRecord,
+  PromiseRecurringProposalDecision,
+  PromiseRecurringTrialOutcome,
 } from "@/lib/promise-crm/types";
 
 type PromiseStatusFormProps = {
@@ -402,11 +404,29 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
   const [proposalValueEstimate, setProposalValueEstimate] = useState(
     promise.recurringAccount?.proposalValueEstimate?.toString() || "",
   );
+  const [proposalDecision, setProposalDecision] = useState<PromiseRecurringProposalDecision>(
+    promise.recurringAccount?.proposalDecision || "open",
+  );
+  const [proposalDecisionAt, setProposalDecisionAt] = useState(
+    promise.recurringAccount?.proposalDecisionAt || "",
+  );
+  const [proposalDecisionReason, setProposalDecisionReason] = useState(
+    promise.recurringAccount?.proposalDecisionReason || "",
+  );
   const [trialStartAt, setTrialStartAt] = useState(
     promise.recurringAccount?.trialStartAt || "",
   );
   const [trialReviewDueAt, setTrialReviewDueAt] = useState(
     promise.recurringAccount?.trialReviewDueAt || "",
+  );
+  const [trialOutcome, setTrialOutcome] = useState<PromiseRecurringTrialOutcome>(
+    promise.recurringAccount?.trialOutcome || "unknown",
+  );
+  const [trialOutcomeAt, setTrialOutcomeAt] = useState(
+    promise.recurringAccount?.trialOutcomeAt || "",
+  );
+  const [trialOutcomeSummary, setTrialOutcomeSummary] = useState(
+    promise.recurringAccount?.trialOutcomeSummary || "",
   );
   const [activationTargetAt, setActivationTargetAt] = useState(
     promise.recurringAccount?.activationTargetAt || "",
@@ -596,8 +616,14 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
             billingTerms: billingTerms.trim() || undefined,
             proposalSentAt: proposalSentAt.trim() || undefined,
             proposalValueEstimate: toOptionalNumber(proposalValueEstimate),
+            proposalDecision,
+            proposalDecisionAt: proposalDecisionAt.trim() || undefined,
+            proposalDecisionReason: proposalDecisionReason.trim() || undefined,
             trialStartAt: trialStartAt.trim() || undefined,
             trialReviewDueAt: trialReviewDueAt.trim() || undefined,
+            trialOutcome,
+            trialOutcomeAt: trialOutcomeAt.trim() || undefined,
+            trialOutcomeSummary: trialOutcomeSummary.trim() || undefined,
             activationTargetAt: activationTargetAt.trim() || undefined,
             nextTouchDueAt: nextTouchDueAt.trim() || undefined,
             summary: recurringSummary.trim() || undefined,
@@ -1930,6 +1956,50 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
 
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Proposal decision
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) =>
+                  setProposalDecision(
+                    event.target.value as PromiseRecurringProposalDecision,
+                  )
+                }
+                value={proposalDecision}
+              >
+                <option value="open">Open</option>
+                <option value="won">Won</option>
+                <option value="lost">Lost</option>
+                <option value="stalled">Stalled</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Proposal decision at
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setProposalDecisionAt(event.target.value)}
+                placeholder="2026-04-24T09:00:00-07:00"
+                value={proposalDecisionAt}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Proposal decision reason
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setProposalDecisionReason(event.target.value)}
+                placeholder="Why was this account won, lost, or stalled?"
+                value={proposalDecisionReason}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
                 Trial start
               </span>
               <input
@@ -1949,6 +2019,48 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
                 onChange={(event) => setTrialReviewDueAt(event.target.value)}
                 placeholder="2026-04-29T09:00:00-07:00"
                 value={trialReviewDueAt}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Trial outcome
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) =>
+                  setTrialOutcome(event.target.value as PromiseRecurringTrialOutcome)
+                }
+                value={trialOutcome}
+              >
+                <option value="unknown">Unknown</option>
+                <option value="successful">Successful</option>
+                <option value="failed">Failed</option>
+                <option value="extended">Extended</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Trial outcome at
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setTrialOutcomeAt(event.target.value)}
+                placeholder="2026-04-29T09:00:00-07:00"
+                value={trialOutcomeAt}
+              />
+            </label>
+
+            <label className="block space-y-2 md:col-span-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Trial outcome summary
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setTrialOutcomeSummary(event.target.value)}
+                placeholder="What happened in the trial and what does it mean for activation?"
+                value={trialOutcomeSummary}
               />
             </label>
 

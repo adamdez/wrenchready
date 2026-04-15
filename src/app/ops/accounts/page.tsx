@@ -45,6 +45,20 @@ function ownerTone(owner: string) {
   return "border-border bg-card text-muted-foreground";
 }
 
+function proposalDecisionLabel(value: string) {
+  if (value === "won") return "Won";
+  if (value === "lost") return "Lost";
+  if (value === "stalled") return "Stalled";
+  return "Open";
+}
+
+function trialOutcomeLabel(value: string) {
+  if (value === "successful") return "Successful";
+  if (value === "failed") return "Failed";
+  if (value === "extended") return "Extended";
+  return "Unknown";
+}
+
 export default async function RecurringAccountsPage() {
   const snapshot = await getRecurringAccountStarterSnapshot();
   const proposalQueue = snapshot.worklist.filter(
@@ -154,6 +168,22 @@ export default async function RecurringAccountsPage() {
               {formatCurrency(snapshot.summary.totalMonthlyValueEstimate)}
             </p>
           </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Won / lost
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {snapshot.summary.proposalsWon} / {snapshot.summary.proposalsLost}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Trial outcomes
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {snapshot.summary.successfulTrials} / {snapshot.summary.failedTrials}
+            </p>
+          </div>
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -189,6 +219,12 @@ export default async function RecurringAccountsPage() {
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               Activation value in flight {formatCurrency(snapshot.summary.activationValueInFlight)}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Won {snapshot.summary.proposalsWon} / lost {snapshot.summary.proposalsLost} / stalled {snapshot.summary.proposalsStalled}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Trials successful {snapshot.summary.successfulTrials} / failed {snapshot.summary.failedTrials} / extended {snapshot.summary.extendedTrials}
             </p>
           </div>
           <div className="rounded-3xl border border-border bg-background/60 p-5">
@@ -358,6 +394,9 @@ export default async function RecurringAccountsPage() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {item.recurringAccount.targetLane || "lane missing"} / {item.proposalStage.replace("-", " ")}
                   </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Decision: {proposalDecisionLabel(item.proposalDecision)} / Trial: {trialOutcomeLabel(item.trialOutcome)}
+                  </p>
                   <p className="mt-2 text-sm text-muted-foreground">{item.nextMilestone}</p>
                 </div>
               ))
@@ -383,6 +422,9 @@ export default async function RecurringAccountsPage() {
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {item.recurringAccount.targetLane || "lane missing"} / {item.proposalStage.replace("-", " ")}
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Decision: {proposalDecisionLabel(item.proposalDecision)} / Trial: {trialOutcomeLabel(item.trialOutcome)}
                   </p>
                   <p className="mt-2 text-sm text-muted-foreground">{item.nextMilestone}</p>
                 </div>
@@ -431,13 +473,19 @@ export default async function RecurringAccountsPage() {
                     >
                       {item.pressure.replace("-", " ")}
                     </span>
-                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
                       {item.daysUntilTouch !== undefined
                         ? `${item.daysUntilTouch <= 0 ? "Due now" : `${item.daysUntilTouch}d to touch`}`
                         : "No touch date"}
                     </span>
                     <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
                       {item.proposalStage.replace("-", " ")}
+                    </span>
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+                      Proposal {proposalDecisionLabel(item.proposalDecision)}
+                    </span>
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+                      Trial {trialOutcomeLabel(item.trialOutcome)}
                     </span>
                   </div>
                 </div>
@@ -509,6 +557,16 @@ export default async function RecurringAccountsPage() {
                   <p className="mt-2 text-sm text-muted-foreground">
                     {item.recurringAccount.nextStep || "No next step recorded"}
                   </p>
+                  {item.recurringAccount.proposalDecisionReason ? (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Proposal reason: {item.recurringAccount.proposalDecisionReason}
+                    </p>
+                  ) : null}
+                  {item.recurringAccount.trialOutcomeSummary ? (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Trial result: {item.recurringAccount.trialOutcomeSummary}
+                    </p>
+                  ) : null}
                   <p className="mt-2 text-sm text-muted-foreground">
                     {item.nextMilestone || "No next milestone recorded"}
                   </p>

@@ -2218,6 +2218,7 @@ export async function getWeeklyRecaptureScorecard(): Promise<WeeklyRecaptureScor
         owner: record.owner,
         serviceScope: record.serviceScope,
         closeoutQualityScore: score,
+        gapLabels: getCloseoutGapLabels(record),
         blockers,
         closeout,
       };
@@ -2300,6 +2301,24 @@ export async function getWeeklyRecaptureScorecard(): Promise<WeeklyRecaptureScor
     ).length,
     recurringAtRisk: recurringTracked.filter(
       (record) => record.recurringAccount?.status === "at-risk",
+    ).length,
+    proposalsWon: recurringTracked.filter(
+      (record) => record.recurringAccount?.proposalDecision === "won",
+    ).length,
+    proposalsLost: recurringTracked.filter(
+      (record) => record.recurringAccount?.proposalDecision === "lost",
+    ).length,
+    proposalsStalled: recurringTracked.filter(
+      (record) => record.recurringAccount?.proposalDecision === "stalled",
+    ).length,
+    successfulTrials: recurringTracked.filter(
+      (record) => record.recurringAccount?.trialOutcome === "successful",
+    ).length,
+    failedTrials: recurringTracked.filter(
+      (record) => record.recurringAccount?.trialOutcome === "failed",
+    ).length,
+    extendedTrials: recurringTracked.filter(
+      (record) => record.recurringAccount?.trialOutcome === "extended",
     ).length,
   };
 
@@ -2590,6 +2609,29 @@ function getRecurringAccountProposalStage(account: PromiseRecurringAccount) {
   return "not-sent" as const;
 }
 
+function getCloseoutGapLabels(record: PromiseRecord) {
+  const closeout = record.closeout;
+  const proof = getProofDisciplineForPromise(record);
+
+  return [
+    !closeout?.workPerformedSummary ? "work-summary" : null,
+    !closeout?.customerConditionSummary ? "customer-condition" : null,
+    !closeout?.customerRecap?.status || closeout.customerRecap.status === "not-ready"
+      ? "customer-recap"
+      : null,
+    !closeout?.reviewRequest?.status || closeout.reviewRequest.status === "not-ready"
+      ? "review-ask"
+      : null,
+    !closeout?.maintenanceReminder?.status ||
+    closeout.maintenanceReminder.status === "not-seeded"
+      ? "reminder-seed"
+      : null,
+    !getNextProbableVisit(record) ? "next-visit" : null,
+    proof.proofScore < 70 ? "proof-depth" : null,
+    proof.approvedAssets === 0 ? "permission-safe-proof" : null,
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
 function isRecurringAccountActivationDue(account: PromiseRecurringAccount) {
   return account.status === "trial-active" && Boolean(account.activationTargetAt);
 }
@@ -2709,6 +2751,8 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
         lastActivity: account.activityHistory?.[0],
         nextMilestone: getRecurringAccountNextMilestone(account),
         proposalStage: getRecurringAccountProposalStage(account),
+        proposalDecision: account.proposalDecision || "open",
+        trialOutcome: account.trialOutcome || "unknown",
         recurringAccount: account,
       };
     })
@@ -2798,6 +2842,24 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
     if (!account || account.status === "active") return sum;
     return sum + (account.proposalValueEstimate || account.monthlyValueEstimate || 0);
   }, 0);
+  const proposalsWon = trackedPromises.filter(
+    (record) => record.recurringAccount?.proposalDecision === "won",
+  ).length;
+  const proposalsLost = trackedPromises.filter(
+    (record) => record.recurringAccount?.proposalDecision === "lost",
+  ).length;
+  const proposalsStalled = trackedPromises.filter(
+    (record) => record.recurringAccount?.proposalDecision === "stalled",
+  ).length;
+  const successfulTrials = trackedPromises.filter(
+    (record) => record.recurringAccount?.trialOutcome === "successful",
+  ).length;
+  const failedTrials = trackedPromises.filter(
+    (record) => record.recurringAccount?.trialOutcome === "failed",
+  ).length;
+  const extendedTrials = trackedPromises.filter(
+    (record) => record.recurringAccount?.trialOutcome === "extended",
+  ).length;
   const activationValueInFlight = trackedPromises.reduce((sum, record) => {
     const account = record.recurringAccount;
     if (!account || !isRecurringAccountActivationDue(account)) return sum;
@@ -2967,6 +3029,12 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
       trialConversionRate: trialActive + active > 0 ? active / (trialActive + active) : 0,
       proposalValueInFlight,
       activationValueInFlight,
+      proposalsWon,
+      proposalsLost,
+      proposalsStalled,
+      successfulTrials,
+      failedTrials,
+      extendedTrials,
     },
     starterOffer: recurringAccountStarterOffer,
     outreachScripts: recurringAccountOutreachScripts,

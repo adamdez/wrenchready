@@ -5,7 +5,9 @@ import { type Dispatch, type SetStateAction, useState } from "react";
 import type {
   PromiseRecurringAccount,
   PromiseRecurringAccountActivityKind,
+  PromiseRecurringProposalDecision,
   PromiseRecurringAccountStatus,
+  PromiseRecurringTrialOutcome,
   RecordOwner,
 } from "@/lib/promise-crm/types";
 
@@ -57,9 +59,27 @@ export function RecurringAccountActionForm({
   const [proposalValueEstimate, setProposalValueEstimate] = useState(
     recurringAccount?.proposalValueEstimate?.toString() || "",
   );
+  const [proposalDecision, setProposalDecision] = useState<PromiseRecurringProposalDecision>(
+    recurringAccount?.proposalDecision || "open",
+  );
+  const [proposalDecisionAt, setProposalDecisionAt] = useState(
+    recurringAccount?.proposalDecisionAt || "",
+  );
+  const [proposalDecisionReason, setProposalDecisionReason] = useState(
+    recurringAccount?.proposalDecisionReason || "",
+  );
   const [trialStartAt, setTrialStartAt] = useState(recurringAccount?.trialStartAt || "");
   const [trialReviewDueAt, setTrialReviewDueAt] = useState(
     recurringAccount?.trialReviewDueAt || "",
+  );
+  const [trialOutcome, setTrialOutcome] = useState<PromiseRecurringTrialOutcome>(
+    recurringAccount?.trialOutcome || "unknown",
+  );
+  const [trialOutcomeAt, setTrialOutcomeAt] = useState(
+    recurringAccount?.trialOutcomeAt || "",
+  );
+  const [trialOutcomeSummary, setTrialOutcomeSummary] = useState(
+    recurringAccount?.trialOutcomeSummary || "",
   );
   const [activationTargetAt, setActivationTargetAt] = useState(
     recurringAccount?.activationTargetAt || "",
@@ -132,8 +152,14 @@ export function RecurringAccountActionForm({
             monthlyValueEstimate: toOptionalNumber(monthlyValueEstimate),
             proposalSentAt: proposalSentAt.trim() || undefined,
             proposalValueEstimate: toOptionalNumber(proposalValueEstimate),
+            proposalDecision,
+            proposalDecisionAt: proposalDecisionAt.trim() || undefined,
+            proposalDecisionReason: proposalDecisionReason.trim() || undefined,
             trialStartAt: trialStartAt.trim() || undefined,
             trialReviewDueAt: trialReviewDueAt.trim() || undefined,
+            trialOutcome,
+            trialOutcomeAt: trialOutcomeAt.trim() || undefined,
+            trialOutcomeSummary: trialOutcomeSummary.trim() || undefined,
             activationTargetAt: activationTargetAt.trim() || undefined,
             lastTouchedAt: activitySummary.trim()
               ? new Date().toISOString()
@@ -326,6 +352,42 @@ export function RecurringAccountActionForm({
         </label>
 
         <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Proposal decision</span>
+          <select
+            className="form-input"
+            onChange={(event) =>
+              setProposalDecision(event.target.value as PromiseRecurringProposalDecision)
+            }
+            value={proposalDecision}
+          >
+            <option value="open">Open</option>
+            <option value="won">Won</option>
+            <option value="lost">Lost</option>
+            <option value="stalled">Stalled</option>
+          </select>
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Proposal decision at</span>
+          <input
+            className="form-input"
+            onChange={(event) => setProposalDecisionAt(event.target.value)}
+            placeholder="2026-04-24T09:00:00-07:00"
+            value={proposalDecisionAt}
+          />
+        </label>
+
+        <label className="space-y-2 md:col-span-2 xl:col-span-3">
+          <span className="text-xs font-medium text-muted-foreground">Proposal decision reason</span>
+          <textarea
+            className="form-textarea"
+            onChange={(event) => setProposalDecisionReason(event.target.value)}
+            placeholder="Why was it won, lost, or stalled?"
+            value={proposalDecisionReason}
+          />
+        </label>
+
+        <label className="space-y-2">
           <span className="text-xs font-medium text-muted-foreground">Trial start</span>
           <input
             className="form-input"
@@ -342,6 +404,42 @@ export function RecurringAccountActionForm({
             onChange={(event) => setTrialReviewDueAt(event.target.value)}
             placeholder="2026-04-29T09:00:00-07:00"
             value={trialReviewDueAt}
+          />
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Trial outcome</span>
+          <select
+            className="form-input"
+            onChange={(event) =>
+              setTrialOutcome(event.target.value as PromiseRecurringTrialOutcome)
+            }
+            value={trialOutcome}
+          >
+            <option value="unknown">Unknown</option>
+            <option value="successful">Successful</option>
+            <option value="failed">Failed</option>
+            <option value="extended">Extended</option>
+          </select>
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Trial outcome at</span>
+          <input
+            className="form-input"
+            onChange={(event) => setTrialOutcomeAt(event.target.value)}
+            placeholder="2026-04-30T09:00:00-07:00"
+            value={trialOutcomeAt}
+          />
+        </label>
+
+        <label className="space-y-2 md:col-span-2 xl:col-span-3">
+          <span className="text-xs font-medium text-muted-foreground">Trial outcome summary</span>
+          <textarea
+            className="form-textarea"
+            onChange={(event) => setTrialOutcomeSummary(event.target.value)}
+            placeholder="What happened in the trial and what should we do next?"
+            value={trialOutcomeSummary}
           />
         </label>
 

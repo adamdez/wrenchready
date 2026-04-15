@@ -138,8 +138,14 @@ type UpdatePromisePayload = {
     monthlyValueEstimate?: number;
     proposalSentAt?: string;
     proposalValueEstimate?: number;
+    proposalDecision?: string;
+    proposalDecisionAt?: string;
+    proposalDecisionReason?: string;
     trialStartAt?: string;
     trialReviewDueAt?: string;
+    trialOutcome?: string;
+    trialOutcomeAt?: string;
+    trialOutcomeSummary?: string;
     activationTargetAt?: string;
     lastTouchedAt?: string;
     nextTouchDueAt?: string;
@@ -456,9 +462,17 @@ function isRecurringAccountPayload(value: unknown) {
     (candidate.proposalSentAt === undefined || typeof candidate.proposalSentAt === "string") &&
     (candidate.proposalValueEstimate === undefined ||
       typeof candidate.proposalValueEstimate === "number") &&
+    (candidate.proposalDecision === undefined || typeof candidate.proposalDecision === "string") &&
+    (candidate.proposalDecisionAt === undefined || typeof candidate.proposalDecisionAt === "string") &&
+    (candidate.proposalDecisionReason === undefined ||
+      typeof candidate.proposalDecisionReason === "string") &&
     (candidate.trialStartAt === undefined || typeof candidate.trialStartAt === "string") &&
     (candidate.trialReviewDueAt === undefined ||
       typeof candidate.trialReviewDueAt === "string") &&
+    (candidate.trialOutcome === undefined || typeof candidate.trialOutcome === "string") &&
+    (candidate.trialOutcomeAt === undefined || typeof candidate.trialOutcomeAt === "string") &&
+    (candidate.trialOutcomeSummary === undefined ||
+      typeof candidate.trialOutcomeSummary === "string") &&
     (candidate.activationTargetAt === undefined ||
       typeof candidate.activationTargetAt === "string") &&
     (candidate.lastTouchedAt === undefined || typeof candidate.lastTouchedAt === "string") &&

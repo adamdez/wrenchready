@@ -5,6 +5,8 @@ import type {
   PromisePaymentMethod,
   PromiseRecurringAccountActivity,
   PromiseRecurringAccountActivityKind,
+  PromiseRecurringProposalDecision,
+  PromiseRecurringTrialOutcome,
   PromiseRecurringAccount,
   PromiseRecord,
   PromiseWarrantyRootCause,
@@ -82,6 +84,23 @@ function normalizeRecurringActivityList(value: unknown) {
     })
     .filter((entry): entry is PromiseRecurringAccountActivity => Boolean(entry))
     .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
+}
+
+function normalizeProposalDecision(
+  value: unknown,
+): PromiseRecurringProposalDecision | undefined {
+  return value === "open" || value === "won" || value === "lost" || value === "stalled"
+    ? value
+    : undefined;
+}
+
+function normalizeTrialOutcome(value: unknown): PromiseRecurringTrialOutcome | undefined {
+  return value === "unknown" ||
+    value === "successful" ||
+    value === "failed" ||
+    value === "extended"
+    ? value
+    : undefined;
 }
 
 export function normalizePromiseJobStage(value?: PromiseJobStage | null): PromiseJobStage {
@@ -366,8 +385,14 @@ export function normalizeRecurringAccount(
     monthlyValueEstimate: toOptionalNumber(value.monthlyValueEstimate),
     proposalSentAt: toOptionalString(value.proposalSentAt),
     proposalValueEstimate: toOptionalNumber(value.proposalValueEstimate),
+    proposalDecision: normalizeProposalDecision(value.proposalDecision) ?? "open",
+    proposalDecisionAt: toOptionalString(value.proposalDecisionAt),
+    proposalDecisionReason: toOptionalString(value.proposalDecisionReason),
     trialStartAt: toOptionalString(value.trialStartAt),
     trialReviewDueAt: toOptionalString(value.trialReviewDueAt),
+    trialOutcome: normalizeTrialOutcome(value.trialOutcome) ?? "unknown",
+    trialOutcomeAt: toOptionalString(value.trialOutcomeAt),
+    trialOutcomeSummary: toOptionalString(value.trialOutcomeSummary),
     activationTargetAt: toOptionalString(value.activationTargetAt),
     lastTouchedAt: toOptionalString(value.lastTouchedAt),
     nextTouchDueAt: toOptionalString(value.nextTouchDueAt),
@@ -402,8 +427,14 @@ export function normalizeRecurringAccount(
     normalized.monthlyValueEstimate !== undefined ||
     normalized.proposalSentAt ||
     normalized.proposalValueEstimate !== undefined ||
+    normalized.proposalDecision !== "open" ||
+    normalized.proposalDecisionAt ||
+    normalized.proposalDecisionReason ||
     normalized.trialStartAt ||
     normalized.trialReviewDueAt ||
+    normalized.trialOutcome !== "unknown" ||
+    normalized.trialOutcomeAt ||
+    normalized.trialOutcomeSummary ||
     normalized.activationTargetAt ||
     normalized.lastTouchedAt ||
     normalized.nextTouchDueAt ||
@@ -440,8 +471,14 @@ export function mergeRecurringAccount(
     monthlyValueEstimate: updates.monthlyValueEstimate ?? current?.monthlyValueEstimate,
     proposalSentAt: updates.proposalSentAt ?? current?.proposalSentAt,
     proposalValueEstimate: updates.proposalValueEstimate ?? current?.proposalValueEstimate,
+    proposalDecision: updates.proposalDecision ?? current?.proposalDecision,
+    proposalDecisionAt: updates.proposalDecisionAt ?? current?.proposalDecisionAt,
+    proposalDecisionReason: updates.proposalDecisionReason ?? current?.proposalDecisionReason,
     trialStartAt: updates.trialStartAt ?? current?.trialStartAt,
     trialReviewDueAt: updates.trialReviewDueAt ?? current?.trialReviewDueAt,
+    trialOutcome: updates.trialOutcome ?? current?.trialOutcome,
+    trialOutcomeAt: updates.trialOutcomeAt ?? current?.trialOutcomeAt,
+    trialOutcomeSummary: updates.trialOutcomeSummary ?? current?.trialOutcomeSummary,
     activationTargetAt: updates.activationTargetAt ?? current?.activationTargetAt,
     lastTouchedAt: updates.lastTouchedAt ?? current?.lastTouchedAt,
     nextTouchDueAt: updates.nextTouchDueAt ?? current?.nextTouchDueAt,

@@ -280,6 +280,18 @@ export type PromiseRecurringAccountActivity = {
   summary: string;
 };
 
+export type PromiseRecurringProposalDecision =
+  | "open"
+  | "won"
+  | "lost"
+  | "stalled";
+
+export type PromiseRecurringTrialOutcome =
+  | "unknown"
+  | "successful"
+  | "failed"
+  | "extended";
+
 export type PromiseRecurringAccount = {
   status: PromiseRecurringAccountStatus;
   accountName?: string;
@@ -294,8 +306,14 @@ export type PromiseRecurringAccount = {
   monthlyValueEstimate?: number;
   proposalSentAt?: string;
   proposalValueEstimate?: number;
+  proposalDecision?: PromiseRecurringProposalDecision;
+  proposalDecisionAt?: string;
+  proposalDecisionReason?: string;
   trialStartAt?: string;
   trialReviewDueAt?: string;
+  trialOutcome?: PromiseRecurringTrialOutcome;
+  trialOutcomeAt?: string;
+  trialOutcomeSummary?: string;
   activationTargetAt?: string;
   lastTouchedAt?: string;
   nextTouchDueAt?: string;
@@ -793,6 +811,12 @@ export type WeeklyRecaptureScorecard = {
     recurringTrialActive: number;
     recurringActive: number;
     recurringAtRisk: number;
+    proposalsWon: number;
+    proposalsLost: number;
+    proposalsStalled: number;
+    successfulTrials: number;
+    failedTrials: number;
+    extendedTrials: number;
   };
   priorities: Array<{
     title: string;
@@ -805,6 +829,7 @@ export type WeeklyRecaptureScorecard = {
     owner: RecordOwner;
     serviceScope: string;
     closeoutQualityScore: number;
+    gapLabels: string[];
     blockers: string[];
     closeout?: PromiseCloseout;
   }>;
@@ -892,6 +917,12 @@ export type RecurringAccountStarterSnapshot = {
     trialConversionRate: number;
     proposalValueInFlight: number;
     activationValueInFlight: number;
+    proposalsWon: number;
+    proposalsLost: number;
+    proposalsStalled: number;
+    successfulTrials: number;
+    failedTrials: number;
+    extendedTrials: number;
   };
   starterOffer: {
     title: string;
@@ -947,6 +978,8 @@ export type RecurringAccountStarterSnapshot = {
     lastActivity?: PromiseRecurringAccountActivity;
     nextMilestone?: string;
     proposalStage: "not-sent" | "sent" | "review-due" | "trial-live" | "activation-target";
+    proposalDecision: PromiseRecurringProposalDecision;
+    trialOutcome: PromiseRecurringTrialOutcome;
     recurringAccount: PromiseRecurringAccount;
   }>;
 };
