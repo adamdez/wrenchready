@@ -20,6 +20,12 @@ function toneClasses(tone: "promise" | "trust" | "growth" | "system") {
   return "border-amber-500/20 bg-amber-500/10 text-amber-300";
 }
 
+function urgencyClasses(value: "critical" | "at-risk") {
+  return value === "critical"
+    ? "border-red-500/20 bg-red-500/10 text-red-200"
+    : "border-amber-500/20 bg-amber-500/10 text-amber-300";
+}
+
 export default async function OperatingCadencePage() {
   const snapshot = await getWeeklyOperatingCadenceSnapshot();
 
@@ -136,6 +142,63 @@ export default async function OperatingCadencePage() {
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
             </Link>
           ))}
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <h2 className="text-xl font-bold text-foreground">Carry forward these commitments</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          If these are still open at week end, they should be the first named items in the next reset.
+        </p>
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          {snapshot.carryforwards.map((item) => (
+            <Link
+              key={`${item.owner}-${item.title}`}
+              href={item.href}
+              className="rounded-2xl border border-border bg-background/60 p-4 transition-all hover:border-primary/30 hover:bg-background/80"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-foreground">{item.owner}</p>
+                <span className={`rounded-full border px-2.5 py-1 text-[11px] ${urgencyClasses(item.urgency)}`}>
+                  {item.urgency}
+                </span>
+              </div>
+              <p className="mt-3 text-sm font-semibold text-foreground">{item.title}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <h2 className="text-xl font-bold text-foreground">Unresolved critical work</h2>
+        <div className="mt-5 space-y-4">
+          {snapshot.unresolvedCriticalItems.length > 0 ? (
+            snapshot.unresolvedCriticalItems.map((item) => (
+              <Link
+                key={`${item.title}-${item.href}`}
+                href={item.href}
+                className="flex flex-col gap-3 rounded-2xl border border-border bg-background/60 p-4 transition-all hover:border-primary/30 hover:bg-background/80 md:flex-row md:items-start md:justify-between"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+                    {item.owner}
+                  </span>
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] ${urgencyClasses(item.urgency)}`}>
+                    {item.urgency}
+                  </span>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
+              No unresolved critical work is visible right now.
+            </div>
+          )}
         </div>
       </section>
 

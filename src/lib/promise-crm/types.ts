@@ -1093,6 +1093,20 @@ export type WeeklyOperatingCadenceSnapshot = {
     detail: string;
     href: string;
   }>;
+  carryforwards: Array<{
+    owner: RecordOwner | "Ops";
+    title: string;
+    detail: string;
+    href: string;
+    urgency: "critical" | "at-risk";
+  }>;
+  unresolvedCriticalItems: Array<{
+    title: string;
+    detail: string;
+    href: string;
+    owner: RecordOwner | "Ops";
+    urgency: "critical" | "at-risk";
+  }>;
   wedgeFocus: {
     headline: string;
     primaryWedge?: string;

@@ -169,6 +169,66 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
     },
   ];
 
+  const unresolvedCriticalItems = [
+    ...recapture.weakCloseouts
+      .filter((item) => item.severity === "critical")
+      .slice(0, 3)
+      .map((item) => ({
+        title: `Critical closeout gap: ${item.customerName}`,
+        detail: `${item.serviceScope} still has critical closeout gaps: ${item.gapLabels
+          .slice(0, 3)
+          .join(", ")}.`,
+        href: `/ops/promises/${item.promiseId}`,
+        owner: item.owner,
+        urgency: "critical" as const,
+      })),
+    ...warranty.tasks
+      .filter((task) => task.overdue || task.severity === "down-unit" || task.severity === "trust-risk")
+      .slice(0, 3)
+      .map((task) => ({
+        title: `Callback risk: ${task.customerName}`,
+        detail: `${task.serviceBucket} / ${task.rootCause || "unknown root cause"} still needs recovery discipline.`,
+        href: `/ops/promises/${task.promiseId}`,
+        owner: task.owner,
+        urgency: task.overdue || task.severity === "down-unit" ? "critical" as const : "at-risk" as const,
+      })),
+    ...accounts.worklist
+      .filter((item) => item.pressure === "overdue" || item.pressure === "due-now")
+      .slice(0, 3)
+      .map((item) => {
+        const nextTouchDetail = item.recurringAccount.nextTouchDueAt
+          ? `Next touch due ${new Date(item.recurringAccount.nextTouchDueAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}.`
+          : typeof item.daysUntilTouch === "number"
+            ? item.daysUntilTouch < 0
+              ? `${Math.abs(item.daysUntilTouch)} day${Math.abs(item.daysUntilTouch) === 1 ? "" : "s"} overdue.`
+              : `Next touch due in ${item.daysUntilTouch} day${item.daysUntilTouch === 1 ? "" : "s"}.`
+            : "";
+
+        return {
+        title: `Account carry-forward: ${item.recurringAccount.accountName || item.customerName}`,
+        detail: `${item.nextMilestone || item.recommendedAction} ${nextTouchDetail}`.trim(),
+        href: `/ops/promises/${item.promiseId}`,
+        owner: item.owner,
+        urgency: item.pressure === "overdue" ? "critical" as const : "at-risk" as const,
+      }}),
+  ].slice(0, 8);
+
+  const carryforwards = managementCommitments.map((commitment) => {
+    const matchingCritical = unresolvedCriticalItems.find((item) => item.owner === commitment.owner);
+    return {
+      owner: commitment.owner,
+      title: commitment.title,
+      detail: matchingCritical
+        ? `${commitment.detail} Carry forward now: ${matchingCritical.detail}`
+        : commitment.detail,
+      href: matchingCritical?.href || commitment.href,
+      urgency: matchingCritical?.urgency || "at-risk",
+    };
+  });
+
   return {
     generatedAt: new Date().toISOString(),
     companyGoal: systems.companyGoal,
@@ -240,6 +300,8 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
     },
     ownerScorecard: accounts.ownerTargets,
     managementCommitments,
+    carryforwards,
+    unresolvedCriticalItems,
     wedgeFocus: {
       headline: wedges.headline,
       primaryWedge: wedges.wedges.find((wedge) => wedge.homepagePriority === "primary")?.title,

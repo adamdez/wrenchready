@@ -75,6 +75,12 @@ export default async function ManagementReviewPage() {
     },
   ];
 
+  function urgencyClasses(value: "critical" | "at-risk") {
+    return value === "critical"
+      ? "border-red-500/20 bg-red-500/10 text-red-200"
+      : "border-amber-500/20 bg-amber-500/10 text-amber-300";
+  }
+
   return (
     <div className="shell py-10 sm:py-14">
       <Link
@@ -168,6 +174,63 @@ export default async function ManagementReviewPage() {
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
           </Link>
         ))}
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <h2 className="text-xl font-bold text-foreground">Carry-forward accountability</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          These are the commitments that should survive the week rollover if they are not actually closed.
+        </p>
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          {cadence.carryforwards.map((item) => (
+            <Link
+              key={`${item.owner}-${item.title}`}
+              href={item.href}
+              className="rounded-2xl border border-border bg-background/60 p-4 transition-all hover:border-primary/30 hover:bg-background/80"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-foreground">{item.owner}</p>
+                <span className={`rounded-full border px-2.5 py-1 text-[11px] ${urgencyClasses(item.urgency)}`}>
+                  {item.urgency}
+                </span>
+              </div>
+              <p className="mt-3 text-sm font-semibold text-foreground">{item.title}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <h2 className="text-xl font-bold text-foreground">Unresolved critical items</h2>
+        <div className="mt-4 space-y-4">
+          {cadence.unresolvedCriticalItems.length > 0 ? (
+            cadence.unresolvedCriticalItems.map((item) => (
+              <Link
+                key={`${item.title}-${item.href}`}
+                href={item.href}
+                className="flex flex-col gap-3 rounded-2xl border border-border bg-background/60 p-4 transition-all hover:border-primary/30 hover:bg-background/80 md:flex-row md:items-start md:justify-between"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+                    {item.owner}
+                  </span>
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] ${urgencyClasses(item.urgency)}`}>
+                    {item.urgency}
+                  </span>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
+              No unresolved critical items are visible right now.
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="mt-6 grid gap-4 lg:grid-cols-3">
