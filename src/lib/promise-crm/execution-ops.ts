@@ -3,6 +3,8 @@ import type {
   PromiseJobStage,
   PromisePaymentCollection,
   PromisePaymentMethod,
+  PromiseRecurringAccountActivity,
+  PromiseRecurringAccountActivityKind,
   PromiseRecurringAccount,
   PromiseRecord,
   PromiseWarrantyCase,
@@ -36,6 +38,48 @@ function normalizeStringList(value: unknown) {
   return value
     .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
     .filter(Boolean);
+}
+
+function normalizeRecurringActivityList(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const candidate = entry as Record<string, unknown>;
+      const kind = candidate.kind;
+      const actor = candidate.actor;
+      const recordedAt = toOptionalString(candidate.recordedAt);
+      const summary = toOptionalString(candidate.summary);
+
+      const normalizedKind: PromiseRecurringAccountActivityKind | undefined =
+        kind === "identified" ||
+        kind === "outreach" ||
+        kind === "proposal" ||
+        kind === "trial-started" ||
+        kind === "trial-check-in" ||
+        kind === "activated" ||
+        kind === "risk-flagged" ||
+        kind === "note"
+          ? kind
+          : undefined;
+
+      const normalizedActor =
+        actor === "Dez" || actor === "Simon" || actor === "Unassigned" || actor === "System"
+          ? actor
+          : undefined;
+
+      if (!normalizedKind || !normalizedActor || !recordedAt || !summary) return null;
+
+      return {
+        recordedAt,
+        actor: normalizedActor,
+        kind: normalizedKind,
+        summary,
+      } satisfies PromiseRecurringAccountActivity;
+    })
+    .filter((entry): entry is PromiseRecurringAccountActivity => Boolean(entry))
+    .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
 }
 
 export function normalizePromiseJobStage(value?: PromiseJobStage | null): PromiseJobStage {
@@ -267,20 +311,36 @@ export function normalizeRecurringAccount(
   const normalized: PromiseRecurringAccount = {
     status,
     accountName: toOptionalString(value.accountName),
+    primaryContactName: toOptionalString(value.primaryContactName),
+    primaryContactRole: toOptionalString(value.primaryContactRole),
+    contactEmail: toOptionalString(value.contactEmail),
+    contactPhone: toOptionalString(value.contactPhone),
     vehicleCount: toOptionalNumber(value.vehicleCount),
     cadenceLabel: toOptionalString(value.cadenceLabel),
     billingTerms: toOptionalString(value.billingTerms),
+    monthlyValueEstimate: toOptionalNumber(value.monthlyValueEstimate),
+    lastTouchedAt: toOptionalString(value.lastTouchedAt),
     nextTouchDueAt: toOptionalString(value.nextTouchDueAt),
+    nextStep: toOptionalString(value.nextStep),
     summary: toOptionalString(value.summary),
+    activityHistory: normalizeRecurringActivityList(value.activityHistory),
   };
 
   return normalized.status !== "not-account" ||
     normalized.accountName ||
+    normalized.primaryContactName ||
+    normalized.primaryContactRole ||
+    normalized.contactEmail ||
+    normalized.contactPhone ||
     normalized.vehicleCount !== undefined ||
     normalized.cadenceLabel ||
     normalized.billingTerms ||
+    normalized.monthlyValueEstimate !== undefined ||
+    normalized.lastTouchedAt ||
     normalized.nextTouchDueAt ||
-    normalized.summary
+    normalized.nextStep ||
+    normalized.summary ||
+    (normalized.activityHistory?.length || 0) > 0
     ? normalized
     : undefined;
 }
@@ -295,11 +355,19 @@ export function mergeRecurringAccount(
   return normalizeRecurringAccount({
     status: updates.status ?? current?.status ?? "not-account",
     accountName: updates.accountName ?? current?.accountName,
+    primaryContactName: updates.primaryContactName ?? current?.primaryContactName,
+    primaryContactRole: updates.primaryContactRole ?? current?.primaryContactRole,
+    contactEmail: updates.contactEmail ?? current?.contactEmail,
+    contactPhone: updates.contactPhone ?? current?.contactPhone,
     vehicleCount: updates.vehicleCount ?? current?.vehicleCount,
     cadenceLabel: updates.cadenceLabel ?? current?.cadenceLabel,
     billingTerms: updates.billingTerms ?? current?.billingTerms,
+    monthlyValueEstimate: updates.monthlyValueEstimate ?? current?.monthlyValueEstimate,
+    lastTouchedAt: updates.lastTouchedAt ?? current?.lastTouchedAt,
     nextTouchDueAt: updates.nextTouchDueAt ?? current?.nextTouchDueAt,
+    nextStep: updates.nextStep ?? current?.nextStep,
     summary: updates.summary ?? current?.summary,
+    activityHistory: updates.activityHistory ?? current?.activityHistory ?? [],
   });
 }
 

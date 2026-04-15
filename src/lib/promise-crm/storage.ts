@@ -2044,6 +2044,42 @@ export async function getProofDisciplineSnapshot(): Promise<ProofDisciplineSnaps
 
 export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAccountStarterSnapshot> {
   const [inbound, promises] = await Promise.all([getInboundRecords(), getPromiseRecords()]);
+  const trackedPromises = promises.filter(
+    (record) => record.recurringAccount && record.recurringAccount.status !== "not-account",
+  );
+  const worklist = trackedPromises
+    .map((record) => {
+      const account = record.recurringAccount!;
+      const nextTouchAt = account.nextTouchDueAt ? new Date(account.nextTouchDueAt).getTime() : undefined;
+      const now = Date.now();
+      const overdue = nextTouchAt !== undefined && nextTouchAt < now;
+      const daysUntilTouch =
+        nextTouchAt !== undefined
+          ? Math.ceil((nextTouchAt - now) / (1000 * 60 * 60 * 24))
+          : undefined;
+
+      return {
+        promiseId: record.id,
+        customerName: record.customer.name,
+        owner: record.owner,
+        territory: record.location.territory,
+        status: account.status,
+        overdue,
+        daysUntilTouch,
+        lastActivity: account.activityHistory?.[0],
+        recurringAccount: account,
+      };
+    })
+    .sort((a, b) => {
+      if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
+      if (a.daysUntilTouch !== undefined && b.daysUntilTouch !== undefined) {
+        return a.daysUntilTouch - b.daysUntilTouch;
+      }
+      if (a.daysUntilTouch !== undefined) return -1;
+      if (b.daysUntilTouch !== undefined) return 1;
+      return a.customerName.localeCompare(b.customerName);
+    });
+
   const candidates = [
     ...inbound
       .filter(
@@ -2089,20 +2125,32 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
 
   return {
     generatedAt: new Date().toISOString(),
+    summary: {
+      tracked: trackedPromises.length,
+      dueNow: worklist.filter((item) => (item.daysUntilTouch ?? 99) <= 2).length,
+      overdue: worklist.filter((item) => item.overdue).length,
+      trialActive: trackedPromises.filter(
+        (record) => record.recurringAccount?.status === "trial-active",
+      ).length,
+      active: trackedPromises.filter(
+        (record) => record.recurringAccount?.status === "active",
+      ).length,
+      atRisk: trackedPromises.filter(
+        (record) => record.recurringAccount?.status === "at-risk",
+      ).length,
+      totalVehicles: trackedPromises.reduce(
+        (sum, record) => sum + (record.recurringAccount?.vehicleCount || 0),
+        0,
+      ),
+      totalMonthlyValueEstimate: trackedPromises.reduce(
+        (sum, record) => sum + (record.recurringAccount?.monthlyValueEstimate || 0),
+        0,
+      ),
+    },
     starterOffer: recurringAccountStarterOffer,
     outreachScripts: recurringAccountOutreachScripts,
     candidates,
-    activeAccounts: Array.from(
-      new Map(
-        promises
-          .map((record) => record.recurringAccount)
-          .filter(
-            (account): account is NonNullable<PromiseRecord["recurringAccount"]> =>
-              Boolean(account && account.status !== "not-account"),
-          )
-          .map((account) => [account.accountName || JSON.stringify(account), account]),
-      ).values(),
-    ),
+    worklist,
   };
 }
 

@@ -238,7 +238,8 @@ Why it matters:
 
 Current status:
 - now live as a starter lane in ops with one offer, one opener, one follow-up, and live candidate detection
-- still needs real outreach habit and account wins
+- now upgraded with a real execution worklist, due and overdue next touches, account detail, and logged activity on tracked promises
+- still needs real outreach habit, trial conversions, and actual account wins
 
 ### 8. Weekly Operator Dashboard
 

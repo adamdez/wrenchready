@@ -250,14 +250,39 @@ export type PromiseRecurringAccountStatus =
   | "active"
   | "at-risk";
 
+export type PromiseRecurringAccountActivityKind =
+  | "identified"
+  | "outreach"
+  | "proposal"
+  | "trial-started"
+  | "trial-check-in"
+  | "activated"
+  | "risk-flagged"
+  | "note";
+
+export type PromiseRecurringAccountActivity = {
+  recordedAt: string;
+  actor: RecordOwner | "System";
+  kind: PromiseRecurringAccountActivityKind;
+  summary: string;
+};
+
 export type PromiseRecurringAccount = {
   status: PromiseRecurringAccountStatus;
   accountName?: string;
+  primaryContactName?: string;
+  primaryContactRole?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   vehicleCount?: number;
   cadenceLabel?: string;
   billingTerms?: string;
+  monthlyValueEstimate?: number;
+  lastTouchedAt?: string;
   nextTouchDueAt?: string;
+  nextStep?: string;
   summary?: string;
+  activityHistory?: PromiseRecurringAccountActivity[];
 };
 
 export type PromiseCloseout = {
@@ -765,6 +790,16 @@ export type RecurringAccountStarterCandidate = {
 
 export type RecurringAccountStarterSnapshot = {
   generatedAt: string;
+  summary: {
+    tracked: number;
+    dueNow: number;
+    overdue: number;
+    trialActive: number;
+    active: number;
+    atRisk: number;
+    totalVehicles: number;
+    totalMonthlyValueEstimate: number;
+  };
   starterOffer: {
     title: string;
     summary: string;
@@ -777,7 +812,17 @@ export type RecurringAccountStarterSnapshot = {
     landingPageHeadline: string;
   };
   candidates: RecurringAccountStarterCandidate[];
-  activeAccounts?: PromiseRecurringAccount[];
+  worklist: Array<{
+    promiseId: string;
+    customerName: string;
+    owner: RecordOwner;
+    territory: string;
+    status: PromiseRecurringAccountStatus;
+    overdue: boolean;
+    daysUntilTouch?: number;
+    lastActivity?: PromiseRecurringAccountActivity;
+    recurringAccount: PromiseRecurringAccount;
+  }>;
 };
 
 export type OperatingCadenceAction = {
@@ -801,6 +846,7 @@ export type WeeklyOperatingCadenceSnapshot = {
     callbackOpen: number;
     proofWeak: number;
     recurringCandidates: number;
+    recurringOverdue: number;
   };
   immediateActions: OperatingCadenceAction[];
 };

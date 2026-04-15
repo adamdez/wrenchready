@@ -412,6 +412,9 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 <p className="mt-2 text-sm text-muted-foreground">
                   {promise.recurringAccount?.accountName || "No account linked"}
                 </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {promise.recurringAccount?.primaryContactName || "No primary contact recorded"}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-border bg-background/60 p-4">
@@ -427,6 +430,9 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 <p className="mt-2 text-sm text-muted-foreground">
                   Vehicle count: {promise.recurringAccount?.vehicleCount ?? "Unknown"}
                 </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Monthly value: {formatCurrency(promise.recurringAccount?.monthlyValueEstimate)}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-border bg-background/60 p-4 md:col-span-2">
@@ -437,10 +443,37 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                   {promise.recurringAccount?.nextTouchDueAt || "No next touch due"}
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
+                  {promise.recurringAccount?.nextStep || "No recurring account next step recorded"}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
                   {promise.recurringAccount?.summary || "No recurring account summary recorded"}
                 </p>
               </div>
             </div>
+            {promise.recurringAccount?.activityHistory &&
+            promise.recurringAccount.activityHistory.length > 0 ? (
+              <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Account activity
+                </p>
+                <div className="mt-3 space-y-3">
+                  {promise.recurringAccount.activityHistory.slice(0, 5).map((activity) => (
+                    <div
+                      key={`${activity.recordedAt}-${activity.summary}`}
+                      className="rounded-xl border border-border/70 bg-card/50 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-medium text-foreground">{activity.summary}</p>
+                        <span className="text-xs text-muted-foreground">
+                          {activity.kind} / {activity.actor}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">{activity.recordedAt}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="rounded-3xl border border-border bg-card/50 p-6">

@@ -69,7 +69,7 @@ export default async function OperatingCadencePage() {
           These numbers keep the team pointed at trust, money, and repeatability instead of just volume.
         </p>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Closeout rate</p>
             <p className="mt-2 text-2xl font-bold text-foreground">
@@ -95,6 +95,10 @@ export default async function OperatingCadencePage() {
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Recurring candidates</p>
             <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.metrics.recurringCandidates}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Recurring overdue</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.metrics.recurringOverdue}</p>
           </div>
         </div>
       </section>

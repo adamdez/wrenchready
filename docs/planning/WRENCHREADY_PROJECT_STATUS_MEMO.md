@@ -263,6 +263,7 @@ This phase also added:
 - a collections action form so ops can update status, method, invoice reference, write-off reason, and notes from the queue itself
 - weekly cadence metrics now include closeout rate, send-ready outbound, open balances, callbacks open, weak proof count, and recurring-account candidates
 - production proof on 2026-04-13 that remaining-balance checkout, signed Stripe completion, and paid-state writeback work end to end on wrenchreadymobile.com
+- a real recurring-account execution lane so account work now includes due and overdue touches, contact detail, next-step discipline, monthly value estimates, and logged account activity instead of only a starter note
 
 ## What we are optimizing for
 

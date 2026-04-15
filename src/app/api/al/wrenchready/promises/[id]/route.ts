@@ -334,6 +334,18 @@ function isFieldExecutionPayload(value: unknown) {
   );
 }
 
+function isRecurringAccountActivityPayload(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.recordedAt === "string" &&
+    typeof candidate.actor === "string" &&
+    typeof candidate.kind === "string" &&
+    typeof candidate.summary === "string"
+  );
+}
+
 function isPaymentCollectionPayload(value: unknown) {
   if (value === null || value === undefined) return true;
   if (!value || typeof value !== "object") return false;
@@ -388,11 +400,24 @@ function isRecurringAccountPayload(value: unknown) {
   return (
     (candidate.status === undefined || typeof candidate.status === "string") &&
     (candidate.accountName === undefined || typeof candidate.accountName === "string") &&
+    (candidate.primaryContactName === undefined ||
+      typeof candidate.primaryContactName === "string") &&
+    (candidate.primaryContactRole === undefined ||
+      typeof candidate.primaryContactRole === "string") &&
+    (candidate.contactEmail === undefined || typeof candidate.contactEmail === "string") &&
+    (candidate.contactPhone === undefined || typeof candidate.contactPhone === "string") &&
     (candidate.vehicleCount === undefined || typeof candidate.vehicleCount === "number") &&
     (candidate.cadenceLabel === undefined || typeof candidate.cadenceLabel === "string") &&
     (candidate.billingTerms === undefined || typeof candidate.billingTerms === "string") &&
+    (candidate.monthlyValueEstimate === undefined ||
+      typeof candidate.monthlyValueEstimate === "number") &&
+    (candidate.lastTouchedAt === undefined || typeof candidate.lastTouchedAt === "string") &&
     (candidate.nextTouchDueAt === undefined || typeof candidate.nextTouchDueAt === "string") &&
-    (candidate.summary === undefined || typeof candidate.summary === "string")
+    (candidate.nextStep === undefined || typeof candidate.nextStep === "string") &&
+    (candidate.summary === undefined || typeof candidate.summary === "string") &&
+    (candidate.activityHistory === undefined ||
+      (Array.isArray(candidate.activityHistory) &&
+        candidate.activityHistory.every(isRecurringAccountActivityPayload)))
   );
 }
 

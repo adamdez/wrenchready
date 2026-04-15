@@ -91,6 +91,17 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
     });
   }
 
+  if (accounts.summary.overdue > 0) {
+    immediateActions.push({
+      title: "Clear the overdue account touches",
+      detail:
+        "Recurring accounts are slipping past their next-touch date. Protect the lane before warm account work cools off.",
+      owner: "Dez",
+      href: "/ops/accounts",
+      tone: "growth",
+    });
+  }
+
   if (systems.needsNow.length > 0) {
     immediateActions.push({
       title: "Clear the real system blockers before relying on them",
@@ -133,6 +144,7 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
       callbackOpen: warranty.open,
       proofWeak: proof.summary.proofWeak,
       recurringCandidates: accounts.candidates.length,
+      recurringOverdue: accounts.summary.overdue,
     },
     immediateActions: immediateActions.slice(0, 6),
   };
