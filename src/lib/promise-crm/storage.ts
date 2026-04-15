@@ -2238,6 +2238,7 @@ export async function getWeeklyRecaptureScorecard(): Promise<WeeklyRecaptureScor
         owner: record.owner,
         serviceScope: record.serviceScope,
         closeoutQualityScore: score,
+        severity: getCloseoutSeverity(record),
         gapLabels: getCloseoutGapLabels(record),
         blockers,
         closeout,
@@ -2650,6 +2651,56 @@ function getCloseoutGapLabels(record: PromiseRecord) {
     proof.proofScore < 70 ? "proof-depth" : null,
     proof.approvedAssets === 0 ? "permission-safe-proof" : null,
   ].filter((entry): entry is string => Boolean(entry));
+}
+
+function getCloseoutSeverity(record: PromiseRecord): "critical" | "at-risk" | "repairable" {
+  const gaps = getCloseoutGapLabels(record);
+  const criticalGaps = new Set([
+    "customer-recap",
+    "review-ask",
+    "next-visit",
+    "permission-safe-proof",
+  ]);
+  const criticalCount = gaps.filter((gap) => criticalGaps.has(gap)).length;
+
+  if (criticalCount >= 2 || gaps.length >= 6) return "critical";
+  if (criticalCount >= 1 || gaps.length >= 4) return "at-risk";
+  return "repairable";
+}
+
+function getWarrantyServiceBucket(serviceScope: string) {
+  const normalized = serviceScope.toLowerCase();
+  if (normalized.includes("brake")) return "Brake service";
+  if (
+    normalized.includes("battery") ||
+    normalized.includes("no-start") ||
+    normalized.includes("charging") ||
+    normalized.includes("starter") ||
+    normalized.includes("alternator")
+  ) {
+    return "No-start / electrical";
+  }
+  if (normalized.includes("diagnostic") || normalized.includes("check engine")) {
+    return "Diagnostic";
+  }
+  if (normalized.includes("oil") || normalized.includes("maintenance")) {
+    return "Maintenance";
+  }
+  if (normalized.includes("inspection")) return "Inspection";
+  return "Other";
+}
+
+function summarizeCounts(values: string[], fallback: string) {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    const key = value || fallback;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([label, count]) => ({ label, count }));
 }
 
 function isRecurringAccountActivationDue(account: PromiseRecurringAccount) {
@@ -3249,6 +3300,7 @@ export async function getWarrantySnapshot(): Promise<WarrantySnapshot> {
       const overdue = callbackDueAt ? new Date(callbackDueAt).getTime() < now : false;
       const makeGoodPlanMissing = !record.warrantyCase?.makeGoodPlan;
       const preventionMissing = !record.warrantyCase?.preventionStep;
+      const serviceBucket = getWarrantyServiceBucket(record.serviceScope);
 
       return {
         promiseId: record.id,
@@ -3256,6 +3308,7 @@ export async function getWarrantySnapshot(): Promise<WarrantySnapshot> {
         owner: record.owner,
         territory: record.location.territory,
         serviceScope: record.serviceScope,
+        serviceBucket,
         status: record.warrantyCase?.status || "none",
         severity: record.warrantyCase?.severity,
         rootCause: record.warrantyCase?.rootCause,
@@ -3285,6 +3338,10 @@ export async function getWarrantySnapshot(): Promise<WarrantySnapshot> {
       );
     });
 
+  const warrantyTracked = promises.filter(
+    (record) => record.warrantyCase && record.warrantyCase.status !== "none",
+  );
+
   return {
     generatedAt: new Date().toISOString(),
     open: tasks.filter((task) => task.status === "open").length,
@@ -3294,6 +3351,20 @@ export async function getWarrantySnapshot(): Promise<WarrantySnapshot> {
     trustRisk: tasks.filter((task) => task.severity === "trust-risk").length,
     downUnit: tasks.filter((task) => task.severity === "down-unit").length,
     preventionMissing: tasks.filter((task) => task.preventionMissing).length,
+    patterns: {
+      byRootCause: summarizeCounts(
+        warrantyTracked.map((record) => record.warrantyCase?.rootCause || "unknown"),
+        "unknown",
+      ),
+      byServiceBucket: summarizeCounts(
+        warrantyTracked.map((record) => getWarrantyServiceBucket(record.serviceScope)),
+        "Other",
+      ),
+      bySeverity: summarizeCounts(
+        warrantyTracked.map((record) => record.warrantyCase?.severity || "watch"),
+        "watch",
+      ),
+    },
     tasks,
   };
 }

@@ -40,6 +40,57 @@ export default async function WarrantyPage() {
       </section>
 
       <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <h2 className="text-xl font-bold text-foreground">Comeback patterns</h2>
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Root causes
+            </p>
+            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+              {snapshot.patterns.byRootCause.map((item) => (
+                <div key={`root-${item.label}`} className="flex items-center justify-between gap-3">
+                  <span>{item.label}</span>
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px]">
+                    {item.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Service buckets
+            </p>
+            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+              {snapshot.patterns.byServiceBucket.map((item) => (
+                <div key={`bucket-${item.label}`} className="flex items-center justify-between gap-3">
+                  <span>{item.label}</span>
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px]">
+                    {item.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Severity mix
+            </p>
+            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+              {snapshot.patterns.bySeverity.map((item) => (
+                <div key={`severity-${item.label}`} className="flex items-center justify-between gap-3">
+                  <span>{item.label}</span>
+                  <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px]">
+                    {item.count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <h2 className="text-xl font-bold text-foreground">Warranty worklist</h2>
         <div className="mt-4 space-y-4">
           {snapshot.tasks.length > 0 ? snapshot.tasks.map((task) => (
@@ -70,6 +121,7 @@ export default async function WarrantyPage() {
               <p className="mt-3 text-sm text-muted-foreground">{task.issueSummary || "No issue summary recorded."}</p>
               <p className="mt-2 text-sm text-muted-foreground">Callback due: {task.callbackDueAt || "Not scheduled"}</p>
               <p className="mt-2 text-sm text-muted-foreground">Root cause: {task.rootCause || "Not set"}</p>
+              <p className="mt-2 text-sm text-muted-foreground">Service bucket: {task.serviceBucket}</p>
               <p className="mt-2 text-xs text-muted-foreground">
                 Missing: {[
                   task.makeGoodPlanMissing ? "make-good plan" : null,

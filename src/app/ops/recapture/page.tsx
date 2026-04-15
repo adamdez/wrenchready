@@ -29,6 +29,12 @@ function formatPercent(value: number) {
 export default async function RecapturePage() {
   const scorecard = await getWeeklyRecaptureScorecard();
 
+  function severityClasses(value: "critical" | "at-risk" | "repairable") {
+    if (value === "critical") return "border-red-500/20 bg-red-500/10 text-red-200";
+    if (value === "at-risk") return "border-amber-500/20 bg-amber-500/10 text-amber-300";
+    return "border-sky-500/20 bg-sky-500/10 text-sky-300";
+  }
+
   return (
     <div className="shell py-10 sm:py-14">
       <Link
@@ -152,6 +158,9 @@ export default async function RecapturePage() {
                   </div>
                   <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-300">
                     {formatPercent(task.closeoutQualityScore)}
+                  </span>
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] ${severityClasses(task.severity)}`}>
+                    {task.severity}
                   </span>
                 </div>
                 <ul className="mt-3 space-y-2 text-sm text-muted-foreground">

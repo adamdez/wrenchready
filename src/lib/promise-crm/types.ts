@@ -532,6 +532,7 @@ export type WarrantyTask = {
   owner: RecordOwner;
   territory: string;
   serviceScope: string;
+  serviceBucket: string;
   status: PromiseWarrantyCaseStatus;
   severity?: PromiseWarrantySeverity;
   rootCause?: PromiseWarrantyRootCause;
@@ -553,6 +554,11 @@ export type WarrantySnapshot = {
   trustRisk: number;
   downUnit: number;
   preventionMissing: number;
+  patterns: {
+    byRootCause: Array<{ label: string; count: number }>;
+    byServiceBucket: Array<{ label: string; count: number }>;
+    bySeverity: Array<{ label: string; count: number }>;
+  };
   tasks: WarrantyTask[];
 };
 
@@ -833,6 +839,7 @@ export type WeeklyRecaptureScorecard = {
     owner: RecordOwner;
     serviceScope: string;
     closeoutQualityScore: number;
+    severity: "critical" | "at-risk" | "repairable";
     gapLabels: string[];
     blockers: string[];
     closeout?: PromiseCloseout;

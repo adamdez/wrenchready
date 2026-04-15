@@ -20,6 +20,7 @@ import { getNextProbableVisit } from "@/lib/promise-crm/closeout-recapture";
 import { computePromiseEconomics } from "@/lib/promise-crm/economics";
 import { getPromiseOutboundSnapshot } from "@/lib/promise-crm/outbound-drafts";
 import { getPlaybookRecommendation } from "@/lib/promise-crm/playbooks";
+import { getProofDisciplineForPromise } from "@/lib/promise-crm/proof-discipline";
 import { getPromiseRecord } from "@/lib/promise-crm/server";
 import type {
   CommercialOutcomeStatus,
@@ -155,10 +156,21 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
 
   const economics = computePromiseEconomics(promise.economics);
   const nextProbableVisit = getNextProbableVisit(promise);
+  const proof = getProofDisciplineForPromise(promise);
   const outbound = getPromiseOutboundSnapshot(promise);
   const playbook = getPlaybookRecommendation(
     `${promise.serviceScope} ${promise.commercialOutcome?.convertedService || ""} ${promise.nextAction}`,
   );
+  const closeoutGapLabels = [
+    !promise.closeout?.workPerformedSummary ? "work summary" : null,
+    !promise.closeout?.customerConditionSummary ? "customer condition" : null,
+    !promise.closeout?.customerRecap?.summary ? "customer recap summary" : null,
+    !promise.closeout?.reviewRequest?.summary ? "review ask summary" : null,
+    !promise.closeout?.maintenanceReminder?.summary ? "reminder summary" : null,
+    !nextProbableVisit?.reason ? "next visit reason" : null,
+    proof.proofScore < 70 ? "proof depth" : null,
+    proof.approvedAssets === 0 ? "permission-safe proof" : null,
+  ].filter((entry): entry is string => Boolean(entry));
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -515,6 +527,23 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
             <h2 className="text-xl font-bold text-foreground">Structured closeout</h2>
             {promise.closeout ? (
               <>
+                {closeoutGapLabels.length > 0 ? (
+                  <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-300">
+                      Closeout still needs work
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {closeoutGapLabels.map((gap) => (
+                        <span
+                          key={gap}
+                          className="rounded-full border border-amber-500/20 bg-background/60 px-2.5 py-1 text-[11px] text-amber-200"
+                        >
+                          {gap}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <div className="rounded-2xl border border-border bg-background/60 p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
