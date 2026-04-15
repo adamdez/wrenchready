@@ -14,6 +14,53 @@ import type {
 } from "@/lib/promise-crm/types";
 import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
 
+function getCriticalCloseoutGaps(
+  promise: PromiseRecord,
+  closeout: Partial<PromiseCloseout> | null | undefined,
+) {
+  const mergedCloseout = {
+    ...promise.closeout,
+    ...closeout,
+    customerRecap: {
+      ...promise.closeout?.customerRecap,
+      ...closeout?.customerRecap,
+    },
+    reviewRequest: {
+      ...promise.closeout?.reviewRequest,
+      ...closeout?.reviewRequest,
+    },
+    maintenanceReminder: {
+      ...promise.closeout?.maintenanceReminder,
+      ...closeout?.maintenanceReminder,
+    },
+    nextProbableVisit: {
+      ...promise.closeout?.nextProbableVisit,
+      ...closeout?.nextProbableVisit,
+    },
+    proofCapture: {
+      ...promise.closeout?.proofCapture,
+      ...closeout?.proofCapture,
+      assets: closeout?.proofCapture?.assets ?? promise.closeout?.proofCapture?.assets ?? [],
+    },
+  };
+
+  const gaps = [
+    !mergedCloseout.workPerformedSummary ? "work performed summary" : null,
+    !mergedCloseout.customerConditionSummary ? "customer condition summary" : null,
+    !mergedCloseout.customerRecap?.summary ? "customer recap summary" : null,
+    !mergedCloseout.reviewRequest?.summary ? "review ask summary" : null,
+    !mergedCloseout.maintenanceReminder?.summary ? "maintenance reminder summary" : null,
+    !mergedCloseout.nextProbableVisit?.service ? "next probable visit service" : null,
+    !mergedCloseout.nextProbableVisit?.reason ? "next probable visit reason" : null,
+    !mergedCloseout.proofCapture?.proofNotes &&
+    !mergedCloseout.proofCapture?.customerReliefQuote &&
+    !(mergedCloseout.proofCapture?.assets?.length)
+      ? "proof capture" : null,
+  ].filter((entry): entry is string => Boolean(entry));
+
+  return gaps;
+}
+
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
@@ -538,6 +585,30 @@ export async function PATCH(request: Request, context: RouteContext) {
         { error: "Promise update payload is invalid." },
         { status: 400 },
       );
+    }
+
+    const currentPromise = await getPromiseRecord(id);
+    if (!currentPromise) {
+      return NextResponse.json({ error: "Promise record not found." }, { status: 404 });
+    }
+
+    const resolvingToCompletedState =
+      body.status === "completed" ||
+      body.jobStage === "completed" ||
+      body.jobStage === "collected";
+
+    if (resolvingToCompletedState) {
+      const criticalCloseoutGaps = getCriticalCloseoutGaps(currentPromise, body.closeout);
+      if (criticalCloseoutGaps.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Complete the closeout before marking this promise finished. Missing: " +
+              criticalCloseoutGaps.join(", "),
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const promise = await updatePromiseRecord(id, {

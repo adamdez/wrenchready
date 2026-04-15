@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CheckCircle2, Save } from "lucide-react";
 import { computePromiseEconomics } from "@/lib/promise-crm/economics";
+import { getSuggestedComebackPreventionSteps } from "@/lib/promise-crm/execution-ops";
 import type {
   CommercialOutcomeStatus,
   CustomerApprovalStatus,
@@ -33,6 +34,11 @@ function parseList(value: string) {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function mergeUniqueLines(existing: string, additions: string[]) {
+  const current = parseList(existing);
+  return [...new Set([...current, ...additions])].join("\n");
 }
 
 function formatRecapItems(value: PromiseRecapItem[] = []) {
@@ -459,6 +465,23 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
     cardFeePercent: toOptionalNumber(cardFeePercent),
     warrantyReservePercent: toOptionalNumber(warrantyReservePercent),
   });
+  const closeoutCriticalGaps = [
+    !workPerformedSummary.trim() ? "work performed summary" : null,
+    !customerConditionSummary.trim() ? "customer condition summary" : null,
+    !customerRecapSummary.trim() ? "customer recap summary" : null,
+    !reviewRequestSummary.trim() ? "review ask summary" : null,
+    !maintenanceSummary.trim() ? "maintenance reminder summary" : null,
+    !nextProbableVisitService.trim() ? "next probable visit service" : null,
+    !nextProbableVisitReason.trim() ? "next probable visit reason" : null,
+    !proofNotes.trim() && parseProofAssets(proofAssets).length === 0 && !customerReliefQuote.trim()
+      ? "proof capture" : null,
+  ].filter((entry): entry is string => Boolean(entry));
+  const requiresCloseoutDiscipline =
+    statusValue === "completed" || jobStage === "completed" || jobStage === "collected";
+  const suggestedPreventionSteps = getSuggestedComebackPreventionSteps(
+    promise.serviceScope,
+    warrantyRootCause,
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -876,6 +899,22 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
             the next probable visit. Use one line per item in the format:
             <span className="font-medium text-foreground"> title | detail | amount</span>.
           </p>
+
+          {requiresCloseoutDiscipline && closeoutCriticalGaps.length > 0 ? (
+            <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
+              Finish these before this promise should be treated as completed:
+              <div className="mt-3 flex flex-wrap gap-2">
+                {closeoutCriticalGaps.map((gap) => (
+                  <span
+                    key={gap}
+                    className="rounded-full border border-amber-500/20 bg-background/60 px-2.5 py-1 text-[11px]"
+                  >
+                    {gap}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="block space-y-2">
@@ -1443,6 +1482,38 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
           <p className="mt-2 text-sm text-muted-foreground">
             Give the tech one clean packet instead of scattered texts. Use one line per checklist item.
           </p>
+
+          <div className="mt-4 rounded-2xl border border-border bg-card/50 p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Comeback prevention suggestions
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Suggestions are based on this lane and any recorded warranty root cause.
+                </p>
+              </div>
+              <button
+                className="inline-flex items-center justify-center rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-all hover:bg-secondary"
+                onClick={() =>
+                  setComebackPreventionSteps(
+                    mergeUniqueLines(comebackPreventionSteps, suggestedPreventionSteps),
+                  )
+                }
+                type="button"
+              >
+                Add suggestions
+              </button>
+            </div>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              {suggestedPreventionSteps.map((step) => (
+                <li key={step} className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                  {step}
+                </li>
+              ))}
+            </ul>
+          </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="block space-y-2 md:col-span-2">

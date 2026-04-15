@@ -172,6 +172,51 @@ export function mergeFieldExecutionPacket(
   });
 }
 
+export function getSuggestedComebackPreventionSteps(
+  serviceScope: string,
+  rootCause?: PromiseWarrantyRootCause,
+) {
+  const normalized = serviceScope.toLowerCase();
+  const steps = new Set<string>();
+
+  if (normalized.includes("brake")) {
+    steps.add("Document brake symptom before wrenching: noise, pull, pedal feel, or vibration.");
+    steps.add("Capture wheel-off brake photos and final pedal/road-test confirmation before closeout.");
+  } else if (
+    normalized.includes("battery") ||
+    normalized.includes("no-start") ||
+    normalized.includes("charging") ||
+    normalized.includes("starter") ||
+    normalized.includes("alternator")
+  ) {
+    steps.add("Record crank/no-crank behavior and confirm charging or starting output before leaving.");
+    steps.add("Photograph terminals, cable condition, and final voltage or start result.");
+  } else if (normalized.includes("diagnostic") || normalized.includes("check engine")) {
+    steps.add("Write the diagnostic conclusion in plain language and state what is proven versus still suspected.");
+    steps.add("Capture scan or test evidence that supports the recommended next step.");
+  } else if (normalized.includes("oil") || normalized.includes("maintenance")) {
+    steps.add("Verify fluid level, reset reminders where appropriate, and record the retention follow-up due.");
+    steps.add("Photograph final service condition so the next visit starts with better context.");
+  } else {
+    steps.add("Capture before/after proof and verify the customer-facing result before leaving the site.");
+  }
+
+  if (rootCause === "parts") {
+    steps.add("Reconfirm part fitment and keep part-number proof in the notes before installation.");
+  }
+  if (rootCause === "installation") {
+    steps.add("Use a final torque/fit checklist and record the verification step before closeout.");
+  }
+  if (rootCause === "diagnosis") {
+    steps.add("Do not state certainty beyond the evidence; record the exact test that supports the recommendation.");
+  }
+  if (rootCause === "expectation-gap") {
+    steps.add("Repeat what is and is not being fixed today, and record that customer-facing expectation in the recap.");
+  }
+
+  return [...steps];
+}
+
 export function normalizePaymentCollection(
   value?: PromisePaymentCollection | null,
 ): PromisePaymentCollection | undefined {
