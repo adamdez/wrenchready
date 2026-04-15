@@ -384,6 +384,9 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
   const [accountName, setAccountName] = useState(
     promise.recurringAccount?.accountName || "",
   );
+  const [targetLane, setTargetLane] = useState(
+    promise.recurringAccount?.targetLane || "contractor-upkeep",
+  );
   const [vehicleCount, setVehicleCount] = useState(
     promise.recurringAccount?.vehicleCount?.toString() || "",
   );
@@ -392,6 +395,21 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
   );
   const [billingTerms, setBillingTerms] = useState(
     promise.recurringAccount?.billingTerms || "",
+  );
+  const [proposalSentAt, setProposalSentAt] = useState(
+    promise.recurringAccount?.proposalSentAt || "",
+  );
+  const [proposalValueEstimate, setProposalValueEstimate] = useState(
+    promise.recurringAccount?.proposalValueEstimate?.toString() || "",
+  );
+  const [trialStartAt, setTrialStartAt] = useState(
+    promise.recurringAccount?.trialStartAt || "",
+  );
+  const [trialReviewDueAt, setTrialReviewDueAt] = useState(
+    promise.recurringAccount?.trialReviewDueAt || "",
+  );
+  const [activationTargetAt, setActivationTargetAt] = useState(
+    promise.recurringAccount?.activationTargetAt || "",
   );
   const [nextTouchDueAt, setNextTouchDueAt] = useState(
     promise.recurringAccount?.nextTouchDueAt || "",
@@ -565,9 +583,22 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
           recurringAccount: {
             status: recurringAccountStatus,
             accountName: accountName.trim() || undefined,
+            targetLane:
+              targetLane === "fleet-pm" ||
+              targetLane === "contractor-upkeep" ||
+              targetLane === "property-manager" ||
+              targetLane === "nonprofit" ||
+              targetLane === "mixed"
+                ? targetLane
+                : undefined,
             vehicleCount: toOptionalNumber(vehicleCount),
             cadenceLabel: cadenceLabel.trim() || undefined,
             billingTerms: billingTerms.trim() || undefined,
+            proposalSentAt: proposalSentAt.trim() || undefined,
+            proposalValueEstimate: toOptionalNumber(proposalValueEstimate),
+            trialStartAt: trialStartAt.trim() || undefined,
+            trialReviewDueAt: trialReviewDueAt.trim() || undefined,
+            activationTargetAt: activationTargetAt.trim() || undefined,
             nextTouchDueAt: nextTouchDueAt.trim() || undefined,
             summary: recurringSummary.trim() || undefined,
           },
@@ -1811,6 +1842,32 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
 
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Target lane
+              </span>
+              <select
+                className="form-input"
+                onChange={(event) =>
+                  setTargetLane(
+                    event.target.value as
+                      | "fleet-pm"
+                      | "contractor-upkeep"
+                      | "property-manager"
+                      | "nonprofit"
+                      | "mixed",
+                  )
+                }
+                value={targetLane}
+              >
+                <option value="contractor-upkeep">Contractor upkeep</option>
+                <option value="fleet-pm">Fleet PM</option>
+                <option value="property-manager">Property manager</option>
+                <option value="nonprofit">Nonprofit</option>
+                <option value="mixed">Mixed</option>
+              </select>
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
                 Vehicle count
               </span>
               <input
@@ -1843,6 +1900,67 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
                 onChange={(event) => setBillingTerms(event.target.value)}
                 placeholder="Card on file / Net 15 / same-day invoice"
                 value={billingTerms}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Proposal sent
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setProposalSentAt(event.target.value)}
+                placeholder="2026-04-18T09:00:00-07:00"
+                value={proposalSentAt}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Proposal value
+              </span>
+              <input
+                className="form-input"
+                inputMode="decimal"
+                onChange={(event) => setProposalValueEstimate(event.target.value)}
+                placeholder="1200"
+                value={proposalValueEstimate}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Trial start
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setTrialStartAt(event.target.value)}
+                placeholder="2026-04-22T08:00:00-07:00"
+                value={trialStartAt}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Trial review due
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setTrialReviewDueAt(event.target.value)}
+                placeholder="2026-04-29T09:00:00-07:00"
+                value={trialReviewDueAt}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Activation target
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setActivationTargetAt(event.target.value)}
+                placeholder="2026-05-02T09:00:00-07:00"
+                value={activationTargetAt}
               />
             </label>
 

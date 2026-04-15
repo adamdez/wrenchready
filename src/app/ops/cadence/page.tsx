@@ -77,6 +77,12 @@ export default async function OperatingCadencePage() {
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Closeout quality</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {(snapshot.metrics.closeoutQualityRate * 100).toFixed(0)}%
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Send-ready outbound</p>
             <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.metrics.outboundSendReady}</p>
           </div>
@@ -100,6 +106,36 @@ export default async function OperatingCadencePage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Recurring overdue</p>
             <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.metrics.recurringOverdue}</p>
           </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Proposal due</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.metrics.proposalDue}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Trial review due</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.metrics.trialReviewDue}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <h2 className="text-xl font-bold text-foreground">Weekly ritual</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          Run the same operating rhythm every week so the business compounds through habit, not heroics.
+        </p>
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {snapshot.weeklyRitual.map((item) => (
+            <Link
+              key={`${item.label}-${item.href}`}
+              href={item.href}
+              className="rounded-2xl border border-border bg-background/60 p-4 transition-all hover:border-primary/30 hover:bg-background/80"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                {item.label}
+              </p>
+              <p className="mt-2 text-sm font-semibold text-foreground">{item.owner}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -141,6 +177,14 @@ export default async function OperatingCadencePage() {
                 </p>
                 <p className="mt-2 text-2xl font-bold text-foreground">
                   ${snapshot.recurring.activeMonthlyValueEstimate.toFixed(0)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-card/50 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Ready to pitch / activate
+                </p>
+                <p className="mt-2 text-2xl font-bold text-foreground">
+                  {snapshot.recurring.readyToPitch} / {snapshot.recurring.readyToActivate}
                 </p>
               </div>
             </div>

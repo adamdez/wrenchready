@@ -158,13 +158,46 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
     ],
     metrics: {
       closeoutRate: recapture.metrics.closeoutRate,
+      closeoutQualityRate: recapture.metrics.closeoutQualityRate,
       outboundSendReady: outbound.summary.sendReady,
       balancesOpen: collections.totalBalanceOpen,
       callbackOpen: warranty.open,
       proofWeak: proof.summary.proofWeak,
       recurringCandidates: accounts.candidates.length,
       recurringOverdue: accounts.summary.overdue,
+      proposalDue: accounts.summary.proposalDue,
+      trialReviewDue: accounts.summary.trialReviewDue,
     },
+    weeklyRitual: [
+      {
+        label: "Monday reset",
+        owner: "Ops",
+        detail:
+          "Review the management page, tighten tomorrow risk, and make the wedge and recurring priorities explicit for the week.",
+        href: "/ops/management",
+      },
+      {
+        label: "Daily promise check",
+        owner: "Ops",
+        detail:
+          "Clear tomorrow-at-risk blockers, tighten field packets, and keep collections from trailing execution.",
+        href: "/ops/tomorrow",
+      },
+      {
+        label: "Midweek account push",
+        owner: "Dez",
+        detail:
+          "Advance one recurring account with a real proposal, one trial date, or one active-cadence protection move.",
+        href: "/ops/accounts",
+      },
+      {
+        label: "Friday recapture review",
+        owner: "Simon",
+        detail:
+          "Check closeout quality, review completion, reminder seed quality, and callback recovery before the week ends.",
+        href: "/ops/recapture",
+      },
+    ],
     recurring: {
       headline: accounts.weeklyPlan.headline,
       tracked: accounts.summary.tracked,
@@ -173,6 +206,8 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
       activeMonthlyValueEstimate: accounts.summary.activeMonthlyValueEstimate,
       touchDisciplineRate: accounts.summary.touchDisciplineRate,
       trialConversionRate: accounts.summary.trialConversionRate,
+      readyToPitch: accounts.summary.readyToPitch,
+      readyToActivate: accounts.summary.readyToActivate,
       focusAreas: accounts.weeklyPlan.focusAreas,
     },
     wedgeFocus: {

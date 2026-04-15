@@ -40,6 +40,9 @@ export function RecurringAccountActionForm({
   );
   const [contactEmail, setContactEmail] = useState(recurringAccount?.contactEmail || "");
   const [contactPhone, setContactPhone] = useState(recurringAccount?.contactPhone || "");
+  const [targetLane, setTargetLane] = useState(
+    recurringAccount?.targetLane || "contractor-upkeep",
+  );
   const [vehicleCount, setVehicleCount] = useState(
     recurringAccount?.vehicleCount?.toString() || "",
   );
@@ -47,6 +50,19 @@ export function RecurringAccountActionForm({
   const [billingTerms, setBillingTerms] = useState(recurringAccount?.billingTerms || "");
   const [monthlyValueEstimate, setMonthlyValueEstimate] = useState(
     recurringAccount?.monthlyValueEstimate?.toString() || "",
+  );
+  const [proposalSentAt, setProposalSentAt] = useState(
+    recurringAccount?.proposalSentAt || "",
+  );
+  const [proposalValueEstimate, setProposalValueEstimate] = useState(
+    recurringAccount?.proposalValueEstimate?.toString() || "",
+  );
+  const [trialStartAt, setTrialStartAt] = useState(recurringAccount?.trialStartAt || "");
+  const [trialReviewDueAt, setTrialReviewDueAt] = useState(
+    recurringAccount?.trialReviewDueAt || "",
+  );
+  const [activationTargetAt, setActivationTargetAt] = useState(
+    recurringAccount?.activationTargetAt || "",
   );
   const [nextTouchDueAt, setNextTouchDueAt] = useState(
     recurringAccount?.nextTouchDueAt || "",
@@ -102,10 +118,23 @@ export function RecurringAccountActionForm({
             primaryContactRole: primaryContactRole.trim() || undefined,
             contactEmail: contactEmail.trim() || undefined,
             contactPhone: contactPhone.trim() || undefined,
+            targetLane:
+              targetLane === "fleet-pm" ||
+              targetLane === "contractor-upkeep" ||
+              targetLane === "property-manager" ||
+              targetLane === "nonprofit" ||
+              targetLane === "mixed"
+                ? targetLane
+                : undefined,
             vehicleCount: toOptionalNumber(vehicleCount),
             cadenceLabel: cadenceLabel.trim() || undefined,
             billingTerms: billingTerms.trim() || undefined,
             monthlyValueEstimate: toOptionalNumber(monthlyValueEstimate),
+            proposalSentAt: proposalSentAt.trim() || undefined,
+            proposalValueEstimate: toOptionalNumber(proposalValueEstimate),
+            trialStartAt: trialStartAt.trim() || undefined,
+            trialReviewDueAt: trialReviewDueAt.trim() || undefined,
+            activationTargetAt: activationTargetAt.trim() || undefined,
             lastTouchedAt: activitySummary.trim()
               ? new Date().toISOString()
               : recurringAccount?.lastTouchedAt,
@@ -213,6 +242,30 @@ export function RecurringAccountActionForm({
         </label>
 
         <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Target lane</span>
+          <select
+            className="form-input"
+            onChange={(event) =>
+              setTargetLane(
+                event.target.value as
+                  | "fleet-pm"
+                  | "contractor-upkeep"
+                  | "property-manager"
+                  | "nonprofit"
+                  | "mixed",
+              )
+            }
+            value={targetLane}
+          >
+            <option value="contractor-upkeep">Contractor upkeep</option>
+            <option value="fleet-pm">Fleet PM</option>
+            <option value="property-manager">Property manager</option>
+            <option value="nonprofit">Nonprofit</option>
+            <option value="mixed">Mixed</option>
+          </select>
+        </label>
+
+        <label className="space-y-2">
           <span className="text-xs font-medium text-muted-foreground">Vehicles</span>
           <input
             className="form-input"
@@ -249,6 +302,56 @@ export function RecurringAccountActionForm({
             inputMode="decimal"
             onChange={(event) => setMonthlyValueEstimate(event.target.value)}
             value={monthlyValueEstimate}
+          />
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Proposal sent</span>
+          <input
+            className="form-input"
+            onChange={(event) => setProposalSentAt(event.target.value)}
+            placeholder="2026-04-20T09:00:00-07:00"
+            value={proposalSentAt}
+          />
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Proposal value</span>
+          <input
+            className="form-input"
+            inputMode="decimal"
+            onChange={(event) => setProposalValueEstimate(event.target.value)}
+            value={proposalValueEstimate}
+          />
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Trial start</span>
+          <input
+            className="form-input"
+            onChange={(event) => setTrialStartAt(event.target.value)}
+            placeholder="2026-04-22T08:00:00-07:00"
+            value={trialStartAt}
+          />
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Trial review due</span>
+          <input
+            className="form-input"
+            onChange={(event) => setTrialReviewDueAt(event.target.value)}
+            placeholder="2026-04-29T09:00:00-07:00"
+            value={trialReviewDueAt}
+          />
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Activation target</span>
+          <input
+            className="form-input"
+            onChange={(event) => setActivationTargetAt(event.target.value)}
+            placeholder="2026-05-01T09:00:00-07:00"
+            value={activationTargetAt}
           />
         </label>
 

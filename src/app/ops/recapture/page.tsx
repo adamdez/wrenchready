@@ -65,6 +65,12 @@ export default async function RecapturePage() {
             <p className="mt-2 text-2xl font-bold text-foreground">{formatPercent(scorecard.metrics.closeoutRate)}</p>
           </div>
           <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Closeout quality</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {formatPercent(scorecard.metrics.closeoutQualityRate)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Proof-ready visits</p>
             <p className="mt-2 text-2xl font-bold text-foreground">{scorecard.metrics.proofReady}</p>
           </div>
@@ -90,6 +96,10 @@ export default async function RecapturePage() {
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Next-visit conversions</p>
             <p className="mt-2 text-xl font-semibold text-foreground">{scorecard.metrics.nextVisitConversions}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Permission-safe proof</p>
+            <p className="mt-2 text-xl font-semibold text-foreground">{scorecard.metrics.proofPermissionReady}</p>
           </div>
         </div>
       </section>

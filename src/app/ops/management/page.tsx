@@ -68,7 +68,7 @@ export default async function ManagementReviewPage() {
     },
     {
       title: "Repeat and recurring revenue",
-      detail: `${recapture.metrics.nextVisitConversions} next-visit conversion${recapture.metrics.nextVisitConversions === 1 ? "" : "s"} and ${accounts.summary.active} active account${accounts.summary.active === 1 ? "" : "s"} are on the board.`,
+      detail: `${recapture.metrics.nextVisitConversions} next-visit conversion${recapture.metrics.nextVisitConversions === 1 ? "" : "s"}, ${accounts.summary.proposalDue} proposal gap${accounts.summary.proposalDue === 1 ? "" : "s"}, and ${accounts.summary.active} active account${accounts.summary.active === 1 ? "" : "s"} are on the board.`,
       href: "/ops/accounts",
     },
   ];
@@ -96,7 +96,7 @@ export default async function ManagementReviewPage() {
           discipline, money truth, trust recovery, and recurring growth in one place.
         </p>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-7">
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Primary wedge</p>
             <p className="mt-2 text-lg font-semibold text-foreground">
@@ -122,6 +122,12 @@ export default async function ManagementReviewPage() {
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Active monthly</p>
             <p className="mt-2 text-2xl font-bold text-foreground">{formatCurrency(accounts.summary.activeMonthlyValueEstimate)}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Proposal / trial due</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {accounts.summary.proposalDue} / {accounts.summary.trialReviewDue}
+            </p>
           </div>
         </div>
       </section>
@@ -169,6 +175,7 @@ export default async function ManagementReviewPage() {
             <p>{recapture.metrics.nextVisitCaptured} next probable visit{recapture.metrics.nextVisitCaptured === 1 ? "" : "s"} captured.</p>
             <p>{accounts.summary.readyToPitch} lead{accounts.summary.readyToPitch === 1 ? "" : "s"} are ready for a real pitch.</p>
             <p>{accounts.summary.readyToActivate} account{accounts.summary.readyToActivate === 1 ? "" : "s"} are close to trial or activation.</p>
+            <p>{accounts.summary.proposalDue} proposal gap{accounts.summary.proposalDue === 1 ? "" : "s"} and {accounts.summary.trialReviewDue} trial review date gap{accounts.summary.trialReviewDue === 1 ? "" : "s"} still need ownership.</p>
           </div>
         </div>
       </section>

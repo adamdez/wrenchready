@@ -131,10 +131,16 @@ type UpdatePromisePayload = {
     primaryContactRole?: string;
     contactEmail?: string;
     contactPhone?: string;
+    targetLane?: string;
     vehicleCount?: number;
     cadenceLabel?: string;
     billingTerms?: string;
     monthlyValueEstimate?: number;
+    proposalSentAt?: string;
+    proposalValueEstimate?: number;
+    trialStartAt?: string;
+    trialReviewDueAt?: string;
+    activationTargetAt?: string;
     lastTouchedAt?: string;
     nextTouchDueAt?: string;
     nextStep?: string;
@@ -437,11 +443,20 @@ function isRecurringAccountPayload(value: unknown) {
       typeof candidate.primaryContactRole === "string") &&
     (candidate.contactEmail === undefined || typeof candidate.contactEmail === "string") &&
     (candidate.contactPhone === undefined || typeof candidate.contactPhone === "string") &&
+    (candidate.targetLane === undefined || typeof candidate.targetLane === "string") &&
     (candidate.vehicleCount === undefined || typeof candidate.vehicleCount === "number") &&
     (candidate.cadenceLabel === undefined || typeof candidate.cadenceLabel === "string") &&
     (candidate.billingTerms === undefined || typeof candidate.billingTerms === "string") &&
     (candidate.monthlyValueEstimate === undefined ||
       typeof candidate.monthlyValueEstimate === "number") &&
+    (candidate.proposalSentAt === undefined || typeof candidate.proposalSentAt === "string") &&
+    (candidate.proposalValueEstimate === undefined ||
+      typeof candidate.proposalValueEstimate === "number") &&
+    (candidate.trialStartAt === undefined || typeof candidate.trialStartAt === "string") &&
+    (candidate.trialReviewDueAt === undefined ||
+      typeof candidate.trialReviewDueAt === "string") &&
+    (candidate.activationTargetAt === undefined ||
+      typeof candidate.activationTargetAt === "string") &&
     (candidate.lastTouchedAt === undefined || typeof candidate.lastTouchedAt === "string") &&
     (candidate.nextTouchDueAt === undefined || typeof candidate.nextTouchDueAt === "string") &&
     (candidate.nextStep === undefined || typeof candidate.nextStep === "string") &&

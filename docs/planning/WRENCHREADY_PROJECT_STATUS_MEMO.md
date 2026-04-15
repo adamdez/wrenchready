@@ -176,6 +176,9 @@ The CRM now stores:
 - a deeper field-execution layer with handoff and comeback-prevention checklists, not just parts / photos / inspection
 - a deeper warranty layer with severity, root-cause, make-good-plan, and prevention-step truth
 - a management-review page that turns the major weekly signals into one operating packet instead of a pile of tabs
+- deeper recurring-account execution truth including target lane, proposal timing/value, trial review date, and activation target
+- stronger closeout quality measurement so finished visits are scored on recap depth, proof safety, and next-step capture instead of just whether closeout exists
+- a weekly operating ritual layer that turns cadence into named management habits, not just dashboard access
 
 The ops layer can now answer not just what came in, but what happened after we made the promise.
 

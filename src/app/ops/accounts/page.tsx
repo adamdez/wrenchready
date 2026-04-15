@@ -121,6 +121,18 @@ export default async function RecurringAccountsPage() {
           </div>
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Proposal due
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.proposalDue}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Trial review due
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.trialReviewDue}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
               Est. monthly
             </p>
             <p className="mt-2 text-2xl font-bold text-foreground">
@@ -153,6 +165,9 @@ export default async function RecurringAccountsPage() {
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
               Ready to pitch {snapshot.summary.readyToPitch} / ready to activate {snapshot.summary.readyToActivate}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Proposal due {snapshot.summary.proposalDue} / trial review due {snapshot.summary.trialReviewDue}
             </p>
           </div>
           <div className="rounded-3xl border border-border bg-background/60 p-5">
@@ -279,6 +294,9 @@ export default async function RecurringAccountsPage() {
                         ? `${item.daysUntilTouch <= 0 ? "Due now" : `${item.daysUntilTouch}d to touch`}`
                         : "No touch date"}
                     </span>
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
+                      {item.proposalStage.replace("-", " ")}
+                    </span>
                   </div>
                 </div>
 
@@ -350,6 +368,9 @@ export default async function RecurringAccountsPage() {
                     {item.recurringAccount.nextStep || "No next step recorded"}
                   </p>
                   <p className="mt-2 text-sm text-muted-foreground">
+                    {item.nextMilestone || "No next milestone recorded"}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
                     {item.recurringAccount.summary || "No account summary recorded"}
                   </p>
                   <p className="mt-3 text-sm font-medium text-foreground">Recommended action</p>
@@ -366,6 +387,8 @@ export default async function RecurringAccountsPage() {
                       ["Pricing shared", item.recurringAccount.pricingShared],
                       ["Service mix", item.recurringAccount.serviceMixDefined],
                       ["Cluster window", item.recurringAccount.clusterWindowDefined],
+                      ["Proposal sent", Boolean(item.recurringAccount.proposalSentAt)],
+                      ["Trial review date", Boolean(item.recurringAccount.trialReviewDueAt)],
                     ].map(([label, value]) => (
                       <div
                         key={label as string}

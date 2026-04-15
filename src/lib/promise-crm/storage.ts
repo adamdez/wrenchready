@@ -1927,12 +1927,27 @@ export async function getCloseoutRecaptureSnapshot(): Promise<CloseoutRecaptureS
     (record) => record.status === "completed" || record.status === "follow-through-due",
   );
 
-  return completedPromises.reduce<CloseoutRecaptureSnapshot>(
+  const snapshot = completedPromises.reduce<CloseoutRecaptureSnapshot>(
     (summary, record) => {
       const closeout = record.closeout;
+      const proof = getProofDisciplineForPromise(record);
+      const closeoutQualityFlags = [
+        Boolean(closeout?.workPerformedSummary),
+        Boolean(closeout?.customerConditionSummary),
+        Boolean(closeout?.customerRecap?.status && closeout.customerRecap.status !== "not-ready"),
+        Boolean(closeout?.reviewRequest?.status && closeout.reviewRequest.status !== "not-ready"),
+        Boolean(
+          closeout?.maintenanceReminder?.status &&
+            closeout.maintenanceReminder.status !== "not-seeded",
+        ),
+        Boolean(getNextProbableVisit(record)),
+        proof.proofScore >= 70,
+        proof.approvedAssets > 0,
+      ].filter(Boolean).length;
 
       summary.completedPromises += 1;
       if (closeout) summary.closeoutCompleted += 1;
+      if (!closeout) summary.closeoutMissing += 1;
       if (closeout?.customerRecap?.status === "ready") summary.recapReady += 1;
       if (closeout?.customerRecap?.status === "sent") summary.recapSent += 1;
       if (closeout?.reviewRequest?.status === "ready") summary.reviewReady += 1;
@@ -1950,15 +1965,19 @@ export async function getCloseoutRecaptureSnapshot(): Promise<CloseoutRecaptureS
       ) {
         summary.proofCaptured += 1;
       }
+      if (proof.approvedAssets > 0) summary.proofPermissionReady += 1;
       summary.nowItems += closeout?.now.length || 0;
       summary.soonItems += closeout?.soon.length || 0;
       summary.monitorItems += closeout?.monitor.length || 0;
       summary.deferredValueOpen += record.commercialOutcome?.deferredValueAmount || 0;
+      summary.closeoutQualityRate += closeoutQualityFlags / 8;
       return summary;
     },
     {
       completedPromises: 0,
       closeoutCompleted: 0,
+      closeoutMissing: 0,
+      closeoutQualityRate: 0,
       recapReady: 0,
       recapSent: 0,
       reviewReady: 0,
@@ -1968,12 +1987,21 @@ export async function getCloseoutRecaptureSnapshot(): Promise<CloseoutRecaptureS
       reminderScheduled: 0,
       nextProbableVisitCaptured: 0,
       proofCaptured: 0,
+      proofPermissionReady: 0,
       nowItems: 0,
       soonItems: 0,
       monitorItems: 0,
       deferredValueOpen: 0,
     },
   );
+
+  return {
+    ...snapshot,
+    closeoutQualityRate:
+      snapshot.completedPromises > 0
+        ? snapshot.closeoutQualityRate / snapshot.completedPromises
+        : 0,
+  };
 }
 
 export async function getOutboundQueueSnapshot(): Promise<OutboundQueueSnapshot> {
@@ -2127,6 +2155,25 @@ export async function getWeeklyRecaptureScorecard(): Promise<WeeklyRecaptureScor
       record.recurringAccount &&
       record.recurringAccount.status !== "not-account",
   );
+  const closeoutQualityScores = completedPromises.map((record) => {
+    const closeout = record.closeout;
+    const proof = getProofDisciplineForPromise(record);
+    const completedFlags = [
+      Boolean(closeout?.workPerformedSummary),
+      Boolean(closeout?.customerConditionSummary),
+      Boolean(closeout?.customerRecap?.status && closeout.customerRecap.status !== "not-ready"),
+      Boolean(closeout?.reviewRequest?.status && closeout.reviewRequest.status !== "not-ready"),
+      Boolean(
+        closeout?.maintenanceReminder?.status &&
+          closeout.maintenanceReminder.status !== "not-seeded",
+      ),
+      Boolean(getNextProbableVisit(record)),
+      proof.proofScore >= 70,
+      proof.approvedAssets > 0,
+    ].filter(Boolean).length;
+
+    return completedFlags / 8;
+  });
 
   const metrics = {
     completedVisits: completedPromises.length,
@@ -2135,8 +2182,15 @@ export async function getWeeklyRecaptureScorecard(): Promise<WeeklyRecaptureScor
       completedPromises.length > 0
         ? completedPromises.filter((record) => Boolean(record.closeout)).length / completedPromises.length
         : 0,
+    closeoutQualityRate:
+      closeoutQualityScores.length > 0
+        ? closeoutQualityScores.reduce((sum, score) => sum + score, 0) / closeoutQualityScores.length
+        : 0,
     proofReady: completedPromises.filter(
       (record) => getProofDisciplineForPromise(record).proofScore >= 70,
+    ).length,
+    proofPermissionReady: completedPromises.filter(
+      (record) => getProofDisciplineForPromise(record).approvedAssets > 0,
     ).length,
     reviewReady: completedPromises.filter(
       (record) => record.closeout?.reviewRequest?.status === "ready",
@@ -2205,6 +2259,13 @@ export async function getWeeklyRecaptureScorecard(): Promise<WeeklyRecaptureScor
       title: "Finish closeout on every completed visit",
       detail: "The machine is still leaking learning because completed work is not always becoming structured recap.",
       tone: "risk",
+    });
+  }
+  if (metrics.closeoutQualityRate < 0.75) {
+    priorities.push({
+      title: "Raise closeout quality, not just closeout volume",
+      detail: "Too many completed visits still lack proof-safe recap depth or a believable next-step seed.",
+      tone: "focus",
     });
   }
   if (metrics.reviewCompleted < metrics.recapsSent) {
@@ -2311,11 +2372,19 @@ function getRecurringAccountReadinessBlockers(account: PromiseRecurringAccount) 
   const blockers: string[] = [];
 
   if (!account.primaryContactName) blockers.push("Primary contact missing");
+  if (!account.targetLane) blockers.push("Target lane not defined");
   if (!account.decisionMakerConfirmed) blockers.push("Approval owner not confirmed");
   if (!account.pricingShared) blockers.push("Pricing not shared yet");
   if (!account.serviceMixDefined) blockers.push("Service mix not defined");
   if (!account.clusterWindowDefined) blockers.push("Clustered service window not defined");
   if (!account.nextTouchDueAt) blockers.push("Next touch date not set");
+  if (account.status === "pitched" && !account.proposalSentAt) blockers.push("Proposal date missing");
+  if (account.status === "trial-active" && !account.trialReviewDueAt) {
+    blockers.push("Trial review date missing");
+  }
+  if ((account.status === "pitched" || account.status === "trial-active") && !account.proposalValueEstimate) {
+    blockers.push("Proposal value estimate missing");
+  }
   if (account.blockerSummary) blockers.push(account.blockerSummary);
 
   return blockers;
@@ -2326,12 +2395,15 @@ function getRecurringAccountHealthScore(account: PromiseRecurringAccount) {
 
   if (account.primaryContactName) score += 15;
   if (account.contactEmail || account.contactPhone) score += 10;
+  if (account.targetLane) score += 10;
   if (account.decisionMakerConfirmed) score += 15;
   if (account.pricingShared) score += 15;
   if (account.serviceMixDefined) score += 15;
   if (account.clusterWindowDefined) score += 10;
   if (account.nextTouchDueAt) score += 10;
   if (account.monthlyValueEstimate !== undefined) score += 10;
+  if (account.proposalSentAt) score += 10;
+  if (account.trialReviewDueAt) score += 10;
 
   if (account.status === "trial-active") score += 10;
   if (account.status === "active") score += 20;
@@ -2345,7 +2417,8 @@ function isRecurringAccountReadyToPitch(account: PromiseRecurringAccount) {
     account.status === "lead" &&
     !!account.accountName &&
     !!account.primaryContactName &&
-    !!account.summary
+    !!account.summary &&
+    !!account.targetLane
   );
 }
 
@@ -2355,8 +2428,48 @@ function isRecurringAccountReadyToActivate(account: PromiseRecurringAccount) {
     !!account.decisionMakerConfirmed &&
     !!account.pricingShared &&
     !!account.serviceMixDefined &&
-    !!account.clusterWindowDefined
+    !!account.clusterWindowDefined &&
+    !!account.proposalSentAt &&
+    !!account.proposalValueEstimate
   );
+}
+
+function getRecurringAccountProposalStage(account: PromiseRecurringAccount) {
+  if (account.status === "trial-active") return "trial-live" as const;
+  if (account.status === "active") return "activation-target" as const;
+  if (account.trialReviewDueAt) return "review-due" as const;
+  if (account.proposalSentAt) return "sent" as const;
+  return "not-sent" as const;
+}
+
+function getRecurringAccountNextMilestone(account: PromiseRecurringAccount) {
+  if (account.status === "lead") {
+    return account.proposalSentAt
+      ? "Move from lead to pitched with one clear proposal conversation."
+      : "Send the first real proposal and lock the next touch.";
+  }
+
+  if (account.status === "pitched") {
+    return account.trialStartAt
+      ? "Protect the trial launch and set the trial review date."
+      : "Convert the proposal into a narrow paid or pilot trial.";
+  }
+
+  if (account.status === "trial-active") {
+    return account.activationTargetAt
+      ? "Use the trial to hit the activation target and move to active cadence."
+      : "Set the activation target and make the trial decision explicit.";
+  }
+
+  if (account.status === "active") {
+    return "Protect the active cadence and expand the account carefully.";
+  }
+
+  if (account.status === "at-risk") {
+    return "Resolve the blocker and rebuild confidence before the account cools off.";
+  }
+
+  return "Keep the next touch visible and move the account forward intentionally.";
 }
 
 function getRecurringAccountRecommendedAction(account: PromiseRecurringAccount, overdue: boolean) {
@@ -2385,10 +2498,16 @@ function getRecurringAccountRecommendedAction(account: PromiseRecurringAccount, 
   }
 
   if (account.status === "pitched") {
+    if (!account.proposalSentAt) {
+      return "Log the real proposal send date and make the next trial decision date visible.";
+    }
     return "Convert the pitch into a trial decision with one narrow first visit.";
   }
 
   if (account.status === "trial-active") {
+    if (!account.trialReviewDueAt) {
+      return "Set the trial review date now so the account cannot drift without a decision.";
+    }
     return "Use the trial results to earn active cadence, card-on-file terms, and a next recurring stop.";
   }
 
@@ -2436,6 +2555,8 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
         readinessBlockers: getRecurringAccountReadinessBlockers(account),
         recommendedAction: getRecurringAccountRecommendedAction(account, overdue),
         lastActivity: account.activityHistory?.[0],
+        nextMilestone: getRecurringAccountNextMilestone(account),
+        proposalStage: getRecurringAccountProposalStage(account),
         recurringAccount: account,
       };
     })
@@ -2508,6 +2629,16 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
   ).length;
   const active = trackedPromises.filter((record) => record.recurringAccount?.status === "active").length;
   const atRisk = trackedPromises.filter((record) => record.recurringAccount?.status === "at-risk").length;
+  const proposalDue = trackedPromises.filter(
+    (record) =>
+      record.recurringAccount?.status === "pitched" &&
+      (!record.recurringAccount.proposalSentAt || !record.recurringAccount.proposalValueEstimate),
+  ).length;
+  const trialReviewDue = trackedPromises.filter(
+    (record) =>
+      record.recurringAccount?.status === "trial-active" &&
+      !record.recurringAccount.trialReviewDueAt,
+  ).length;
   const withTouchDate = worklist.filter((item) => item.daysUntilTouch !== undefined).length;
   const onTimeTouches = worklist.filter((item) => !item.overdue && item.daysUntilTouch !== undefined).length;
 
@@ -2530,6 +2661,8 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
           ? isRecurringAccountReadyToActivate(record.recurringAccount)
           : false,
       ).length,
+      proposalDue,
+      trialReviewDue,
       totalVehicles: trackedPromises.reduce(
         (sum, record) => sum + (record.recurringAccount?.vehicleCount || 0),
         0,
@@ -2568,6 +2701,8 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
         } to clear`,
         `${pitched} pitched account${pitched === 1 ? "" : "s"} ready to move toward trial`,
         `${active} active recurring account${active === 1 ? "" : "s"} worth protecting this week`,
+        `${proposalDue} proposal${proposalDue === 1 ? "" : "s"} still missing send date or value`,
+        `${trialReviewDue} trial review${trialReviewDue === 1 ? "" : "s"} still missing a decision date`,
         `${trackedPromises.filter((record) =>
           record.recurringAccount
             ? isRecurringAccountReadyToPitch(record.recurringAccount)

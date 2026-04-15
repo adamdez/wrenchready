@@ -352,10 +352,23 @@ export function normalizeRecurringAccount(
     primaryContactRole: toOptionalString(value.primaryContactRole),
     contactEmail: toOptionalString(value.contactEmail),
     contactPhone: toOptionalString(value.contactPhone),
+    targetLane:
+      value.targetLane === "fleet-pm" ||
+      value.targetLane === "contractor-upkeep" ||
+      value.targetLane === "property-manager" ||
+      value.targetLane === "nonprofit" ||
+      value.targetLane === "mixed"
+        ? value.targetLane
+        : undefined,
     vehicleCount: toOptionalNumber(value.vehicleCount),
     cadenceLabel: toOptionalString(value.cadenceLabel),
     billingTerms: toOptionalString(value.billingTerms),
     monthlyValueEstimate: toOptionalNumber(value.monthlyValueEstimate),
+    proposalSentAt: toOptionalString(value.proposalSentAt),
+    proposalValueEstimate: toOptionalNumber(value.proposalValueEstimate),
+    trialStartAt: toOptionalString(value.trialStartAt),
+    trialReviewDueAt: toOptionalString(value.trialReviewDueAt),
+    activationTargetAt: toOptionalString(value.activationTargetAt),
     lastTouchedAt: toOptionalString(value.lastTouchedAt),
     nextTouchDueAt: toOptionalString(value.nextTouchDueAt),
     nextStep: toOptionalString(value.nextStep),
@@ -382,10 +395,16 @@ export function normalizeRecurringAccount(
     normalized.primaryContactRole ||
     normalized.contactEmail ||
     normalized.contactPhone ||
+    normalized.targetLane ||
     normalized.vehicleCount !== undefined ||
     normalized.cadenceLabel ||
     normalized.billingTerms ||
     normalized.monthlyValueEstimate !== undefined ||
+    normalized.proposalSentAt ||
+    normalized.proposalValueEstimate !== undefined ||
+    normalized.trialStartAt ||
+    normalized.trialReviewDueAt ||
+    normalized.activationTargetAt ||
     normalized.lastTouchedAt ||
     normalized.nextTouchDueAt ||
     normalized.nextStep ||
@@ -414,10 +433,16 @@ export function mergeRecurringAccount(
     primaryContactRole: updates.primaryContactRole ?? current?.primaryContactRole,
     contactEmail: updates.contactEmail ?? current?.contactEmail,
     contactPhone: updates.contactPhone ?? current?.contactPhone,
+    targetLane: updates.targetLane ?? current?.targetLane,
     vehicleCount: updates.vehicleCount ?? current?.vehicleCount,
     cadenceLabel: updates.cadenceLabel ?? current?.cadenceLabel,
     billingTerms: updates.billingTerms ?? current?.billingTerms,
     monthlyValueEstimate: updates.monthlyValueEstimate ?? current?.monthlyValueEstimate,
+    proposalSentAt: updates.proposalSentAt ?? current?.proposalSentAt,
+    proposalValueEstimate: updates.proposalValueEstimate ?? current?.proposalValueEstimate,
+    trialStartAt: updates.trialStartAt ?? current?.trialStartAt,
+    trialReviewDueAt: updates.trialReviewDueAt ?? current?.trialReviewDueAt,
+    activationTargetAt: updates.activationTargetAt ?? current?.activationTargetAt,
     lastTouchedAt: updates.lastTouchedAt ?? current?.lastTouchedAt,
     nextTouchDueAt: updates.nextTouchDueAt ?? current?.nextTouchDueAt,
     nextStep: updates.nextStep ?? current?.nextStep,

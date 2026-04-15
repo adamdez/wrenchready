@@ -75,6 +75,7 @@ Current status:
 - weekly recapture scorecard is now live as an operator surface
 - weekly recapture now also measures deposit collection, callback resolution, and recurring-account progression
 - still needs deeper automation and cleaner weekly measurement
+- closeout quality now also needs to be managed, not just closeout existence
 
 ### 3. Dispatcher Decision Framework
 
@@ -179,6 +180,27 @@ Why it matters:
 Current status:
 - now built into the field packet and field-execution view
 - still needs stronger daily use in real ops
+
+### 5D. Proposal and trial discipline for recurring accounts
+
+Recurring-account work should not stop at `lead`, `pitched`, or `trial-active`.
+
+The lane needs explicit truth for:
+- target lane
+- proposal date
+- proposal value
+- trial start
+- trial review date
+- activation target
+
+Why it matters:
+- prevents warm account work from drifting
+- makes weekly account review concrete
+- helps turn “interest” into repeat revenue
+
+Current status:
+- now built into the recurring-account worklist, account action form, management review, and weekly cadence
+- still needs real operator use and account conversion proof
 
 ### 5A. Review Ask Scripts
 

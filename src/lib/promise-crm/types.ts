@@ -287,10 +287,16 @@ export type PromiseRecurringAccount = {
   primaryContactRole?: string;
   contactEmail?: string;
   contactPhone?: string;
+  targetLane?: "fleet-pm" | "contractor-upkeep" | "property-manager" | "nonprofit" | "mixed";
   vehicleCount?: number;
   cadenceLabel?: string;
   billingTerms?: string;
   monthlyValueEstimate?: number;
+  proposalSentAt?: string;
+  proposalValueEstimate?: number;
+  trialStartAt?: string;
+  trialReviewDueAt?: string;
+  activationTargetAt?: string;
   lastTouchedAt?: string;
   nextTouchDueAt?: string;
   nextStep?: string;
@@ -320,6 +326,8 @@ export type PromiseCloseout = {
 export type CloseoutRecaptureSnapshot = {
   completedPromises: number;
   closeoutCompleted: number;
+  closeoutMissing: number;
+  closeoutQualityRate: number;
   recapReady: number;
   recapSent: number;
   reviewReady: number;
@@ -329,6 +337,7 @@ export type CloseoutRecaptureSnapshot = {
   reminderScheduled: number;
   nextProbableVisitCaptured: number;
   proofCaptured: number;
+  proofPermissionReady: number;
   nowItems: number;
   soonItems: number;
   monitorItems: number;
@@ -759,7 +768,9 @@ export type WeeklyRecaptureScorecard = {
     completedVisits: number;
     closeoutsDone: number;
     closeoutRate: number;
+    closeoutQualityRate: number;
     proofReady: number;
+    proofPermissionReady: number;
     reviewReady: number;
     reviewCompleted: number;
     recapsSent: number;
@@ -836,6 +847,8 @@ export type RecurringAccountStarterSnapshot = {
     atRisk: number;
     readyToPitch: number;
     readyToActivate: number;
+    proposalDue: number;
+    trialReviewDue: number;
     totalVehicles: number;
     totalMonthlyValueEstimate: number;
     activeMonthlyValueEstimate: number;
@@ -872,6 +885,8 @@ export type RecurringAccountStarterSnapshot = {
     readinessBlockers: string[];
     recommendedAction: string;
     lastActivity?: PromiseRecurringAccountActivity;
+    nextMilestone?: string;
+    proposalStage: "not-sent" | "sent" | "review-due" | "trial-live" | "activation-target";
     recurringAccount: PromiseRecurringAccount;
   }>;
 };
@@ -928,13 +943,22 @@ export type WeeklyOperatingCadenceSnapshot = {
   standard: string[];
   metrics: {
     closeoutRate: number;
+    closeoutQualityRate: number;
     outboundSendReady: number;
     balancesOpen: number;
     callbackOpen: number;
     proofWeak: number;
     recurringCandidates: number;
     recurringOverdue: number;
+    proposalDue: number;
+    trialReviewDue: number;
   };
+  weeklyRitual: Array<{
+    label: string;
+    owner: string;
+    detail: string;
+    href: string;
+  }>;
   recurring: {
     headline: string;
     tracked: number;
@@ -943,6 +967,8 @@ export type WeeklyOperatingCadenceSnapshot = {
     activeMonthlyValueEstimate: number;
     touchDisciplineRate: number;
     trialConversionRate: number;
+    readyToPitch: number;
+    readyToActivate: number;
     focusAreas: string[];
   };
   wedgeFocus: {
