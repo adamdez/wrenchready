@@ -30,7 +30,9 @@ Primary folder:
 - Proof-discipline view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\proof\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\proof\page.tsx)
 - Recurring-account starter lane is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\accounts\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\accounts\page.tsx)
 - The recurring-account lane now includes an execution worklist, due/overdue touches, contact detail, monthly value estimate, and logged activity via [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\recurring-account-action-form.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\recurring-account-action-form.tsx)
+- The recurring-account lane now also includes readiness signals, health scoring, blockers, and recommended action directly in the live worklist
 - Weekly operating cadence is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\cadence\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\cadence\page.tsx)
+- Weekly operating cadence now includes a recurring-growth ritual with tracked/active/trial signal, touch discipline, trial conversion, and focus areas
 - Systems-readiness view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\systems\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\systems\page.tsx)
 - Field-execution view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\field\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\field\page.tsx)
 - Collections view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\collections\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\collections\page.tsx)

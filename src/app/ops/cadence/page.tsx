@@ -104,6 +104,71 @@ export default async function OperatingCadencePage() {
       </section>
 
       <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <h2 className="text-xl font-bold text-foreground">Recurring growth ritual</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          This lane should become a repeatable motion, not a someday idea. Run it weekly with one
+          clear headline, one quality bar, and one real account move.
+        </p>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl border border-border bg-background/60 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Weekly headline
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {snapshot.recurring.headline}
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-card/50 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Tracked / active
+                </p>
+                <p className="mt-2 text-2xl font-bold text-foreground">
+                  {snapshot.recurring.tracked} / {snapshot.recurring.active}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-card/50 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Trial active
+                </p>
+                <p className="mt-2 text-2xl font-bold text-foreground">
+                  {snapshot.recurring.trialActive}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-card/50 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Active monthly
+                </p>
+                <p className="mt-2 text-2xl font-bold text-foreground">
+                  ${snapshot.recurring.activeMonthlyValueEstimate.toFixed(0)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-background/60 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Quality bar
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Touch discipline {(snapshot.recurring.touchDisciplineRate * 100).toFixed(0)}%
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Trial conversion {(snapshot.recurring.trialConversionRate * 100).toFixed(0)}%
+            </p>
+            <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+              {snapshot.recurring.focusAreas.map((item) => (
+                <div key={item} className="flex gap-2 rounded-xl border border-border bg-card/50 p-3">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <div className="flex items-start gap-3">
           <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <Target className="h-5 w-5" />

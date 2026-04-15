@@ -146,6 +146,16 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
       recurringCandidates: accounts.candidates.length,
       recurringOverdue: accounts.summary.overdue,
     },
+    recurring: {
+      headline: accounts.weeklyPlan.headline,
+      tracked: accounts.summary.tracked,
+      active: accounts.summary.active,
+      trialActive: accounts.summary.trialActive,
+      activeMonthlyValueEstimate: accounts.summary.activeMonthlyValueEstimate,
+      touchDisciplineRate: accounts.summary.touchDisciplineRate,
+      trialConversionRate: accounts.summary.trialConversionRate,
+      focusAreas: accounts.weeklyPlan.focusAreas,
+    },
     immediateActions: immediateActions.slice(0, 6),
   };
 }

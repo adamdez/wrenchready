@@ -247,6 +247,8 @@ Why it matters:
 Current status:
 - now live as a starter lane in ops with one offer, one opener, one follow-up, and live candidate detection
 - now upgraded with a real execution worklist, due and overdue next touches, account detail, and logged activity on tracked promises
+- account readiness is now explicit through approval-owner, pricing, service-mix, cluster-window, and blocker fields
+- account health score and recommended next action are now visible in the live worklist
 - still needs real outreach habit, trial conversions, and actual account wins
 
 ### 8. Weekly Operator Dashboard
@@ -270,6 +272,7 @@ Why it matters:
 
 Current status:
 - partly built already through Promise Board, Insights, Follow-through, Tomorrow, and Owner cockpits
+- now upgraded with a recurring-growth ritual so the weekly cadence includes account headline, touch discipline, trial conversion, and active monthly signal
 - still needs KPI hardening and weekly review discipline
 
 ## Priority Order

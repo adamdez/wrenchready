@@ -2143,6 +2143,79 @@ export async function getProofDisciplineSnapshot(): Promise<ProofDisciplineSnaps
   };
 }
 
+function getRecurringAccountReadinessBlockers(account: PromiseRecurringAccount) {
+  const blockers: string[] = [];
+
+  if (!account.primaryContactName) blockers.push("Primary contact missing");
+  if (!account.decisionMakerConfirmed) blockers.push("Approval owner not confirmed");
+  if (!account.pricingShared) blockers.push("Pricing not shared yet");
+  if (!account.serviceMixDefined) blockers.push("Service mix not defined");
+  if (!account.clusterWindowDefined) blockers.push("Clustered service window not defined");
+  if (!account.nextTouchDueAt) blockers.push("Next touch date not set");
+  if (account.blockerSummary) blockers.push(account.blockerSummary);
+
+  return blockers;
+}
+
+function getRecurringAccountHealthScore(account: PromiseRecurringAccount) {
+  let score = 0;
+
+  if (account.primaryContactName) score += 15;
+  if (account.contactEmail || account.contactPhone) score += 10;
+  if (account.decisionMakerConfirmed) score += 15;
+  if (account.pricingShared) score += 15;
+  if (account.serviceMixDefined) score += 15;
+  if (account.clusterWindowDefined) score += 10;
+  if (account.nextTouchDueAt) score += 10;
+  if (account.monthlyValueEstimate !== undefined) score += 10;
+
+  if (account.status === "trial-active") score += 10;
+  if (account.status === "active") score += 20;
+  if (account.status === "at-risk") score -= 15;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function getRecurringAccountRecommendedAction(account: PromiseRecurringAccount, overdue: boolean) {
+  if (overdue) {
+    return "Clear the overdue touch now and either move the account forward or record the real blocker.";
+  }
+
+  if (!account.decisionMakerConfirmed) {
+    return "Confirm the real approval owner before treating this as a serious account opportunity.";
+  }
+
+  if (!account.pricingShared) {
+    return "Share the recurring pricing shape and make sure the account knows what the first lane costs.";
+  }
+
+  if (!account.serviceMixDefined) {
+    return "Define the exact recurring mix: inspections, maintenance, or uptime rescue coverage.";
+  }
+
+  if (!account.clusterWindowDefined) {
+    return "Lock a believable clustered service window so the account sees how this reduces downtime.";
+  }
+
+  if (account.status === "lead") {
+    return "Move this lead into a real pitch with a contact, a pain point, and one starter offer.";
+  }
+
+  if (account.status === "pitched") {
+    return "Convert the pitch into a trial decision with one narrow first visit.";
+  }
+
+  if (account.status === "trial-active") {
+    return "Use the trial results to earn active cadence, card-on-file terms, and a next recurring stop.";
+  }
+
+  if (account.status === "at-risk") {
+    return "Resolve the current blocker fast and protect the account before the lane goes cold.";
+  }
+
+  return "Keep the cadence tight and keep the next touch visible before the account cools off.";
+}
+
 export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAccountStarterSnapshot> {
   const [inbound, promises] = await Promise.all([getInboundRecords(), getPromiseRecords()]);
   const trackedPromises = promises.filter(
@@ -2159,6 +2232,14 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
           ? Math.ceil((nextTouchAt - now) / (1000 * 60 * 60 * 24))
           : undefined;
 
+      const pressure: "overdue" | "due-now" | "watch" | "healthy" = overdue
+        ? "overdue"
+        : (daysUntilTouch ?? 99) <= 2
+          ? "due-now"
+          : account.status === "at-risk"
+            ? "watch"
+            : "healthy";
+
       return {
         promiseId: record.id,
         customerName: record.customer.name,
@@ -2167,11 +2248,24 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
         status: account.status,
         overdue,
         daysUntilTouch,
+        healthScore: getRecurringAccountHealthScore(account),
+        pressure,
+        readinessBlockers: getRecurringAccountReadinessBlockers(account),
+        recommendedAction: getRecurringAccountRecommendedAction(account, overdue),
         lastActivity: account.activityHistory?.[0],
         recurringAccount: account,
       };
     })
     .sort((a, b) => {
+      const pressureRank: Record<"overdue" | "due-now" | "watch" | "healthy", number> = {
+        overdue: 0,
+        "due-now": 1,
+        watch: 2,
+        healthy: 3,
+      };
+      if (pressureRank[a.pressure] !== pressureRank[b.pressure]) {
+        return pressureRank[a.pressure] - pressureRank[b.pressure];
+      }
       if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
       if (a.daysUntilTouch !== undefined && b.daysUntilTouch !== undefined) {
         return a.daysUntilTouch - b.daysUntilTouch;
@@ -2224,21 +2318,27 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
       })),
   ].slice(0, 12);
 
+  const leads = trackedPromises.filter((record) => record.recurringAccount?.status === "lead").length;
+  const pitched = trackedPromises.filter((record) => record.recurringAccount?.status === "pitched").length;
+  const trialActive = trackedPromises.filter(
+    (record) => record.recurringAccount?.status === "trial-active",
+  ).length;
+  const active = trackedPromises.filter((record) => record.recurringAccount?.status === "active").length;
+  const atRisk = trackedPromises.filter((record) => record.recurringAccount?.status === "at-risk").length;
+  const withTouchDate = worklist.filter((item) => item.daysUntilTouch !== undefined).length;
+  const onTimeTouches = worklist.filter((item) => !item.overdue && item.daysUntilTouch !== undefined).length;
+
   return {
     generatedAt: new Date().toISOString(),
     summary: {
       tracked: trackedPromises.length,
+      leads,
+      pitched,
       dueNow: worklist.filter((item) => (item.daysUntilTouch ?? 99) <= 2).length,
       overdue: worklist.filter((item) => item.overdue).length,
-      trialActive: trackedPromises.filter(
-        (record) => record.recurringAccount?.status === "trial-active",
-      ).length,
-      active: trackedPromises.filter(
-        (record) => record.recurringAccount?.status === "active",
-      ).length,
-      atRisk: trackedPromises.filter(
-        (record) => record.recurringAccount?.status === "at-risk",
-      ).length,
+      trialActive,
+      active,
+      atRisk,
       totalVehicles: trackedPromises.reduce(
         (sum, record) => sum + (record.recurringAccount?.vehicleCount || 0),
         0,
@@ -2247,10 +2347,38 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
         (sum, record) => sum + (record.recurringAccount?.monthlyValueEstimate || 0),
         0,
       ),
+      activeMonthlyValueEstimate: trackedPromises.reduce(
+        (sum, record) =>
+          sum +
+          (record.recurringAccount?.status === "active"
+            ? record.recurringAccount?.monthlyValueEstimate || 0
+            : 0),
+        0,
+      ),
+      touchDisciplineRate: withTouchDate > 0 ? onTimeTouches / withTouchDate : 0,
+      trialConversionRate: trialActive + active > 0 ? active / (trialActive + active) : 0,
     },
     starterOffer: recurringAccountStarterOffer,
     outreachScripts: recurringAccountOutreachScripts,
     candidates,
+    weeklyPlan: {
+      headline:
+        active > 0
+          ? "Protect active accounts, move one trial forward, and keep the next touch honest."
+          : "Move one pitched account into trial and keep overdue touches from rotting the lane.",
+      focusAreas: [
+        "Confirm the approval owner and one believable recurring pain point.",
+        "Share simple recurring pricing and cluster-window logic instead of vague fleet language.",
+        "Turn one account into the next real trial or active cadence win.",
+      ],
+      targets: [
+        `${worklist.filter((item) => item.overdue).length} overdue account touch${
+          worklist.filter((item) => item.overdue).length === 1 ? "" : "es"
+        } to clear`,
+        `${pitched} pitched account${pitched === 1 ? "" : "s"} ready to move toward trial`,
+        `${active} active recurring account${active === 1 ? "" : "s"} worth protecting this week`,
+      ],
+    },
     worklist,
   };
 }

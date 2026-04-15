@@ -32,6 +32,13 @@ function recurringStatusLabel(value?: string) {
   return "Not account work";
 }
 
+function pressureClasses(value: "overdue" | "due-now" | "watch" | "healthy") {
+  if (value === "overdue") return "border-red-500/20 bg-red-500/10 text-red-200";
+  if (value === "due-now") return "border-amber-500/20 bg-amber-500/10 text-amber-300";
+  if (value === "watch") return "border-sky-500/20 bg-sky-500/10 text-sky-300";
+  return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
+}
+
 export default async function RecurringAccountsPage() {
   const snapshot = await getRecurringAccountStarterSnapshot();
 
@@ -68,6 +75,14 @@ export default async function RecurringAccountsPage() {
           </div>
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Leads / pitched
+            </p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {snapshot.summary.leads} / {snapshot.summary.pitched}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
               Due now
             </p>
             <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.dueNow}</p>
@@ -99,6 +114,57 @@ export default async function RecurringAccountsPage() {
             <p className="mt-2 text-2xl font-bold text-foreground">
               {formatCurrency(snapshot.summary.totalMonthlyValueEstimate)}
             </p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-3xl border border-border bg-background/60 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Weekly headline
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {snapshot.weeklyPlan.headline}
+            </p>
+          </div>
+          <div className="rounded-3xl border border-border bg-background/60 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Health metrics
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Touch discipline {(snapshot.summary.touchDisciplineRate * 100).toFixed(0)}%
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Trial conversion {(snapshot.summary.trialConversionRate * 100).toFixed(0)}%
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Active monthly {formatCurrency(snapshot.summary.activeMonthlyValueEstimate)}
+            </p>
+          </div>
+          <div className="rounded-3xl border border-border bg-background/60 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              This week
+            </p>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              {snapshot.weeklyPlan.targets.map((target) => (
+                <li key={target} className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                  {target}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-3xl border border-border bg-background/60 p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+            Focus areas
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {snapshot.weeklyPlan.focusAreas.map((item) => (
+              <div key={item} className="rounded-2xl border border-border bg-card/50 p-4 text-sm text-muted-foreground">
+                {item}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -188,6 +254,11 @@ export default async function RecurringAccountsPage() {
                         Overdue
                       </span>
                     ) : null}
+                    <span
+                      className={`rounded-full border px-2.5 py-1 text-[11px] ${pressureClasses(item.pressure)}`}
+                    >
+                      {item.pressure.replace("-", " ")}
+                    </span>
                     <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
                       {item.daysUntilTouch !== undefined
                         ? `${item.daysUntilTouch <= 0 ? "Due now" : `${item.daysUntilTouch}d to touch`}`
@@ -217,6 +288,19 @@ export default async function RecurringAccountsPage() {
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {item.recurringAccount.vehicleCount || "?"} vehicles
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-card/50 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                      Health
+                    </p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {item.healthScore}% account health
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {item.readinessBlockers.length > 0
+                        ? `${item.readinessBlockers.length} blocker${item.readinessBlockers.length === 1 ? "" : "s"}`
+                        : "No explicit blockers"}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-border bg-card/50 p-3">
@@ -253,6 +337,47 @@ export default async function RecurringAccountsPage() {
                   <p className="mt-2 text-sm text-muted-foreground">
                     {item.recurringAccount.summary || "No account summary recorded"}
                   </p>
+                  <p className="mt-3 text-sm font-medium text-foreground">Recommended action</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{item.recommendedAction}</p>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-border bg-card/50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                    Account readiness
+                  </p>
+                  <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                    {[
+                      ["Decision maker", item.recurringAccount.decisionMakerConfirmed],
+                      ["Pricing shared", item.recurringAccount.pricingShared],
+                      ["Service mix", item.recurringAccount.serviceMixDefined],
+                      ["Cluster window", item.recurringAccount.clusterWindowDefined],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label as string}
+                        className={`rounded-xl border px-3 py-3 text-sm ${
+                          value
+                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                            : "border-amber-500/20 bg-amber-500/10 text-amber-300"
+                        }`}
+                      >
+                        {label as string}
+                      </div>
+                    ))}
+                  </div>
+                  {item.readinessBlockers.length > 0 ? (
+                    <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                      {item.readinessBlockers.map((blocker) => (
+                        <li key={`${item.promiseId}-${blocker}`} className="flex gap-2">
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                          {blocker}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-4 text-sm text-muted-foreground">
+                      Readiness looks clean enough to push this account forward.
+                    </p>
+                  )}
                 </div>
 
                 {item.recurringAccount.activityHistory &&

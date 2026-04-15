@@ -323,6 +323,19 @@ export function normalizeRecurringAccount(
     nextTouchDueAt: toOptionalString(value.nextTouchDueAt),
     nextStep: toOptionalString(value.nextStep),
     summary: toOptionalString(value.summary),
+    decisionMakerConfirmed:
+      typeof value.decisionMakerConfirmed === "boolean"
+        ? value.decisionMakerConfirmed
+        : undefined,
+    pricingShared:
+      typeof value.pricingShared === "boolean" ? value.pricingShared : undefined,
+    serviceMixDefined:
+      typeof value.serviceMixDefined === "boolean" ? value.serviceMixDefined : undefined,
+    clusterWindowDefined:
+      typeof value.clusterWindowDefined === "boolean"
+        ? value.clusterWindowDefined
+        : undefined,
+    blockerSummary: toOptionalString(value.blockerSummary),
     activityHistory: normalizeRecurringActivityList(value.activityHistory),
   };
 
@@ -340,6 +353,11 @@ export function normalizeRecurringAccount(
     normalized.nextTouchDueAt ||
     normalized.nextStep ||
     normalized.summary ||
+    normalized.decisionMakerConfirmed !== undefined ||
+    normalized.pricingShared !== undefined ||
+    normalized.serviceMixDefined !== undefined ||
+    normalized.clusterWindowDefined !== undefined ||
+    normalized.blockerSummary ||
     (normalized.activityHistory?.length || 0) > 0
     ? normalized
     : undefined;
@@ -367,6 +385,13 @@ export function mergeRecurringAccount(
     nextTouchDueAt: updates.nextTouchDueAt ?? current?.nextTouchDueAt,
     nextStep: updates.nextStep ?? current?.nextStep,
     summary: updates.summary ?? current?.summary,
+    decisionMakerConfirmed:
+      updates.decisionMakerConfirmed ?? current?.decisionMakerConfirmed,
+    pricingShared: updates.pricingShared ?? current?.pricingShared,
+    serviceMixDefined: updates.serviceMixDefined ?? current?.serviceMixDefined,
+    clusterWindowDefined:
+      updates.clusterWindowDefined ?? current?.clusterWindowDefined,
+    blockerSummary: updates.blockerSummary ?? current?.blockerSummary,
     activityHistory: updates.activityHistory ?? current?.activityHistory ?? [],
   });
 }

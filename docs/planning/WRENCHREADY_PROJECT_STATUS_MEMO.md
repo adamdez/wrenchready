@@ -265,6 +265,9 @@ This phase also added:
 - weekly cadence metrics now include closeout rate, send-ready outbound, open balances, callbacks open, weak proof count, and recurring-account candidates
 - production proof on 2026-04-13 that remaining-balance checkout, signed Stripe completion, and paid-state writeback work end to end on wrenchreadymobile.com
 - a real recurring-account execution lane so account work now includes due and overdue touches, contact detail, next-step discipline, monthly value estimates, and logged account activity instead of only a starter note
+- recurring-account readiness signals so approval owner, pricing, service mix, cluster window, and blockers are explicit instead of living in memory
+- recurring-account health scoring and recommended-action guidance so the worklist can tell ops what to do next instead of only listing account facts
+- a recurring-growth ritual inside weekly cadence so tracked, trial, active, touch-discipline, and trial-conversion signal are now part of the same management rhythm as trust and collections
 
 ## What we are optimizing for
 

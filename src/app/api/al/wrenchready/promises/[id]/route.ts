@@ -121,11 +121,29 @@ type UpdatePromisePayload = {
   recurringAccount?: {
     status?: string;
     accountName?: string;
+    primaryContactName?: string;
+    primaryContactRole?: string;
+    contactEmail?: string;
+    contactPhone?: string;
     vehicleCount?: number;
     cadenceLabel?: string;
     billingTerms?: string;
+    monthlyValueEstimate?: number;
+    lastTouchedAt?: string;
     nextTouchDueAt?: string;
+    nextStep?: string;
     summary?: string;
+    decisionMakerConfirmed?: boolean;
+    pricingShared?: boolean;
+    serviceMixDefined?: boolean;
+    clusterWindowDefined?: boolean;
+    blockerSummary?: string;
+    activityHistory?: Array<{
+      recordedAt: string;
+      actor: string;
+      kind: string;
+      summary: string;
+    }>;
   } | null;
 };
 
@@ -415,6 +433,14 @@ function isRecurringAccountPayload(value: unknown) {
     (candidate.nextTouchDueAt === undefined || typeof candidate.nextTouchDueAt === "string") &&
     (candidate.nextStep === undefined || typeof candidate.nextStep === "string") &&
     (candidate.summary === undefined || typeof candidate.summary === "string") &&
+    (candidate.decisionMakerConfirmed === undefined ||
+      typeof candidate.decisionMakerConfirmed === "boolean") &&
+    (candidate.pricingShared === undefined || typeof candidate.pricingShared === "boolean") &&
+    (candidate.serviceMixDefined === undefined ||
+      typeof candidate.serviceMixDefined === "boolean") &&
+    (candidate.clusterWindowDefined === undefined ||
+      typeof candidate.clusterWindowDefined === "boolean") &&
+    (candidate.blockerSummary === undefined || typeof candidate.blockerSummary === "string") &&
     (candidate.activityHistory === undefined ||
       (Array.isArray(candidate.activityHistory) &&
         candidate.activityHistory.every(isRecurringAccountActivityPayload)))

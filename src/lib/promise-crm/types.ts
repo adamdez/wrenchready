@@ -282,6 +282,11 @@ export type PromiseRecurringAccount = {
   nextTouchDueAt?: string;
   nextStep?: string;
   summary?: string;
+  decisionMakerConfirmed?: boolean;
+  pricingShared?: boolean;
+  serviceMixDefined?: boolean;
+  clusterWindowDefined?: boolean;
+  blockerSummary?: string;
   activityHistory?: PromiseRecurringAccountActivity[];
 };
 
@@ -792,6 +797,8 @@ export type RecurringAccountStarterSnapshot = {
   generatedAt: string;
   summary: {
     tracked: number;
+    leads: number;
+    pitched: number;
     dueNow: number;
     overdue: number;
     trialActive: number;
@@ -799,6 +806,9 @@ export type RecurringAccountStarterSnapshot = {
     atRisk: number;
     totalVehicles: number;
     totalMonthlyValueEstimate: number;
+    activeMonthlyValueEstimate: number;
+    touchDisciplineRate: number;
+    trialConversionRate: number;
   };
   starterOffer: {
     title: string;
@@ -812,6 +822,11 @@ export type RecurringAccountStarterSnapshot = {
     landingPageHeadline: string;
   };
   candidates: RecurringAccountStarterCandidate[];
+  weeklyPlan: {
+    headline: string;
+    focusAreas: string[];
+    targets: string[];
+  };
   worklist: Array<{
     promiseId: string;
     customerName: string;
@@ -820,6 +835,10 @@ export type RecurringAccountStarterSnapshot = {
     status: PromiseRecurringAccountStatus;
     overdue: boolean;
     daysUntilTouch?: number;
+    healthScore: number;
+    pressure: "overdue" | "due-now" | "watch" | "healthy";
+    readinessBlockers: string[];
+    recommendedAction: string;
     lastActivity?: PromiseRecurringAccountActivity;
     recurringAccount: PromiseRecurringAccount;
   }>;
@@ -847,6 +866,16 @@ export type WeeklyOperatingCadenceSnapshot = {
     proofWeak: number;
     recurringCandidates: number;
     recurringOverdue: number;
+  };
+  recurring: {
+    headline: string;
+    tracked: number;
+    active: number;
+    trialActive: number;
+    activeMonthlyValueEstimate: number;
+    touchDisciplineRate: number;
+    trialConversionRate: number;
+    focusAreas: string[];
   };
   immediateActions: OperatingCadenceAction[];
 };

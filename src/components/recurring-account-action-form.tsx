@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { type Dispatch, type SetStateAction, useState } from "react";
 import type {
   PromiseRecurringAccount,
   PromiseRecurringAccountActivityKind,
@@ -53,6 +53,21 @@ export function RecurringAccountActionForm({
   );
   const [nextStep, setNextStep] = useState(recurringAccount?.nextStep || "");
   const [summary, setSummary] = useState(recurringAccount?.summary || "");
+  const [decisionMakerConfirmed, setDecisionMakerConfirmed] = useState(
+    recurringAccount?.decisionMakerConfirmed || false,
+  );
+  const [pricingShared, setPricingShared] = useState(
+    recurringAccount?.pricingShared || false,
+  );
+  const [serviceMixDefined, setServiceMixDefined] = useState(
+    recurringAccount?.serviceMixDefined || false,
+  );
+  const [clusterWindowDefined, setClusterWindowDefined] = useState(
+    recurringAccount?.clusterWindowDefined || false,
+  );
+  const [blockerSummary, setBlockerSummary] = useState(
+    recurringAccount?.blockerSummary || "",
+  );
   const [activityKind, setActivityKind] = useState<PromiseRecurringAccountActivityKind>("note");
   const [activitySummary, setActivitySummary] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -97,6 +112,11 @@ export function RecurringAccountActionForm({
             nextTouchDueAt: nextTouchDueAt.trim() || undefined,
             nextStep: nextStep.trim() || undefined,
             summary: summary.trim() || undefined,
+            decisionMakerConfirmed,
+            pricingShared,
+            serviceMixDefined,
+            clusterWindowDefined,
+            blockerSummary: blockerSummary.trim() || undefined,
             activityHistory: nextHistory,
           },
           noteToAdd: activitySummary.trim()
@@ -259,6 +279,42 @@ export function RecurringAccountActionForm({
             onChange={(event) => setSummary(event.target.value)}
             placeholder="What makes this account worth pursuing and what has been learned so far?"
             value={summary}
+          />
+        </label>
+
+        <div className="rounded-2xl border border-border bg-background/40 p-4 md:col-span-2 xl:col-span-3">
+          <p className="text-xs font-medium text-muted-foreground">Account readiness</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              ["Decision maker confirmed", decisionMakerConfirmed, setDecisionMakerConfirmed],
+              ["Pricing shared", pricingShared, setPricingShared],
+              ["Service mix defined", serviceMixDefined, setServiceMixDefined],
+              ["Cluster window defined", clusterWindowDefined, setClusterWindowDefined],
+            ].map(([label, value, setter]) => (
+              <label
+                key={label as string}
+                className="flex items-center gap-3 rounded-xl border border-border bg-card/50 px-3 py-3 text-sm text-muted-foreground"
+              >
+                <input
+                  checked={value as boolean}
+                  onChange={(event) =>
+                    (setter as Dispatch<SetStateAction<boolean>>)(event.target.checked)
+                  }
+                  type="checkbox"
+                />
+                <span>{label as string}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <label className="space-y-2 xl:col-span-3">
+          <span className="text-xs font-medium text-muted-foreground">Current blocker</span>
+          <textarea
+            className="form-textarea"
+            onChange={(event) => setBlockerSummary(event.target.value)}
+            placeholder="What is still preventing this account from moving cleanly to the next stage?"
+            value={blockerSummary}
           />
         </label>
 
