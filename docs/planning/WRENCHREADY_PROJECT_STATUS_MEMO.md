@@ -172,6 +172,7 @@ The CRM now stores:
 - a structured closeout-and-recapture spine so every finished visit can store Now / Soon / Monitor recap items, deferred-work value, review-request state, maintenance reminder seed, and the next probable visit
 - lane-aware follow-through resolution so review, reminder, deferred-work, and open-closeout tasks can progress in sequence instead of one action blanking the whole promise
 - expanded operator playbooks for review asks and reminder seeds, not just intake and quote language
+- an explicit wedge-focus layer that now keeps no-start help and brake help as the primary launch wedges across the homepage, the request flow, the ops wedge scorecard, and the weekly cadence ritual
 
 The ops layer can now answer not just what came in, but what happened after we made the promise.
 
@@ -200,6 +201,7 @@ They are operating-design and go-live blockers:
 - setting the real Google review destination once the public profile exposes it
 - deepening automation and scorecard habit on top of the now-live rails
 - better conversion and follow-through measurement
+- keeping the public front door narrow enough that the best-fit wedges create better promises instead of noisier demand
 
 ## What changed in this phase
 

@@ -335,6 +335,13 @@ export function PromiseBoard(props: PromiseBoardProps) {
                 Public request flow
                 <ArrowRight className="h-4 w-4" />
               </Link>
+              <Link
+                href="/ops/wedges"
+                className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+              >
+                Wedge focus
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
 

@@ -5,6 +5,7 @@ import {
   getRecurringAccountStarterSnapshot,
   getWarrantySnapshot,
   getWeeklyRecaptureScorecard,
+  getWedgeFocusSnapshot,
 } from "@/lib/promise-crm/storage";
 import { getSystemsReadinessSnapshot } from "@/lib/promise-crm/system-readiness";
 import type {
@@ -13,7 +14,7 @@ import type {
 } from "@/lib/promise-crm/types";
 
 export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperatingCadenceSnapshot> {
-  const [recapture, outbound, proof, accounts, systems, collections, warranty] = await Promise.all([
+  const [recapture, outbound, proof, accounts, systems, collections, warranty, wedges] = await Promise.all([
     getWeeklyRecaptureScorecard(),
     getOutboundQueueSnapshot(),
     getProofDisciplineSnapshot(),
@@ -21,6 +22,7 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
     getSystemsReadinessSnapshot(),
     getCollectionSnapshot(),
     getWarrantySnapshot(),
+    getWedgeFocusSnapshot(),
   ]);
 
   const immediateActions: OperatingCadenceAction[] = [];
@@ -102,6 +104,23 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
     });
   }
 
+  const primaryWedgeNeedsWork = wedges.wedges.some(
+    (wedge) =>
+      wedge.homepagePriority === "primary" &&
+      (wedge.action === "Protect the promise" || wedge.action === "Keep testing"),
+  );
+
+  if (primaryWedgeNeedsWork) {
+    immediateActions.push({
+      title: "Tighten the launch wedges before broadening demand",
+      detail:
+        "No-start help and brake help are the front door. Keep the homepage, intake, and response language narrow enough that these leads turn into believable promises.",
+      owner: "Ops",
+      href: "/ops/wedges",
+      tone: "growth",
+    });
+  }
+
   if (systems.needsNow.length > 0) {
     immediateActions.push({
       title: "Clear the real system blockers before relying on them",
@@ -155,6 +174,17 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
       touchDisciplineRate: accounts.summary.touchDisciplineRate,
       trialConversionRate: accounts.summary.trialConversionRate,
       focusAreas: accounts.weeklyPlan.focusAreas,
+    },
+    wedgeFocus: {
+      headline: wedges.headline,
+      primaryWedge: wedges.wedges.find((wedge) => wedge.homepagePriority === "primary")?.title,
+      promotedCount: wedges.wedges
+        .filter((wedge) => wedge.homepagePriority === "primary")
+        .reduce((total, wedge) => total + wedge.promotedCount, 0),
+      netProfitInView: wedges.wedges
+        .filter((wedge) => wedge.homepagePriority === "primary")
+        .reduce((total, wedge) => total + wedge.netProfitInView, 0),
+      focusAreas: wedges.focusAreas,
     },
     immediateActions: immediateActions.slice(0, 6),
   };

@@ -147,6 +147,7 @@ The software center is still the Promise CRM and its surrounding operating views
 - recurring accounts
 - operating cadence
 - systems readiness
+- wedge focus
 
 This is the right center because it is the shortest path from:
 
@@ -164,7 +165,7 @@ These are the next big steps now that the core operating spine, production-safe 
 2. switch payments from test-mode proof to live-mode operating reality
 3. make the weekly recapture and operator cadence a real management habit
 4. turn the recurring-account lane into real outreach, trials, and repeat accounts
-5. tighten the wedge-specific launch, pricing discipline, and response speed around the strongest entry lanes
+5. use the now-live wedge focus weekly so no-start and brake demand stay sharper than generic mobile-mechanic demand
 6. activate text only when 10DLC and transport reality make it honest to do so
 
 Why these six:

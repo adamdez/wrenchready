@@ -175,6 +175,27 @@ export const serviceLaneHighlights = [
   "Pre-purchase inspections that reduce bad-buy risk",
 ] as const;
 
+export const launchWedges = [
+  {
+    slug: "battery-replacement",
+    label: "Dead battery / won't start",
+    shortLabel: "No-start help",
+    firstPromise:
+      "We test first so we do not sell the wrong battery or pretend every no-start is the same job.",
+    whyNow:
+      "High urgency, easy customer language, and one of the cleanest mobile fits in the category.",
+  },
+  {
+    slug: "brake-repair",
+    label: "Brake noise / brake repair",
+    shortLabel: "Brake help",
+    firstPromise:
+      "We inspect first, tell you whether it stays a pad-and-rotor visit, and get approval before anything widens.",
+    whyNow:
+      "Strong safety-driven demand, strong ticket shape, and clear before-and-after proof.",
+  },
+] as const;
+
 export const priorityServiceSlugs = [
   "battery-replacement",
   "brake-repair",

@@ -15,6 +15,7 @@ Use this file as a supporting checklist for what still matters, especially where
 - Stripe and Resend rails are live in production-safe form.
 - Text is still held until 10DLC makes it honest.
 - Google review URL is still waiting on the public GBP share link.
+- The public request flow and weekly cadence now explicitly treat `No-start help` and `Brake help` as the primary launch wedges instead of drifting into generic mobile-mechanic positioning.
 
 ## What Still Matters Most
 
@@ -122,6 +123,22 @@ Why it matters:
 Current status:
 - now built in the operator playbooks for the core lanes plus pre-purchase and fleet
 - still needs training use, iteration, and evidence from real conversations
+
+### 4A. Wedge-first launch discipline
+
+The strongest public story should still be:
+- dead battery / no-start
+- brake noise / brake repair
+
+Why it matters:
+- stronger customer language
+- tighter response discipline
+- better demand quality
+- cleaner route economics than broad generic positioning
+
+Current status:
+- now built into the homepage, request flow, wedge scorecard, and weekly operating cadence
+- still needs real operating follow-through: faster response, clearer worksite screening, and weekly review of which wedge is truly earning the best promises
 
 ### 5. Driveway Add-On Playbook
 

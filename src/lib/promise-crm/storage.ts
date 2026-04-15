@@ -101,6 +101,9 @@ import type {
   TomorrowReadinessSnapshot,
   WarrantySnapshot,
   WeeklyRecaptureScorecard,
+  WedgeFocusAction,
+  WedgeFocusItem,
+  WedgeFocusSnapshot,
   WrenchReadyOwner,
 } from "@/lib/promise-crm/types";
 
@@ -1180,6 +1183,167 @@ export async function getMarketingOfferPerformance(): Promise<MarketingOfferPerf
     if (b.netProfitInView !== a.netProfitInView) return b.netProfitInView - a.netProfitInView;
     return b.inboundCount - a.inboundCount;
   });
+}
+
+function getWedgeActionForOffer(
+  offer: MarketingOfferPerformance | undefined,
+): {
+  action: WedgeFocusAction;
+  actionDetail: string;
+  weeklyFocus: string;
+} {
+  if (!offer || offer.inboundCount === 0) {
+    return {
+      action: "Keep testing",
+      actionDetail:
+        "This wedge does not have enough live inbound yet. Keep the language tight, keep screening honest, and wait for cleaner signal before overweighting it.",
+      weeklyFocus: "Keep gathering signal without broadening the promise.",
+    };
+  }
+
+  if (offer.netProfitInView > 0 && offer.convertedWorkCount > 0) {
+    return {
+      action: "Lead harder",
+      actionDetail:
+        "This wedge is already creating both real work and net profit. It deserves stronger homepage emphasis, faster response discipline, and cleaner intake handling.",
+      weeklyFocus: "Protect response speed and make this wedge the clearest front door.",
+    };
+  }
+
+  if (offer.promotedCount > 0 && offer.convertedWorkCount === 0 && offer.deferredWorkCount > 0) {
+    return {
+      action: "Tighten follow-through",
+      actionDetail:
+        "This wedge is opening work, but too much value is cooling into deferred items. Close the recap and next-step gap before pushing more demand into it.",
+      weeklyFocus: "Turn deferred value into scheduled next steps.",
+    };
+  }
+
+  if (offer.promotedCount === 0 || offer.promotionRate < 0.5) {
+    return {
+      action: "Protect the promise",
+      actionDetail:
+        "Demand is arriving, but too much of it is not clean enough to turn into a promise. Tighten worksite notes, job-fit screening, and pricing language before scaling it.",
+      weeklyFocus: "Tighten screening so the wedge creates believable promises, not noisy inbound.",
+    };
+  }
+
+  return {
+    action: "Keep testing",
+    actionDetail:
+      "The wedge has early movement, but the signal is still thin. Keep the positioning focused and keep measuring before changing spend or page hierarchy.",
+    weeklyFocus: "Keep testing without broadening the service story.",
+  };
+}
+
+export async function getWedgeFocusSnapshot(): Promise<WedgeFocusSnapshot> {
+  const offers = await getMarketingOfferPerformance();
+  const byOffer = new Map(offers.map((offer) => [offer.marketingOffer, offer]));
+
+  const wedgeDefinitions: Array<{
+    id: WedgeFocusItem["id"];
+    title: string;
+    marketingOffer: string;
+    lane: string;
+    homepagePriority: WedgeFocusItem["homepagePriority"];
+  }> = [
+    {
+      id: "battery-no-start",
+      title: "Dead battery and no-start",
+      marketingOffer: "No-start help",
+      lane: "Battery / no-start / charging",
+      homepagePriority: "primary",
+    },
+    {
+      id: "brake-service",
+      title: "Brake noise and brake repair",
+      marketingOffer: "Brake help",
+      lane: "Brake service",
+      homepagePriority: "primary",
+    },
+    {
+      id: "paid-diagnostic",
+      title: "Check engine and paid diagnostic clarity",
+      marketingOffer: "Check engine light evaluation",
+      lane: "Check-engine / diagnostic evaluation",
+      homepagePriority: "supporting",
+    },
+    {
+      id: "inspection",
+      title: "Pre-purchase and inspection trust lane",
+      marketingOffer: "Inspection",
+      lane: "Inspection",
+      homepagePriority: "supporting",
+    },
+    {
+      id: "maintenance",
+      title: "Routine maintenance as retention, not the hero",
+      marketingOffer: "Mobile oil change",
+      lane: "Maintenance / retention",
+      homepagePriority: "supporting",
+    },
+  ];
+
+  const wedges = wedgeDefinitions.map<WedgeFocusItem>((definition) => {
+    const offer = byOffer.get(definition.marketingOffer);
+    const action = getWedgeActionForOffer(offer);
+
+    return {
+      id: definition.id,
+      title: definition.title,
+      marketingOffer: definition.marketingOffer,
+      lane: definition.lane,
+      homepagePriority: definition.homepagePriority,
+      inboundCount: offer?.inboundCount ?? 0,
+      promotedCount: offer?.promotedCount ?? 0,
+      promotionRate: offer?.promotionRate ?? 0,
+      convertedWorkCount: offer?.convertedWorkCount ?? 0,
+      netProfitInView: offer?.netProfitInView ?? 0,
+      deferredValueTotal: offer?.deferredValueTotal ?? 0,
+      action: action.action,
+      actionDetail: action.actionDetail,
+      weeklyFocus: action.weeklyFocus,
+    };
+  });
+
+  const primaryWedges = wedges.filter((wedge) => wedge.homepagePriority === "primary");
+  const topPrimaryWedge = [...primaryWedges].sort((left, right) => {
+    if (right.netProfitInView !== left.netProfitInView) {
+      return right.netProfitInView - left.netProfitInView;
+    }
+    return right.promotedCount - left.promotedCount;
+  })[0];
+
+  const focusAreas = primaryWedges.map((wedge) => {
+    if (wedge.inboundCount === 0) {
+      return `${wedge.title}: tighten the page and intake language until live inbound starts showing up cleanly.`;
+    }
+
+    if (wedge.action === "Lead harder") {
+      return `${wedge.title}: keep it at the top of the homepage, answer fast, and protect the clean promise that is already converting.`;
+    }
+
+    if (wedge.action === "Protect the promise") {
+      return `${wedge.title}: improve worksite notes, pricing framing, and screening so fewer leads die before a believable promise.`;
+    }
+
+    if (wedge.action === "Tighten follow-through") {
+      return `${wedge.title}: close the recap and next-step gap so deferred value does not cool off.`;
+    }
+
+    return `${wedge.title}: keep gathering signal without broadening into generic mobile-mechanic language.`;
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    headline: topPrimaryWedge
+      ? `${topPrimaryWedge.title} is the clearest current wedge to protect and grow.`
+      : "No wedge has enough live signal yet. Keep the front door narrow and measurable.",
+    whyNow:
+      "The company needs a sharper front door, not a broader catalog. The launch wedges should make demand easier to capture, easier to screen, and easier to turn into profitable kept promises.",
+    focusAreas,
+    wedges,
+  };
 }
 
 export async function getPromiseBoardSnapshot() {

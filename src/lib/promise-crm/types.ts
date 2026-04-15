@@ -844,6 +844,42 @@ export type RecurringAccountStarterSnapshot = {
   }>;
 };
 
+export type WedgeFocusAction =
+  | "Lead harder"
+  | "Protect the promise"
+  | "Tighten follow-through"
+  | "Keep testing";
+
+export type WedgeFocusItem = {
+  id:
+    | "battery-no-start"
+    | "brake-service"
+    | "paid-diagnostic"
+    | "inspection"
+    | "maintenance";
+  title: string;
+  marketingOffer: string;
+  lane: string;
+  homepagePriority: "primary" | "supporting";
+  inboundCount: number;
+  promotedCount: number;
+  promotionRate: number;
+  convertedWorkCount: number;
+  netProfitInView: number;
+  deferredValueTotal: number;
+  action: WedgeFocusAction;
+  actionDetail: string;
+  weeklyFocus: string;
+};
+
+export type WedgeFocusSnapshot = {
+  generatedAt: string;
+  headline: string;
+  whyNow: string;
+  focusAreas: string[];
+  wedges: WedgeFocusItem[];
+};
+
 export type OperatingCadenceAction = {
   title: string;
   detail: string;
@@ -875,6 +911,13 @@ export type WeeklyOperatingCadenceSnapshot = {
     activeMonthlyValueEstimate: number;
     touchDisciplineRate: number;
     trialConversionRate: number;
+    focusAreas: string[];
+  };
+  wedgeFocus: {
+    headline: string;
+    primaryWedge?: string;
+    promotedCount: number;
+    netProfitInView: number;
     focusAreas: string[];
   };
   immediateActions: OperatingCadenceAction[];

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { siteConfig } from "@/data/site";
-import { getServicesInPriorityOrder } from "@/data/site";
+import { getServicesInPriorityOrder, launchWedges } from "@/data/site";
 import { trackFormSubmit } from "@/components/analytics";
 import { CheckCircle2, Phone, Send, RotateCcw } from "lucide-react";
 import Link from "next/link";
@@ -47,6 +47,10 @@ export function LaunchRequestForm() {
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [intakeEvaluation, setIntakeEvaluation] = useState<IntakeEvaluation | null>(null);
+  const selectedWedge = launchWedges.find((wedge) => wedge.slug === formState.serviceNeeded);
+  const notesPlaceholder = selectedWedge
+    ? `Describe what the vehicle is doing so we can screen the ${selectedWedge.shortLabel.toLowerCase()} path.`
+    : "Anything else that helps screen the job";
 
   function updateField(
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -159,6 +163,39 @@ export function LaunchRequestForm() {
         Fill out the details below and we&apos;ll screen the job before we confirm the promise.
       </p>
 
+      <div className="mt-6 rounded-2xl border border-border bg-background/60 p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+          Launch wedges first
+        </p>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {launchWedges.map((wedge) => {
+            const selected = formState.serviceNeeded === wedge.slug;
+            return (
+              <button
+                key={wedge.slug}
+                type="button"
+                onClick={() =>
+                  setFormState((current) => ({
+                    ...current,
+                    serviceNeeded: wedge.slug,
+                  }))
+                }
+                className={`rounded-2xl border p-4 text-left transition-all ${
+                  selected
+                    ? "border-primary/30 bg-primary/10"
+                    : "border-border bg-card/50 hover:border-primary/20 hover:bg-background/70"
+                }`}
+              >
+                <p className="text-sm font-semibold text-foreground">{wedge.label}</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  {wedge.firstPromise}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {status === "error" && errorMessage && (
         <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}
@@ -235,13 +272,24 @@ export function LaunchRequestForm() {
               Select the best match
             </option>
             {priorityServices.map((service) => (
-              <option key={service.slug} value={service.name}>
+              <option key={service.slug} value={service.slug}>
                 {service.name}
               </option>
             ))}
             <option value="Other / not sure">Other / not sure</option>
           </select>
         </label>
+
+        {selectedWedge ? (
+          <div className="rounded-2xl border border-border bg-background/60 p-4 md:col-span-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              First promise
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {selectedWedge.firstPromise}
+            </p>
+          </div>
+        ) : null}
 
         <label className="space-y-2 md:col-span-2">
           <span className="text-xs font-semibold uppercase tracking-widest text-primary">
@@ -277,7 +325,7 @@ export function LaunchRequestForm() {
             className="form-textarea"
             name="notes"
             onChange={updateField}
-            placeholder="Anything else that helps screen the job"
+            placeholder={notesPlaceholder}
             value={formState.notes}
           />
         </label>

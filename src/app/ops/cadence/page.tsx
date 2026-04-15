@@ -169,6 +169,65 @@ export default async function OperatingCadencePage() {
       </section>
 
       <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <h2 className="text-xl font-bold text-foreground">Wedge discipline</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          The company does not need a broader catalog right now. It needs a sharper front door that
+          produces more believable promises from the two strongest entry lanes.
+        </p>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl border border-border bg-background/60 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Weekly headline
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {snapshot.wedgeFocus.headline}
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-card/50 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Primary wedge
+                </p>
+                <p className="mt-2 text-lg font-semibold text-foreground">
+                  {snapshot.wedgeFocus.primaryWedge || "No clear wedge yet"}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-card/50 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Primary wedge signal
+                </p>
+                <p className="mt-2 text-lg font-semibold text-foreground">
+                  {snapshot.wedgeFocus.promotedCount} promoted / $
+                  {snapshot.wedgeFocus.netProfitInView.toFixed(0)} net profit
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-background/60 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Focus areas
+            </p>
+            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+              {snapshot.wedgeFocus.focusAreas.map((item) => (
+                <div key={item} className="flex gap-2 rounded-xl border border-border bg-card/50 p-3">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                  {item}
+                </div>
+              ))}
+            </div>
+            <Link
+              href="/ops/wedges"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary"
+            >
+              Open wedge focus
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <div className="flex items-start gap-3">
           <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <Target className="h-5 w-5" />

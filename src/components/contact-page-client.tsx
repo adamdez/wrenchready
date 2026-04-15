@@ -3,7 +3,7 @@
 import { LaunchRequestForm } from "@/components/launch-request-form";
 import { SectionHeading } from "@/components/marketing";
 import { FadeIn } from "@/components/motion/fade-in";
-import { siteConfig } from "@/data/site";
+import { launchWedges, siteConfig } from "@/data/site";
 import { Phone, Mail, Clock, MapPin, ArrowRight } from "lucide-react";
 
 export function ContactPageClient() {
@@ -89,6 +89,20 @@ export function ContactPageClient() {
                       <p className="text-xs text-muted-foreground">Spokane, Spokane Valley, Liberty Lake, South Hill</p>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card/50 p-8">
+                <p className="eyebrow">Launch Wedges</p>
+                <div className="mt-4 space-y-3">
+                  {launchWedges.map((wedge) => (
+                    <div key={wedge.slug} className="rounded-xl border border-border bg-background/50 p-4">
+                      <p className="text-sm font-semibold text-foreground">{wedge.label}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                        {wedge.firstPromise}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
 

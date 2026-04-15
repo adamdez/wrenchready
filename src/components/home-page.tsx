@@ -4,7 +4,7 @@ import { FaqList, SectionHeading } from "@/components/marketing";
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
 import { SectionOrbs } from "@/components/motion/gradient-orbs";
 import { AnimatedHeading } from "@/components/motion/animated-text";
-import { homeFaqs, siteConfig } from "@/data/site";
+import { homeFaqs, launchWedges, siteConfig } from "@/data/site";
 import { demoTestimonials } from "@/data/demo-testimonials";
 import {
   Shield,
@@ -181,6 +181,12 @@ function IntakeForm() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [serviceChoice, setServiceChoice] = useState("");
+
+  const selectedWedge = launchWedges.find((wedge) => wedge.slug === serviceChoice);
+  const problemPlaceholder = selectedWedge
+    ? `Describe what the vehicle is doing so we can screen the ${selectedWedge.shortLabel.toLowerCase()} path.`
+    : "Describe the problem or what you need done...";
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -204,7 +210,7 @@ function IntakeForm() {
           phone: String(data.get("phone") ?? "").trim(),
           email: "",
           vehicle,
-          serviceNeeded: String(data.get("service") ?? "").trim(),
+          serviceNeeded: serviceChoice || String(data.get("service") ?? "").trim(),
           address: String(data.get("address") ?? "").trim(),
           timing: "",
           notes: String(data.get("problem") ?? "").trim(),
@@ -215,6 +221,7 @@ function IntakeForm() {
         throw new Error(payload?.error || "Submission failed");
       }
       setSubmitted(true);
+      setServiceChoice("");
       form.reset();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Something went wrong. Please call or text us instead.");
@@ -241,6 +248,33 @@ function IntakeForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="rounded-2xl border border-border bg-background/60 p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+          Best-fit front door
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {launchWedges.map((wedge) => {
+            const selected = serviceChoice === wedge.slug;
+            return (
+              <button
+                key={wedge.slug}
+                type="button"
+                onClick={() => setServiceChoice(wedge.slug)}
+                className={`rounded-2xl border p-4 text-left transition-all ${
+                  selected
+                    ? "border-primary/30 bg-primary/10"
+                    : "border-border bg-card/50 hover:border-primary/20 hover:bg-background/70"
+                }`}
+              >
+                <p className="text-sm font-semibold text-foreground">{wedge.label}</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  {wedge.firstPromise}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
       {errorMessage && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}
@@ -251,7 +285,13 @@ function IntakeForm() {
         <input type="text" name="make" placeholder="Make" className="form-input" required />
         <input type="text" name="model" placeholder="Model" className="form-input" required />
       </div>
-      <select name="service" className="form-input" required defaultValue="">
+      <select
+        name="service"
+        className="form-input"
+        required
+        value={serviceChoice}
+        onChange={(event) => setServiceChoice(event.target.value)}
+      >
         <option value="" disabled>What do you need?</option>
         <option value="battery-replacement">Dead battery / no-start</option>
         <option value="brake-repair">Brake noise or problem</option>
@@ -262,10 +302,16 @@ function IntakeForm() {
       </select>
       <textarea
         name="problem"
-        placeholder="Describe the problem or what you need done..."
+        placeholder={problemPlaceholder}
         className="form-textarea"
         rows={3}
       />
+      {selectedWedge ? (
+        <div className="rounded-xl border border-border bg-card/50 px-4 py-3 text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{selectedWedge.shortLabel}:</span>{" "}
+          {selectedWedge.whyNow}
+        </div>
+      ) : null}
       <input type="text" name="address" placeholder="Where is the vehicle? (address or ZIP)" className="form-input" required />
       <div className="grid gap-3 sm:grid-cols-2">
         <input type="text" name="name" placeholder="Your name" className="form-input" required />
@@ -338,7 +384,7 @@ export function HomePage() {
             </FadeIn>
 
             <AnimatedHeading
-              text="Mobile mechanic in Spokane — clear quotes, honest screening, no surprise scope."
+              text="Spokane mobile mechanic for dead batteries, no-starts, and brake problems — clear promises, honest screening, no surprise scope."
               gradient
               className="text-3xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl"
               delay={0.15}
@@ -346,8 +392,21 @@ export function HomePage() {
 
             <FadeIn delay={0.35}>
               <p className="max-w-xl text-base font-medium leading-snug text-white/80 sm:text-xl">
-                Dead battery, brake noise, warning lights, or a car that won&apos;t start? We come to your driveway or workplace anywhere in Spokane County, explain what fits mobile service, and give you a clear next step before work begins.
+                Dead battery, brake noise, warning lights, or a car that won&apos;t start? We come to your driveway or workplace anywhere in Spokane County, but we lead hardest with no-start help and brake repair because those are the clearest promises to make and keep.
               </p>
+            </FadeIn>
+
+            <FadeIn delay={0.42}>
+              <div className="flex flex-wrap gap-2">
+                {launchWedges.map((wedge) => (
+                  <span
+                    key={wedge.slug}
+                    className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/85 backdrop-blur-sm"
+                  >
+                    {wedge.shortLabel}
+                  </span>
+                ))}
+              </div>
             </FadeIn>
 
             <FadeIn delay={0.5}>
