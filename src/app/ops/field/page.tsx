@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ClipboardList } from "lucide-react";
+import { FieldPacketActionForm } from "@/components/field-packet-action-form";
 import { getFieldExecutionSnapshot } from "@/lib/promise-crm/server";
 
 export const metadata: Metadata = {
@@ -74,6 +75,11 @@ export default async function FieldExecutionPage() {
                   task.closeoutNotReady ? "closeout" : null,
                 ].filter(Boolean).join(", ") || "none"}
               </p>
+              <FieldPacketActionForm
+                fieldExecution={task.fieldExecution}
+                owner={task.owner}
+                promiseId={task.promiseId}
+              />
             </div>
           )) : (
             <div className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">

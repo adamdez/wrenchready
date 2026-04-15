@@ -179,6 +179,7 @@ Why it matters:
 
 Current status:
 - now built into the field packet and field-execution view
+- queue actions are now live directly inside the field worklist
 - still needs stronger daily use in real ops
 
 ### 5D. Proposal and trial discipline for recurring accounts
@@ -200,7 +201,26 @@ Why it matters:
 
 Current status:
 - now built into the recurring-account worklist, account action form, management review, and weekly cadence
+- proposal and trial queue sections are now visible directly on the accounts page
 - still needs real operator use and account conversion proof
+
+### 6B. Queue-first operating use
+
+The system is now strong enough that the next gap is operator behavior.
+
+The key standard is:
+- fix the packet from the field queue
+- fix the callback plan from the warranty queue
+- fix the weak recap from the recapture queue
+
+Why it matters:
+- reduces tab-jumping
+- makes the weekly ritual actionable
+- turns the ops surfaces into real operating tools instead of dashboards
+
+Current status:
+- now built directly into the field, warranty, and recapture views
+- still needs disciplined daily use
 
 ### 5A. Review Ask Scripts
 

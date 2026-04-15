@@ -41,6 +41,15 @@ function pressureClasses(value: "overdue" | "due-now" | "watch" | "healthy") {
 
 export default async function RecurringAccountsPage() {
   const snapshot = await getRecurringAccountStarterSnapshot();
+  const proposalQueue = snapshot.worklist.filter(
+    (item) => item.proposalStage === "not-sent" || item.proposalStage === "sent",
+  );
+  const trialQueue = snapshot.worklist.filter(
+    (item) =>
+      item.proposalStage === "review-due" ||
+      item.proposalStage === "trial-live" ||
+      item.proposalStage === "activation-target",
+  );
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -251,6 +260,60 @@ export default async function RecurringAccountsPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             {snapshot.outreachScripts.landingPageHeadline}
           </p>
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-5 lg:grid-cols-2">
+        <div className="rounded-3xl border border-border bg-card/50 p-6">
+          <h2 className="text-xl font-bold text-foreground">Proposal queue</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            These accounts need a real proposal send, proposal value, or a tighter next move toward trial.
+          </p>
+          <div className="mt-4 space-y-3">
+            {proposalQueue.length > 0 ? (
+              proposalQueue.map((item) => (
+                <div key={`${item.promiseId}-proposal`} className="rounded-2xl border border-border bg-background/60 p-4">
+                  <p className="text-sm font-semibold text-foreground">
+                    {item.recurringAccount.accountName || item.customerName}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {item.recurringAccount.targetLane || "lane missing"} / {item.proposalStage.replace("-", " ")}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">{item.nextMilestone}</p>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
+                No proposal-stage account work is visible right now.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-border bg-card/50 p-6">
+          <h2 className="text-xl font-bold text-foreground">Trial and activation queue</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            These accounts need a trial review, an activation target, or a cleaner move into active cadence.
+          </p>
+          <div className="mt-4 space-y-3">
+            {trialQueue.length > 0 ? (
+              trialQueue.map((item) => (
+                <div key={`${item.promiseId}-trial`} className="rounded-2xl border border-border bg-background/60 p-4">
+                  <p className="text-sm font-semibold text-foreground">
+                    {item.recurringAccount.accountName || item.customerName}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {item.recurringAccount.targetLane || "lane missing"} / {item.proposalStage.replace("-", " ")}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">{item.nextMilestone}</p>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
+                No trial or activation work is visible right now.
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

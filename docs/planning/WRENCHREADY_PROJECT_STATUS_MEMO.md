@@ -179,6 +179,7 @@ The CRM now stores:
 - deeper recurring-account execution truth including target lane, proposal timing/value, trial review date, and activation target
 - stronger closeout quality measurement so finished visits are scored on recap depth, proof safety, and next-step capture instead of just whether closeout exists
 - a weekly operating ritual layer that turns cadence into named management habits, not just dashboard access
+- inline queue actions on the field, warranty, and recapture surfaces so ops can improve packet quality, callback recovery, and weak closeouts without opening every promise detail page
 
 The ops layer can now answer not just what came in, but what happened after we made the promise.
 

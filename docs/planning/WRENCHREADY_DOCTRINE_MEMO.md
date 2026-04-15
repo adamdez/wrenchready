@@ -151,6 +151,7 @@ The software center is still the Promise CRM and its surrounding operating views
 - management review
 - proposal and trial discipline inside the recurring-account lane
 - closeout quality measurement, not just closeout completion
+- queue-first field, warranty, and recapture actions so operators can improve the system where the work is surfaced
 
 This is the right center because it is the shortest path from:
 

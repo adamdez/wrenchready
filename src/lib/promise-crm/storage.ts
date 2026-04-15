@@ -2174,6 +2174,56 @@ export async function getWeeklyRecaptureScorecard(): Promise<WeeklyRecaptureScor
 
     return completedFlags / 8;
   });
+  const weakCloseouts = completedPromises
+    .map((record) => {
+      const closeout = record.closeout;
+      const proof = getProofDisciplineForPromise(record);
+      const blockers = [
+        !closeout?.workPerformedSummary ? "Work performed summary missing" : null,
+        !closeout?.customerConditionSummary ? "Customer condition summary missing" : null,
+        !closeout?.customerRecap?.status || closeout.customerRecap.status === "not-ready"
+          ? "Customer recap not ready"
+          : null,
+        !closeout?.reviewRequest?.status || closeout.reviewRequest.status === "not-ready"
+          ? "Review ask not prepared"
+          : null,
+        !closeout?.maintenanceReminder?.status ||
+        closeout.maintenanceReminder.status === "not-seeded"
+          ? "Reminder seed missing"
+          : null,
+        !getNextProbableVisit(record) ? "Next probable visit missing" : null,
+        proof.proofScore < 70 ? "Proof capture is weak" : null,
+        proof.approvedAssets === 0 ? "No permission-safe proof asset" : null,
+      ].filter((entry): entry is string => Boolean(entry));
+
+      const score =
+        [
+          Boolean(closeout?.workPerformedSummary),
+          Boolean(closeout?.customerConditionSummary),
+          Boolean(closeout?.customerRecap?.status && closeout.customerRecap.status !== "not-ready"),
+          Boolean(closeout?.reviewRequest?.status && closeout.reviewRequest.status !== "not-ready"),
+          Boolean(
+            closeout?.maintenanceReminder?.status &&
+              closeout.maintenanceReminder.status !== "not-seeded",
+          ),
+          Boolean(getNextProbableVisit(record)),
+          proof.proofScore >= 70,
+          proof.approvedAssets > 0,
+        ].filter(Boolean).length / 8;
+
+      return {
+        promiseId: record.id,
+        customerName: record.customer.name,
+        owner: record.owner,
+        serviceScope: record.serviceScope,
+        closeoutQualityScore: score,
+        blockers,
+        closeout,
+      };
+    })
+    .filter((task) => task.blockers.length > 0)
+    .sort((a, b) => a.closeoutQualityScore - b.closeoutQualityScore)
+    .slice(0, 8);
 
   const metrics = {
     completedVisits: completedPromises.length,
@@ -2324,6 +2374,7 @@ export async function getWeeklyRecaptureScorecard(): Promise<WeeklyRecaptureScor
     windowLabel: "Last 7-day operating view",
     metrics,
     priorities,
+    weakCloseouts,
   };
 }
 
@@ -2743,6 +2794,7 @@ export async function getFieldExecutionSnapshot(): Promise<FieldExecutionSnapsho
         serviceScope: record.serviceScope,
         scheduledWindowLabel: record.scheduledWindow.label,
         jobStage: record.jobStage,
+        fieldExecution: record.fieldExecution,
         ...completeness,
         taskPriority,
         nextStep:
@@ -2887,6 +2939,7 @@ export async function getWarrantySnapshot(): Promise<WarrantySnapshot> {
         overdue,
         makeGoodPlanMissing,
         preventionMissing,
+        warrantyCase: record.warrantyCase,
         nextStep:
           overdue
             ? "This callback is overdue. Own the make-good plan now before trust damage compounds."

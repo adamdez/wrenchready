@@ -32,6 +32,7 @@ Primary folder:
 - The recurring-account lane now includes an execution worklist, due/overdue touches, contact detail, monthly value estimate, and logged activity via [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\recurring-account-action-form.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\recurring-account-action-form.tsx)
 - The recurring-account lane now also includes readiness signals, health scoring, blockers, and recommended action directly in the live worklist
 - The recurring-account lane now also tracks target lane, proposal timing/value, trial review due date, activation target, and next milestone directly in the live worklist and action form
+- The recurring-account lane now also shows proposal and trial conversion queues directly on the accounts page
 - Weekly operating cadence is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\cadence\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\cadence\page.tsx)
 - Weekly operating cadence now includes a recurring-growth ritual with tracked/active/trial signal, touch discipline, trial conversion, and focus areas
 - Weekly operating cadence now also includes named weekly ritual steps plus closeout-quality, proposal-due, and trial-review-due signal
@@ -41,14 +42,17 @@ Primary folder:
 - The field packet now includes handoff and comeback-prevention checklists, and the warranty lane now includes severity, root cause, make-good plan, and prevention-step truth
 - Systems-readiness view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\systems\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\systems\page.tsx)
 - Field-execution view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\field\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\field\page.tsx)
+- Field-execution view now includes inline queue actions for handoff, comeback prevention, and closeout steps
 - Collections view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\collections\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\collections\page.tsx)
 - Warranty lane is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\warranty\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\warranty\page.tsx)
+- Warranty lane now includes inline queue actions for make-good, prevention, and resolution updates
 - Customer deposit checkout is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\customer-deposit-checkout.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\customer-deposit-checkout.tsx) with the public route at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\wrenchready\status\[token]\deposit\route.ts](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\wrenchready\status\[token]\deposit\route.ts)
 - Customer remaining-balance checkout is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\customer-balance-checkout.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\components\customer-balance-checkout.tsx) with the public route at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\wrenchready\status\[token]\balance\route.ts](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\wrenchready\status\[token]\balance\route.ts)
 - Stripe deposit capture webhook is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\webhook\stripe\route.ts](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\webhook\stripe\route.ts)
 - Direct outbound email transport is now wired through [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\lib\email.ts](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\lib\email.ts) and [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\emails\promise-outbound-email.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\emails\promise-outbound-email.tsx)
 - Weekly recapture now includes deposit collection, callback resolution, and recurring-account progression at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\recapture\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\recapture\page.tsx)
 - Weekly recapture now also measures closeout quality and permission-safe proof, not just whether a closeout record exists
+- Weekly recapture now also includes a weak-closeout queue with inline quality-improvement actions
 
 ## Research / strategy / pricing folder
 

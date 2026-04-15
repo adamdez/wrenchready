@@ -450,6 +450,7 @@ export type FieldExecutionTask = {
   serviceScope: string;
   scheduledWindowLabel: string;
   jobStage: PromiseJobStage;
+  fieldExecution?: PromiseFieldExecutionPacket;
   completionScore: number;
   missingPartsChecklist: boolean;
   missingPhotosChecklist: boolean;
@@ -517,6 +518,7 @@ export type WarrantyTask = {
   overdue: boolean;
   makeGoodPlanMissing: boolean;
   preventionMissing: boolean;
+  warrantyCase?: PromiseWarrantyCase;
   nextStep: string;
 };
 
@@ -796,6 +798,15 @@ export type WeeklyRecaptureScorecard = {
     title: string;
     detail: string;
     tone: "focus" | "risk" | "growth" | "trust";
+  }>;
+  weakCloseouts: Array<{
+    promiseId: string;
+    customerName: string;
+    owner: RecordOwner;
+    serviceScope: string;
+    closeoutQualityScore: number;
+    blockers: string[];
+    closeout?: PromiseCloseout;
   }>;
 };
 

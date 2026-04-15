@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CalendarSync } from "lucide-react";
+import { CloseoutQualityActionForm } from "@/components/closeout-quality-action-form";
 import { getWeeklyRecaptureScorecard } from "@/lib/promise-crm/server";
 
 export const metadata: Metadata = {
@@ -113,6 +114,54 @@ export default async function RecapturePage() {
               <p className="mt-2 text-sm text-muted-foreground">{priority.detail}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <h2 className="text-xl font-bold text-foreground">Weak closeout queue</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          These completed visits still need better recap depth, next-step clarity, or proof-safe follow-through.
+        </p>
+        <div className="mt-4 space-y-4">
+          {scorecard.weakCloseouts.length > 0 ? (
+            scorecard.weakCloseouts.map((task) => (
+              <div key={task.promiseId} className="rounded-2xl border border-border bg-background/60 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <Link
+                      href={`/ops/promises/${task.promiseId}`}
+                      className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
+                    >
+                      {task.customerName}
+                    </Link>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {task.serviceScope} / {task.owner}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-300">
+                    {formatPercent(task.closeoutQualityScore)}
+                  </span>
+                </div>
+                <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                  {task.blockers.map((blocker) => (
+                    <li key={`${task.promiseId}-${blocker}`} className="flex gap-2">
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      {blocker}
+                    </li>
+                  ))}
+                </ul>
+                <CloseoutQualityActionForm
+                  closeout={task.closeout}
+                  owner={task.owner}
+                  promiseId={task.promiseId}
+                />
+              </div>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
+              No weak closeouts are visible right now.
+            </div>
+          )}
         </div>
       </section>
 

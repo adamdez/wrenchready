@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { WarrantyActionForm } from "@/components/warranty-action-form";
 import { getWarrantySnapshot } from "@/lib/promise-crm/server";
 
 export const metadata: Metadata = {
@@ -76,6 +77,11 @@ export default async function WarrantyPage() {
                 ].filter(Boolean).join(", ") || "none"}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">{task.nextStep}</p>
+              <WarrantyActionForm
+                owner={task.owner}
+                promiseId={task.promiseId}
+                warrantyCase={task.warrantyCase}
+              />
             </div>
           )) : (
             <div className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
