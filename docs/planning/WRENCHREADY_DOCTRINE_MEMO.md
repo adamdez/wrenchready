@@ -126,6 +126,7 @@ Every meaningful build should strengthen these standards:
 - the promise must be specific enough to operationalize
 - the customer must be able to feel certainty and progress
 - risk must be visible before the promise breaks
+- execution truth must outrank stale board labels or manual bucket drift
 - every finished visit should create proof, recap, and the next probable visit
 - no channel should be treated as live if compliance or transport reality says otherwise
 - no growth surface should be allowed to create equal growth in office chaos

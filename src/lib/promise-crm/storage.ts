@@ -276,7 +276,7 @@ function replaceInboundRecord(updated: InboundRecord) {
 function replacePromiseRecord(updated: PromiseRecord) {
   const runtime = getRuntimeState();
   runtime.promises = uniqueById([
-    updated,
+    reconcilePromiseRecord(updated),
     ...runtime.promises.filter((record) => record.id !== updated.id),
   ]);
 }
@@ -441,7 +441,7 @@ function mapPromiseRow(row: SupabasePromiseRow): PromiseRecord {
     dayReadiness,
     visibleNotes: visibleNotesWithoutReadinessState,
   } = extractPromiseReadinessState(visibleNotesWithoutCustomerState);
-  return {
+  return reconcilePromiseRecord({
     id: row.id,
     inboundId: row.inbound_id || undefined,
     createdAt: row.created_at,
@@ -493,6 +493,169 @@ function mapPromiseRow(row: SupabasePromiseRow): PromiseRecord {
     followThroughDueAt: row.follow_through_due_at || undefined,
     followThroughResolution,
     followThroughHistory,
+  });
+}
+
+function hasCompletedExecutionSignal(promise: PromiseRecord) {
+  if (
+    promise.jobStage === "completed" ||
+    promise.jobStage === "collected" ||
+    promise.jobStage === "warranty-issue"
+  ) {
+    return true;
+  }
+
+  if (promise.paymentCollection?.status === "paid" || promise.paymentCollection?.status === "written-off") {
+    return true;
+  }
+
+  if (promise.closeout?.completedAt) {
+    return true;
+  }
+
+  if (
+    promise.warrantyCase?.status === "open" ||
+    promise.warrantyCase?.status === "monitoring" ||
+    promise.warrantyCase?.status === "resolved"
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function getFollowThroughCandidates(promise: PromiseRecord) {
+  const outcome = promise.commercialOutcome;
+  const closeout = promise.closeout;
+  const executionComplete = hasCompletedExecutionSignal(promise);
+
+  const candidates: Array<{
+    reason: FollowThroughTask["reason"];
+    summary: string;
+    recommendedAction: string;
+  }> = [];
+
+  if (closeout?.reviewRequest?.status === "ready" || closeout?.reviewRequest?.status === "sent") {
+    candidates.push({
+      reason: "review-request",
+      summary:
+        closeout.reviewRequest.summary ||
+        "Completed visit is ready for a review request. Close the loop while the trust signal is fresh.",
+      recommendedAction:
+        closeout.reviewRequest.status === "sent"
+          ? "Confirm the review ask landed cleanly and record the result or any customer response."
+          : "Send the review ask through the right channel and log when it was sent.",
+    });
+  }
+
+  if (
+    closeout?.maintenanceReminder?.status === "seeded" ||
+    closeout?.maintenanceReminder?.status === "scheduled"
+  ) {
+    candidates.push({
+      reason: "maintenance-reminder",
+      summary:
+        closeout.maintenanceReminder.summary ||
+        `Maintenance reminder is ${closeout.maintenanceReminder.status}. Keep the next service visible before the relationship goes cold.`,
+      recommendedAction:
+        closeout.maintenanceReminder.status === "scheduled"
+          ? "Make sure the reminder cadence is actually set and tied to the next likely visit."
+          : "Turn the maintenance reminder seed into a real follow-up task with timing the customer can understand.",
+    });
+  }
+
+  if (outcome?.outcomeStatus === "approved-repair") {
+    candidates.push({
+      reason: "approved-next-step",
+      summary:
+        outcome.outcomeSummary ||
+        "Customer approved next-step repair. Follow through until the follow-up visit is actually scheduled.",
+      recommendedAction:
+        "Convert approval into a scheduled repair window and confirm parts, timing, and customer expectations.",
+    });
+  }
+
+  if (outcome?.outcomeStatus === "deferred-work") {
+    candidates.push({
+      reason: "deferred-work",
+      summary:
+        outcome.outcomeSummary ||
+        "Deferred work still needs a concrete next step or reminder path.",
+      recommendedAction:
+        "Re-contact the customer with a clear next-step offer and capture whether the work should be scheduled or parked.",
+    });
+  }
+
+  if (outcome?.outcomeStatus === "diagnostic-only") {
+    candidates.push({
+      reason: "diagnostic-recap",
+      summary:
+        outcome.outcomeSummary ||
+        "The diagnostic visit ended without approved work. Close the loop with options and recommendations.",
+      recommendedAction:
+        "Send or confirm the diagnostic recap, pricing, and recommended repair path before the lead goes cold.",
+    });
+  }
+
+  if (executionComplete && !closeout) {
+    candidates.push({
+      reason: "open-follow-through",
+      summary:
+        "Visit is completed, but the structured closeout is still missing. Recap, deferred work, review ask, and reminder seed still need to be captured.",
+      recommendedAction:
+        "Finish the closeout so this completed job turns into a review signal and the next probable visit.",
+    });
+  } else if (executionComplete && closeout && hasDeferredWorkCaptured(closeout)) {
+    const nextProbableVisit = getNextProbableVisit(promise);
+    candidates.push({
+      reason: "deferred-work",
+      summary:
+        closeout.customerConditionSummary ||
+        closeout.workPerformedSummary ||
+        "The visit created follow-on value that still needs a concrete next step.",
+      recommendedAction: nextProbableVisit
+        ? `Use the closeout recap to turn ${nextProbableVisit.service} into the next scheduled visit.`
+        : "Use the closeout recap to turn the best Now or Soon item into a scheduled next visit.",
+    });
+  }
+
+  if (promise.followThroughDueAt || promise.status === "follow-through-due") {
+    candidates.push({
+      reason: "open-follow-through",
+      summary:
+        outcome?.outcomeSummary ||
+        promise.nextAction ||
+        "Promise still needs recap, scheduling, or customer follow-up.",
+      recommendedAction:
+        "Clear the outstanding follow-through item so this promise stops floating between completion and next action.",
+    });
+  }
+
+  return candidates;
+}
+
+function getOutstandingFollowThroughCandidate(promise: PromiseRecord) {
+  return getFollowThroughCandidates(promise).find(
+    (candidate) =>
+      !isFollowThroughReasonResolved(promise.followThroughHistory, candidate.reason),
+  );
+}
+
+function reconcilePromiseStatus(promise: PromiseRecord): PromiseRecord["status"] {
+  if (hasCompletedExecutionSignal(promise)) {
+    return getOutstandingFollowThroughCandidate(promise) ? "follow-through-due" : "completed";
+  }
+
+  return promise.status === "tomorrow-at-risk" ? "tomorrow-at-risk" : "promises-waiting";
+}
+
+function reconcilePromiseRecord(promise: PromiseRecord): PromiseRecord {
+  const reconciledStatus = reconcilePromiseStatus(promise);
+  if (promise.status === reconciledStatus) return promise;
+
+  return {
+    ...promise,
+    status: reconciledStatus,
   };
 }
 
@@ -531,13 +694,17 @@ export async function getInboundRecord(id: string) {
 
 export async function getPromiseRecords(): Promise<PromiseRecord[]> {
   if (!hasPromiseCrmSupabase()) {
-    return sortNewestFirst(uniqueById([...getRuntimeState().promises, ...promiseRecords]));
+    return sortNewestFirst(
+      uniqueById([...getRuntimeState().promises, ...promiseRecords]).map(reconcilePromiseRecord),
+    );
   }
 
   try {
-    return await listSupabasePromiseRecords();
+    return (await listSupabasePromiseRecords()).map(reconcilePromiseRecord);
   } catch {
-    return sortNewestFirst(uniqueById([...getRuntimeState().promises, ...promiseRecords]));
+    return sortNewestFirst(
+      uniqueById([...getRuntimeState().promises, ...promiseRecords]).map(reconcilePromiseRecord),
+    );
   }
 }
 
@@ -649,8 +816,6 @@ function buildFollowThroughTask(
   promise: PromiseRecord,
   sourceInbound?: InboundRecord,
 ): FollowThroughTask | null {
-  const outcome = promise.commercialOutcome;
-  const closeout = promise.closeout;
   const dueAt = promise.followThroughDueAt || undefined;
   const now = Date.now();
   const dueTime = dueAt ? new Date(dueAt).getTime() : undefined;
@@ -662,116 +827,12 @@ function buildFollowThroughTask(
         ? "due-now"
         : "queued";
 
-  const candidates: Array<{
-    reason: FollowThroughTask["reason"];
-    summary: string;
-    recommendedAction: string;
-  }> = [];
-
-  if (closeout?.reviewRequest?.status === "ready" || closeout?.reviewRequest?.status === "sent") {
-    candidates.push({
-      reason: "review-request",
-      summary:
-        closeout.reviewRequest.summary ||
-        "Completed visit is ready for a review request. Close the loop while the trust signal is fresh.",
-      recommendedAction:
-        closeout.reviewRequest.status === "sent"
-          ? "Confirm the review ask landed cleanly and record the result or any customer response."
-          : "Send the review ask through the right channel and log when it was sent.",
-    });
-  }
-
-  if (
-    closeout?.maintenanceReminder?.status === "seeded" ||
-    closeout?.maintenanceReminder?.status === "scheduled"
-  ) {
-    candidates.push({
-      reason: "maintenance-reminder",
-      summary:
-        closeout.maintenanceReminder.summary ||
-        `Maintenance reminder is ${closeout.maintenanceReminder.status}. Keep the next service visible before the relationship goes cold.`,
-      recommendedAction:
-        closeout.maintenanceReminder.status === "scheduled"
-          ? "Make sure the reminder cadence is actually set and tied to the next likely visit."
-          : "Turn the maintenance reminder seed into a real follow-up task with timing the customer can understand.",
-    });
-  }
-
-  if (outcome?.outcomeStatus === "approved-repair") {
-    candidates.push({
-      reason: "approved-next-step",
-      summary:
-        outcome.outcomeSummary ||
-        "Customer approved next-step repair. Follow through until the follow-up visit is actually scheduled.",
-      recommendedAction:
-        "Convert approval into a scheduled repair window and confirm parts, timing, and customer expectations.",
-    });
-  }
-
-  if (outcome?.outcomeStatus === "deferred-work") {
-    candidates.push({
-      reason: "deferred-work",
-      summary:
-        outcome.outcomeSummary ||
-        "Deferred work still needs a concrete next step or reminder path.",
-      recommendedAction:
-        "Re-contact the customer with a clear next-step offer and capture whether the work should be scheduled or parked.",
-    });
-  }
-
-  if (outcome?.outcomeStatus === "diagnostic-only") {
-    candidates.push({
-      reason: "diagnostic-recap",
-      summary:
-        outcome.outcomeSummary ||
-        "The diagnostic visit ended without approved work. Close the loop with options and recommendations.",
-      recommendedAction:
-        "Send or confirm the diagnostic recap, pricing, and recommended repair path before the lead goes cold.",
-    });
-  }
-
-  if (promise.status === "completed" && !closeout) {
-    candidates.push({
-      reason: "open-follow-through",
-      summary:
-        "Visit is completed, but the structured closeout is still missing. Recap, deferred work, review ask, and reminder seed still need to be captured.",
-      recommendedAction:
-        "Finish the closeout so this completed job turns into a review signal and the next probable visit.",
-    });
-  } else if (promise.status === "completed" && closeout && hasDeferredWorkCaptured(closeout)) {
-    const nextProbableVisit = getNextProbableVisit(promise);
-    candidates.push({
-      reason: "deferred-work",
-      summary:
-        closeout.customerConditionSummary ||
-        closeout.workPerformedSummary ||
-        "The visit created follow-on value that still needs a concrete next step.",
-      recommendedAction: nextProbableVisit
-        ? `Use the closeout recap to turn ${nextProbableVisit.service} into the next scheduled visit.`
-        : "Use the closeout recap to turn the best Now or Soon item into a scheduled next visit.",
-    });
-  }
-
-  if (promise.status === "follow-through-due" || dueAt) {
-    candidates.push({
-      reason: "open-follow-through",
-      summary:
-        outcome?.outcomeSummary ||
-        promise.nextAction ||
-        "Promise still needs recap, scheduling, or customer follow-up.",
-      recommendedAction:
-        "Clear the outstanding follow-through item so this promise stops floating between completion and next action.",
-    });
-  }
-
-  const nextCandidate = candidates.find(
-    (candidate) =>
-      !isFollowThroughReasonResolved(promise.followThroughHistory, candidate.reason),
-  );
+  const nextCandidate = getOutstandingFollowThroughCandidate(promise);
 
   if (!nextCandidate) return null;
 
   const { reason, summary, recommendedAction } = nextCandidate;
+  const outcome = promise.commercialOutcome;
 
   const economics = computePromiseEconomics(promise.economics);
 
@@ -1479,11 +1540,51 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
     current.recurringAccount,
     updates.recurringAccount,
   );
+  const resolvedStatus = reconcilePromiseStatus({
+    ...current,
+    updatedAt: new Date().toISOString(),
+    owner: updates.owner ?? current.owner,
+    readinessRisk: updates.readinessRisk ?? current.readinessRisk,
+    status: updates.status ?? current.status,
+    serviceScope: updates.serviceScope ?? current.serviceScope,
+    scheduledWindow: {
+      ...current.scheduledWindow,
+      label: updates.scheduledWindowLabel ?? current.scheduledWindow.label,
+    },
+    readinessSummary: updates.readinessSummary ?? current.readinessSummary,
+    nextAction: updates.nextAction ?? current.nextAction,
+    topRisks: updates.topRisks ?? current.topRisks,
+    jobStage: nextJobStage,
+    customerCertainty: nextCustomerCertainty,
+    dayReadiness: nextDayReadiness,
+    fieldExecution: nextFieldExecution,
+    paymentCollection: nextPaymentCollection,
+    warrantyCase: nextWarrantyCase,
+    recurringAccount: nextRecurringAccount,
+    customerAccess: current.customerAccess,
+    customerApproval: nextCustomerApproval,
+    economics:
+      updates.economics === undefined
+        ? current.economics
+        : normalizePromiseEconomics(updates.economics),
+    commercialOutcome:
+      updates.commercialOutcome === undefined
+        ? current.commercialOutcome
+        : normalizeCommercialOutcome(updates.commercialOutcome),
+    closeout: nextCloseout,
+    outboundHistory: nextOutboundHistory,
+    followThroughDueAt:
+      updates.followThroughDueAt === undefined
+        ? current.followThroughDueAt
+        : updates.followThroughDueAt || undefined,
+    followThroughResolution: nextFollowThroughResolution,
+    followThroughHistory: nextFollowThroughHistory,
+  });
 
   const patch = {
     owner: updates.owner ?? current.owner,
     readiness_risk: updates.readinessRisk ?? current.readinessRisk,
-    status: updates.status ?? current.status,
+    status: resolvedStatus,
     service_scope: updates.serviceScope ?? current.serviceScope,
     scheduled_window_label:
       updates.scheduledWindowLabel ?? current.scheduledWindow.label,

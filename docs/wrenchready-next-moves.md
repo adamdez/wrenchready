@@ -8,6 +8,14 @@ The useful parts have now been folded into the active operating plan in:
 
 Use this file as a supporting checklist for what still matters, especially where the software spine now exists but the operating habit, scripts, proof loop, or automation depth still need to catch up.
 
+## Current truth
+
+- Promise Board status is now reconciled from execution truth before it reaches the board, tomorrow view, owner views, and API snapshots.
+- That means collected or completed work can no longer stay mislabeled as `Promises Waiting` or `Tomorrow At Risk` just because a stale bucket was never cleaned up.
+- Stripe and Resend rails are live in production-safe form.
+- Text is still held until 10DLC makes it honest.
+- Google review URL is still waiting on the public GBP share link.
+
 ## What Still Matters Most
 
 ### 1. Review Capture System

@@ -254,6 +254,7 @@ This phase also added:
 - a systems-readiness page so the team can see what is live, what is held, what needs configuration, and what likely needs vendor purchase or provisioning next
 - a unified doctrine memo so the benchmark lessons, pricing doctrine, build spine, and operating standard are all held in one place
 - a real job-stage layer on each promise so the team can distinguish board status from actual execution phase
+- a status-reconciliation layer so collected, completed, warranty, and follow-through truth override stale board-bucket drift across the board, tomorrow view, owner cockpits, and API snapshots
 - a field-execution packet layer so the tech can run from one packet instead of scattered context
 - a collection layer so completed work can be tracked through deposit, balance due, and final collection truth
 - a warranty / comeback layer so trust breakage can be owned before it turns into silent damage
