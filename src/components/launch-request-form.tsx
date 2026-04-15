@@ -28,6 +28,17 @@ type IntakeEvaluation = {
   nextAction: string;
 };
 
+type SchedulingRead = {
+  normalizedService: string;
+  territorySupported: boolean;
+  requiredIntegrationsReady: boolean;
+  missingIntegrations: string[];
+  confidence: "high" | "medium" | "low";
+  durationMinutes: number;
+  autoBook: boolean;
+  reasons: string[];
+};
+
 const initialState: RequestFormState = {
   fullName: "",
   email: "",
@@ -47,6 +58,8 @@ export function LaunchRequestForm() {
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [intakeEvaluation, setIntakeEvaluation] = useState<IntakeEvaluation | null>(null);
+  const [schedulingRead, setSchedulingRead] = useState<SchedulingRead | null>(null);
+  const [confirmationEmailSent, setConfirmationEmailSent] = useState(false);
   const selectedWedge = launchWedges.find((wedge) => wedge.slug === formState.serviceNeeded);
   const notesPlaceholder = selectedWedge
     ? `Describe what the vehicle is doing so we can screen the ${selectedWedge.shortLabel.toLowerCase()} path.`
@@ -85,6 +98,8 @@ export function LaunchRequestForm() {
       }
 
       setIntakeEvaluation(data?.intakeEvaluation || null);
+      setSchedulingRead(data?.schedulingRead || null);
+      setConfirmationEmailSent(Boolean(data?.confirmationEmailSent));
       setStatus("success");
       trackFormSubmit();
     } catch (err) {
@@ -113,6 +128,11 @@ export function LaunchRequestForm() {
                 : "We received your request and we’ll screen the fit carefully before we promise timing."}
             For anything urgent, call or text directly.
           </p>
+          {confirmationEmailSent ? (
+            <div className="mx-auto max-w-lg rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm leading-relaxed text-primary">
+              A confirmation email was also sent so the next step is visible in writing.
+            </div>
+          ) : null}
           {intakeEvaluation ? (
             <div className="mx-auto max-w-lg rounded-2xl border border-border bg-background/50 p-4 text-left">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
@@ -124,6 +144,28 @@ export function LaunchRequestForm() {
               </p>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 {intakeEvaluation.nextAction}
+              </p>
+            </div>
+          ) : null}
+          {schedulingRead ? (
+            <div className="mx-auto max-w-lg rounded-2xl border border-border bg-background/50 p-4 text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                Scheduling read
+              </p>
+              <p className="mt-2 text-sm text-foreground">
+                {schedulingRead.territorySupported
+                  ? "Service area looks supported."
+                  : "Service area needs manual review before we promise timing."}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {schedulingRead.autoBook
+                  ? `${schedulingRead.durationMinutes} minute service profile.`
+                  : "This request should be scheduled manually after screening."}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {schedulingRead.requiredIntegrationsReady
+                  ? "Live scheduling integrations are connected."
+                  : "Timing is still confirmed manually so we do not over-promise."}
               </p>
             </div>
           ) : null}
@@ -140,6 +182,8 @@ export function LaunchRequestForm() {
               onClick={() => {
                 setFormState(initialState);
                 setIntakeEvaluation(null);
+                setSchedulingRead(null);
+                setConfirmationEmailSent(false);
                 setStatus("idle");
               }}
               type="button"

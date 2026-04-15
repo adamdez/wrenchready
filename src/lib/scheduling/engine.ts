@@ -126,3 +126,10 @@ export function evaluateAvailability(request: AvailabilityRequest): Availability
         : [],
   };
 }
+
+const schedulingEngine = {
+  estimateService,
+  evaluateAvailability,
+};
+
+export default schedulingEngine;

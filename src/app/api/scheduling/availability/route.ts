@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { evaluateAvailability } from "@/lib/scheduling/engine";
+import schedulingEngine from "@/lib/scheduling/engine";
 import type { AvailabilityRequest } from "@/lib/scheduling/types";
 
 function isAvailabilityRequest(body: unknown): body is AvailabilityRequest {
@@ -24,14 +24,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const evaluation = evaluateAvailability(body);
+    const evaluation = schedulingEngine.evaluateAvailability(body);
 
     return NextResponse.json({
       success: true,
       stage: evaluation.requiredIntegrationsReady ? "integration-ready" : "scaffolded",
       ...evaluation,
     });
-  } catch {
+  } catch (error) {
+    console.error("Scheduling availability route failed", error);
     return NextResponse.json(
       { error: "Unable to evaluate availability." },
       { status: 500 },
