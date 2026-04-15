@@ -39,6 +39,12 @@ function pressureClasses(value: "overdue" | "due-now" | "watch" | "healthy") {
   return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
 }
 
+function ownerTone(owner: string) {
+  if (owner === "Dez") return "border-sky-500/20 bg-sky-500/10 text-sky-200";
+  if (owner === "Simon") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-200";
+  return "border-border bg-card text-muted-foreground";
+}
+
 export default async function RecurringAccountsPage() {
   const snapshot = await getRecurringAccountStarterSnapshot();
   const proposalQueue = snapshot.worklist.filter(
@@ -178,6 +184,12 @@ export default async function RecurringAccountsPage() {
             <p className="mt-2 text-sm text-muted-foreground">
               Proposal due {snapshot.summary.proposalDue} / trial review due {snapshot.summary.trialReviewDue}
             </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Proposal value in flight {formatCurrency(snapshot.summary.proposalValueInFlight)}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Activation value in flight {formatCurrency(snapshot.summary.activationValueInFlight)}
+            </p>
           </div>
           <div className="rounded-3xl border border-border bg-background/60 p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
@@ -202,6 +214,73 @@ export default async function RecurringAccountsPage() {
             {snapshot.weeklyPlan.focusAreas.map((item) => (
               <div key={item} className="rounded-2xl border border-border bg-card/50 p-4 text-sm text-muted-foreground">
                 {item}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-3xl border border-border bg-background/60 p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+            Conversion board
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {snapshot.conversionBoard.map((stage) => (
+              <div
+                key={stage.stage}
+                className="rounded-2xl border border-border bg-card/50 p-4"
+              >
+                <p className="text-sm font-semibold text-foreground">{stage.label}</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">{stage.count}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {formatCurrency(stage.estimatedMonthlyValue)}
+                </p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {stage.detail}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-3xl border border-border bg-background/60 p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+            Owner targets
+          </p>
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            {snapshot.ownerTargets.map((target) => (
+              <div key={target.owner} className="rounded-2xl border border-border bg-card/50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground">{target.owner}</p>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[11px] ${ownerTone(target.owner)}`}
+                  >
+                    {target.tracked} tracked
+                  </span>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-muted-foreground">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-primary">Overdue</p>
+                    <p className="mt-1 font-medium text-foreground">{target.overdue}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-primary">Proposal due</p>
+                    <p className="mt-1 font-medium text-foreground">{target.proposalDue}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-primary">Activation due</p>
+                    <p className="mt-1 font-medium text-foreground">{target.activationDue}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-primary">Active</p>
+                    <p className="mt-1 font-medium text-foreground">{target.active}</p>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Monthly value in view {formatCurrency(target.estimatedMonthlyValue)}
+                </p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {target.weeklyTarget}
+                </p>
               </div>
             ))}
           </div>

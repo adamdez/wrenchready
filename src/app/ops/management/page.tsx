@@ -8,6 +8,7 @@ import {
   getTomorrowReadinessSnapshot,
   getWarrantySnapshot,
   getWeeklyRecaptureScorecard,
+  getWeeklyOperatingCadenceSnapshot,
   getWedgeFocusSnapshot,
 } from "@/lib/promise-crm/server";
 
@@ -30,7 +31,7 @@ function formatCurrency(value: number) {
 }
 
 export default async function ManagementReviewPage() {
-  const [wedges, tomorrow, field, collections, warranty, recapture, accounts] = await Promise.all([
+  const [wedges, tomorrow, field, collections, warranty, recapture, accounts, cadence] = await Promise.all([
     getWedgeFocusSnapshot(),
     getTomorrowReadinessSnapshot(),
     getFieldExecutionSnapshot(),
@@ -38,6 +39,7 @@ export default async function ManagementReviewPage() {
     getWarrantySnapshot(),
     getWeeklyRecaptureScorecard(),
     getRecurringAccountStarterSnapshot(),
+    getWeeklyOperatingCadenceSnapshot(),
   ]);
 
   const agenda = [
@@ -153,6 +155,22 @@ export default async function ManagementReviewPage() {
       </section>
 
       <section className="mt-6 grid gap-4 lg:grid-cols-3">
+        {cadence.managementCommitments.map((item) => (
+          <Link
+            key={item.title}
+            href={item.href}
+            className="rounded-3xl border border-border bg-card/50 p-6 transition-all hover:border-primary/30 hover:bg-card/70"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              {item.owner} commitment
+            </p>
+            <h2 className="mt-3 text-lg font-bold text-foreground">{item.title}</h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
+          </Link>
+        ))}
+      </section>
+
+      <section className="mt-6 grid gap-4 lg:grid-cols-3">
         <div className="rounded-3xl border border-border bg-card/50 p-6">
           <h2 className="text-lg font-bold text-foreground">Demand and promise</h2>
           <div className="mt-4 space-y-3 text-sm text-muted-foreground">
@@ -177,6 +195,41 @@ export default async function ManagementReviewPage() {
             <p>{accounts.summary.readyToActivate} account{accounts.summary.readyToActivate === 1 ? "" : "s"} are close to trial or activation.</p>
             <p>{accounts.summary.proposalDue} proposal gap{accounts.summary.proposalDue === 1 ? "" : "s"} and {accounts.summary.trialReviewDue} trial review date gap{accounts.summary.trialReviewDue === 1 ? "" : "s"} still need ownership.</p>
           </div>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <h2 className="text-xl font-bold text-foreground">Recurring account scorecard</h2>
+        <div className="mt-4 grid gap-4 xl:grid-cols-5">
+          {accounts.conversionBoard.map((stage) => (
+            <div key={stage.stage} className="rounded-2xl border border-border bg-background/60 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                {stage.label}
+              </p>
+              <p className="mt-2 text-2xl font-bold text-foreground">{stage.count}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{formatCurrency(stage.estimatedMonthlyValue)}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{stage.detail}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          {accounts.ownerTargets.map((target) => (
+            <div key={target.owner} className="rounded-2xl border border-border bg-background/60 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-foreground">{target.owner}</p>
+                <span className="text-xs text-muted-foreground">
+                  {target.tracked} tracked / {formatCurrency(target.estimatedMonthlyValue)}
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Overdue {target.overdue}, proposal due {target.proposalDue}, activation due {target.activationDue}, active {target.active}.
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {target.weeklyTarget}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
     </div>

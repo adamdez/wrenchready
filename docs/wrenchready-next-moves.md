@@ -202,6 +202,7 @@ Why it matters:
 Current status:
 - now built into the recurring-account worklist, account action form, management review, and weekly cadence
 - proposal and trial queue sections are now visible directly on the accounts page
+- conversion-board stages and owner targets are now visible directly on the accounts and management pages
 - still needs real operator use and account conversion proof
 
 ### 6B. Queue-first operating use

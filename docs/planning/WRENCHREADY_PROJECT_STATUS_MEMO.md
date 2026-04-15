@@ -177,8 +177,11 @@ The CRM now stores:
 - a deeper warranty layer with severity, root-cause, make-good-plan, and prevention-step truth
 - a management-review page that turns the major weekly signals into one operating packet instead of a pile of tabs
 - deeper recurring-account execution truth including target lane, proposal timing/value, trial review date, and activation target
+- a recurring-account conversion board that now makes proposal, trial, activation, and active-protection pressure visible as stages instead of just account statuses
+- owner-level recurring-account targets so Dez, Simon, and ops each have a named weekly conversion responsibility
 - stronger closeout quality measurement so finished visits are scored on recap depth, proof safety, and next-step capture instead of just whether closeout exists
 - a weekly operating ritual layer that turns cadence into named management habits, not just dashboard access
+- explicit management commitments that now turn the recurring lane into owned weekly moves instead of passive reporting
 - inline queue actions on the field, warranty, and recapture surfaces so ops can improve packet quality, callback recovery, and weak closeouts without opening every promise detail page
 
 The ops layer can now answer not just what came in, but what happened after we made the promise.

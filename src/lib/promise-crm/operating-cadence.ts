@@ -143,6 +143,32 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
     });
   }
 
+  const managementCommitments = [
+    {
+      title: "Own one recurring-account conversion move",
+      owner: "Dez" as const,
+      detail:
+        accounts.ownerTargets.find((item) => item.owner === "Dez")?.weeklyTarget ||
+        "Advance one account from lead or proposal into the next real decision.",
+      href: "/ops/accounts",
+    },
+    {
+      title: "Turn trial and quality truth into activation confidence",
+      owner: "Simon" as const,
+      detail:
+        accounts.ownerTargets.find((item) => item.owner === "Simon")?.weeklyTarget ||
+        "Protect the service quality that makes recurring work believable.",
+      href: "/ops/accounts",
+    },
+    {
+      title: "Run the Friday operating review from facts, not memory",
+      owner: "Ops" as const,
+      detail:
+        "Review closeout quality, callbacks, balances, wedge performance, and recurring-account movement in one packet before the week rolls over.",
+      href: "/ops/management",
+    },
+  ];
+
   return {
     generatedAt: new Date().toISOString(),
     companyGoal: systems.companyGoal,
@@ -208,8 +234,12 @@ export async function getWeeklyOperatingCadenceSnapshot(): Promise<WeeklyOperati
       trialConversionRate: accounts.summary.trialConversionRate,
       readyToPitch: accounts.summary.readyToPitch,
       readyToActivate: accounts.summary.readyToActivate,
+      proposalValueInFlight: accounts.summary.proposalValueInFlight,
+      activationValueInFlight: accounts.summary.activationValueInFlight,
       focusAreas: accounts.weeklyPlan.focusAreas,
     },
+    ownerScorecard: accounts.ownerTargets,
+    managementCommitments,
     wedgeFocus: {
       headline: wedges.headline,
       primaryWedge: wedges.wedges.find((wedge) => wedge.homepagePriority === "primary")?.title,

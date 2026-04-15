@@ -2493,6 +2493,10 @@ function getRecurringAccountProposalStage(account: PromiseRecurringAccount) {
   return "not-sent" as const;
 }
 
+function isRecurringAccountActivationDue(account: PromiseRecurringAccount) {
+  return account.status === "trial-active" && Boolean(account.activationTargetAt);
+}
+
 function getRecurringAccountNextMilestone(account: PromiseRecurringAccount) {
   if (account.status === "lead") {
     return account.proposalSentAt
@@ -2692,6 +2696,138 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
   ).length;
   const withTouchDate = worklist.filter((item) => item.daysUntilTouch !== undefined).length;
   const onTimeTouches = worklist.filter((item) => !item.overdue && item.daysUntilTouch !== undefined).length;
+  const proposalValueInFlight = trackedPromises.reduce((sum, record) => {
+    const account = record.recurringAccount;
+    if (!account || account.status === "active") return sum;
+    return sum + (account.proposalValueEstimate || account.monthlyValueEstimate || 0);
+  }, 0);
+  const activationValueInFlight = trackedPromises.reduce((sum, record) => {
+    const account = record.recurringAccount;
+    if (!account || !isRecurringAccountActivationDue(account)) return sum;
+    return sum + (account.proposalValueEstimate || account.monthlyValueEstimate || 0);
+  }, 0);
+  const conversionBoard = [
+    {
+      stage: "needs-proposal" as const,
+      label: "Needs proposal",
+      count: worklist.filter((item) => item.proposalStage === "not-sent").length,
+      estimatedMonthlyValue: worklist
+        .filter((item) => item.proposalStage === "not-sent")
+        .reduce(
+          (sum, item) =>
+            sum +
+            (item.recurringAccount.proposalValueEstimate ||
+              item.recurringAccount.monthlyValueEstimate ||
+              0),
+          0,
+        ),
+      detail: "Accounts that still need a real recurring proposal sent and logged.",
+    },
+    {
+      stage: "proposal-sent" as const,
+      label: "Proposal sent",
+      count: worklist.filter(
+        (item) => item.proposalStage === "sent" || item.proposalStage === "review-due",
+      ).length,
+      estimatedMonthlyValue: worklist
+        .filter((item) => item.proposalStage === "sent" || item.proposalStage === "review-due")
+        .reduce(
+          (sum, item) =>
+            sum +
+            (item.recurringAccount.proposalValueEstimate ||
+              item.recurringAccount.monthlyValueEstimate ||
+              0),
+          0,
+        ),
+      detail: "Proposal is live, but the trial decision still needs to be forced into the open.",
+    },
+    {
+      stage: "trial-live" as const,
+      label: "Trial live",
+      count: worklist.filter((item) => item.proposalStage === "trial-live").length,
+      estimatedMonthlyValue: worklist
+        .filter((item) => item.proposalStage === "trial-live")
+        .reduce(
+          (sum, item) =>
+            sum +
+            (item.recurringAccount.proposalValueEstimate ||
+              item.recurringAccount.monthlyValueEstimate ||
+              0),
+          0,
+        ),
+      detail: "Trials in motion that still need review dates, evidence, and a clean activation decision.",
+    },
+    {
+      stage: "activation-due" as const,
+      label: "Activation due",
+      count: trackedPromises.filter(
+        (record) => record.recurringAccount && isRecurringAccountActivationDue(record.recurringAccount),
+      ).length,
+      estimatedMonthlyValue: activationValueInFlight,
+      detail: "Trials with an activation target that should not drift without a yes-or-no decision.",
+    },
+    {
+      stage: "active-protection" as const,
+      label: "Active protection",
+      count: trackedPromises.filter((record) => record.recurringAccount?.status === "active").length,
+      estimatedMonthlyValue: trackedPromises.reduce(
+        (sum, record) =>
+          sum +
+          (record.recurringAccount?.status === "active"
+            ? record.recurringAccount?.monthlyValueEstimate || 0
+            : 0),
+        0,
+      ),
+      detail: "Active accounts that now need retention, cadence discipline, and careful expansion.",
+    },
+  ];
+  const ownerTargets = (["Dez", "Simon", "Unassigned"] as const)
+    .map((owner) => {
+      const owned = worklist.filter((item) => item.owner === owner);
+      const activationDue = owned.filter((item) =>
+        item.recurringAccount ? isRecurringAccountActivationDue(item.recurringAccount) : false,
+      ).length;
+      const activeCount = owned.filter((item) => item.status === "active").length;
+      const estimatedMonthlyValue = owned.reduce(
+        (sum, item) => sum + (item.recurringAccount.monthlyValueEstimate || 0),
+        0,
+      );
+
+      let weeklyTarget = "No tracked account work assigned yet.";
+      if (owner === "Dez") {
+        weeklyTarget =
+          activationDue > 0
+            ? "Push one live trial into an activation decision this week."
+            : owned.some((item) => item.proposalStage === "not-sent" || item.proposalStage === "sent")
+              ? "Get one proposal into the field and attach a firm next decision date."
+              : activeCount > 0
+                ? "Protect the active accounts and tighten the next clustered stop."
+                : "Identify one believable account lane and move it into a tracked pitch.";
+      } else if (owner === "Simon") {
+        weeklyTarget =
+          activationDue > 0
+            ? "Run the trial review with a real yes-or-no activation recommendation."
+            : owned.some((item) => item.overdue)
+              ? "Clear the overdue account touches and document the blocker honestly."
+              : activeCount > 0
+                ? "Protect service quality on active accounts so the lane compounds."
+                : "Support the next proposal with cleaner operations proof and route discipline.";
+      }
+
+      return {
+        owner,
+        tracked: owned.length,
+        overdue: owned.filter((item) => item.overdue).length,
+        proposalDue: owned.filter(
+          (item) => item.proposalStage === "not-sent" || item.proposalStage === "sent",
+        ).length,
+        activationDue,
+        active: activeCount,
+        estimatedMonthlyValue,
+        weeklyTarget,
+      };
+    })
+    .filter((item) => item.tracked > 0 || item.owner !== "Unassigned");
 
   return {
     generatedAt: new Date().toISOString(),
@@ -2732,6 +2868,8 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
       ),
       touchDisciplineRate: withTouchDate > 0 ? onTimeTouches / withTouchDate : 0,
       trialConversionRate: trialActive + active > 0 ? active / (trialActive + active) : 0,
+      proposalValueInFlight,
+      activationValueInFlight,
     },
     starterOffer: recurringAccountStarterOffer,
     outreachScripts: recurringAccountOutreachScripts,
@@ -2765,6 +2903,8 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
         ).length === 1 ? "" : "s"} ready for a real pitch`,
       ],
     },
+    conversionBoard,
+    ownerTargets,
     worklist,
   };
 }

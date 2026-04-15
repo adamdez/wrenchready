@@ -865,6 +865,8 @@ export type RecurringAccountStarterSnapshot = {
     activeMonthlyValueEstimate: number;
     touchDisciplineRate: number;
     trialConversionRate: number;
+    proposalValueInFlight: number;
+    activationValueInFlight: number;
   };
   starterOffer: {
     title: string;
@@ -883,6 +885,28 @@ export type RecurringAccountStarterSnapshot = {
     focusAreas: string[];
     targets: string[];
   };
+  conversionBoard: Array<{
+    stage:
+      | "needs-proposal"
+      | "proposal-sent"
+      | "trial-live"
+      | "activation-due"
+      | "active-protection";
+    label: string;
+    count: number;
+    estimatedMonthlyValue: number;
+    detail: string;
+  }>;
+  ownerTargets: Array<{
+    owner: RecordOwner;
+    tracked: number;
+    overdue: number;
+    proposalDue: number;
+    activationDue: number;
+    active: number;
+    estimatedMonthlyValue: number;
+    weeklyTarget: string;
+  }>;
   worklist: Array<{
     promiseId: string;
     customerName: string;
@@ -980,8 +1004,26 @@ export type WeeklyOperatingCadenceSnapshot = {
     trialConversionRate: number;
     readyToPitch: number;
     readyToActivate: number;
+    proposalValueInFlight: number;
+    activationValueInFlight: number;
     focusAreas: string[];
   };
+  ownerScorecard: Array<{
+    owner: RecordOwner;
+    tracked: number;
+    overdue: number;
+    proposalDue: number;
+    activationDue: number;
+    active: number;
+    estimatedMonthlyValue: number;
+    weeklyTarget: string;
+  }>;
+  managementCommitments: Array<{
+    title: string;
+    owner: RecordOwner | "Ops";
+    detail: string;
+    href: string;
+  }>;
   wedgeFocus: {
     headline: string;
     primaryWedge?: string;
