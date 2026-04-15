@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readEnv } from "@/lib/env";
 import { sendPromiseOutboundEmail } from "@/lib/email";
-import { sendHighRiskInboundAlert } from "@/lib/promise-crm/alerts";
+import { sendHighRiskInboundAlert, sendNewAppointmentAlert } from "@/lib/promise-crm/alerts";
 import { createInboundFromAppointment } from "@/lib/promise-crm/server";
 import { evaluateIntake } from "@/lib/promise-crm/intake";
 import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
@@ -12,11 +12,13 @@ type AppointmentPayload = {
   email: string;
   phone: string;
   vehicle: string;
+  zipCode: string;
   serviceNeeded: string;
   address: string;
   timing: string;
   notes: string;
   smsConsent?: boolean;
+  sourceTag?: string;
 };
 
 function validatePayload(body: unknown): body is AppointmentPayload {
@@ -68,11 +70,13 @@ async function sendWebhook(payload: AppointmentPayload) {
       email: payload.email || null,
       phone: payload.phone || null,
       vehicle: payload.vehicle,
+      zipCode: payload.zipCode || null,
       serviceNeeded: payload.serviceNeeded || null,
       address: payload.address || null,
       timing: payload.timing || null,
       notes: payload.notes || null,
       smsConsent: !!payload.smsConsent,
+      sourceTag: payload.sourceTag || null,
       intakeEvaluation: evaluation,
     },
   });
@@ -85,7 +89,7 @@ function buildSchedulingRead(payload: AppointmentPayload) {
     notes: payload.notes,
     desiredDate: payload.timing,
     address: {
-      formatted: payload.address,
+      formatted: [payload.address, payload.zipCode].filter(Boolean).join(", "),
       city: payload.address,
       state: "WA",
     },
@@ -100,6 +104,7 @@ function buildSchedulingRead(payload: AppointmentPayload) {
     durationMinutes: availability.serviceEstimate.rules.durationMinutes,
     autoBook: availability.serviceEstimate.rules.autoBook,
     reasons: availability.serviceEstimate.reasons,
+    customerWindowSummary: availability.customerWindowSummary,
   };
 }
 
@@ -118,10 +123,8 @@ async function sendCustomerConfirmationEmail(
         : "We received the request and will screen the fit carefully before we promise timing.";
 
   const schedulingMessage = schedulingRead.territorySupported
-    ? schedulingRead.requiredIntegrationsReady
-      ? `We can evaluate live availability for this lane. Your requested timing was recorded as: ${payload.timing || "not specified"}.`
-      : `Your requested timing was recorded as: ${payload.timing || "not specified"}. We are still confirming final timing manually so we do not over-promise.`
-    : "Your address needs a manual territory check before we promise timing.";
+    ? `${schedulingRead.customerWindowSummary} Your requested timing was recorded as: ${payload.timing || "not specified"}.`
+    : "Your address needs a quick service-area check before we promise timing.";
 
   const body = [
     `We received your request for ${payload.vehicle}.`,
@@ -163,6 +166,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     if (inboundResult.status === "fulfilled" && inboundResult.value) {
+      await sendNewAppointmentAlert(inboundResult.value).catch(() => false);
       await sendHighRiskInboundAlert(inboundResult.value).catch(() => false);
     }
 

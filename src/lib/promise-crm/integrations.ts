@@ -47,7 +47,7 @@ export async function getIntegrationSnapshot(): Promise<WrenchReadyIntegrationSn
   const twilioAccountSid = readEnv("TWILIO_ACCOUNT_SID", "Twilio_Account_SID");
   const twilioAuthToken = readEnv("TWILIO_AUTH_TOKEN", "Twilio_Auth_Token");
   const twilioNotifyPhones = readEnv("TWILIO_VOICEMAIL_NOTIFY_PHONES");
-  const smsAlertsEnabled = readEnv("WR_ENABLE_SMS_ALERTS") === "true";
+  const smsAlertsEnabled = readEnv("WR_ENABLE_SMS_ALERTS")?.trim() === "true";
   const supabase = await getSupabaseStatus();
 
   return {

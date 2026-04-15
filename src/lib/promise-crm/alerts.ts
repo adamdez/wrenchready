@@ -4,7 +4,7 @@ import { getOpsNotifyPhones, sendTwilioSms } from "@/lib/twilio";
 
 function alertsEnabled() {
   if (process.env.NODE_ENV === "test") return false;
-  return readEnv("WR_ENABLE_SMS_ALERTS") === "true";
+  return readEnv("WR_ENABLE_SMS_ALERTS")?.trim() === "true";
 }
 
 async function sendOpsSms(message: string) {
@@ -15,6 +15,17 @@ async function sendOpsSms(message: string) {
 
   await Promise.all(recipients.map((to) => sendTwilioSms(to, message)));
   return true;
+}
+
+export async function sendNewAppointmentAlert(inbound: InboundRecord) {
+  return sendOpsSms(
+    [
+      "WR new apt",
+      `${inbound.customer.name} / ${inbound.requestedService}`,
+      `${inbound.location.territory} / ${inbound.preferredWindow.label}`,
+      inbound.customer.phone,
+    ].join("\n"),
+  );
 }
 
 export async function sendHighRiskInboundAlert(inbound: InboundRecord) {

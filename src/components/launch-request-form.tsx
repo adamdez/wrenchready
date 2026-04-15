@@ -12,6 +12,7 @@ type RequestFormState = {
   email: string;
   phone: string;
   vehicle: string;
+  zipCode: string;
   serviceNeeded: string;
   address: string;
   timing: string;
@@ -37,6 +38,7 @@ type SchedulingRead = {
   durationMinutes: number;
   autoBook: boolean;
   reasons: string[];
+  customerWindowSummary: string;
 };
 
 const initialState: RequestFormState = {
@@ -44,6 +46,7 @@ const initialState: RequestFormState = {
   email: "",
   phone: "",
   vehicle: "",
+  zipCode: "",
   serviceNeeded: "",
   address: "",
   timing: "",
@@ -52,8 +55,29 @@ const initialState: RequestFormState = {
 
 const priorityServices = getServicesInPriorityOrder();
 
-export function LaunchRequestForm() {
-  const [formState, setFormState] = useState(initialState);
+type LaunchRequestFormProps = {
+  allowedZipCodes?: string[];
+  territoryLabel?: string;
+  sourceTag?: string;
+  defaultServiceNeeded?: string;
+  requiredZipCode?: boolean;
+  zipFieldLabel?: string;
+  zipHelperCopy?: string;
+};
+
+export function LaunchRequestForm({
+  allowedZipCodes,
+  territoryLabel,
+  sourceTag,
+  defaultServiceNeeded,
+  requiredZipCode,
+  zipFieldLabel,
+  zipHelperCopy,
+}: LaunchRequestFormProps) {
+  const [formState, setFormState] = useState<RequestFormState>(() => ({
+    ...initialState,
+    serviceNeeded: defaultServiceNeeded ?? "",
+  }));
   const [smsConsent, setSmsConsent] = useState(false);
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -81,6 +105,14 @@ export function LaunchRequestForm() {
       return;
     }
 
+    if (allowedZipCodes?.length && !allowedZipCodes.includes(formState.zipCode)) {
+      setErrorMessage(
+        `This request form is only booking ${territoryLabel || allowedZipCodes.join(" and ")} right now.`,
+      );
+      setStatus("error");
+      return;
+    }
+
     setStatus("submitting");
     setErrorMessage("");
 
@@ -88,7 +120,7 @@ export function LaunchRequestForm() {
       const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formState, smsConsent }),
+        body: JSON.stringify({ ...formState, smsConsent, sourceTag }),
       });
 
       const data = await res.json().catch(() => null);
@@ -163,9 +195,7 @@ export function LaunchRequestForm() {
                   : "This request should be scheduled manually after screening."}
               </p>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {schedulingRead.requiredIntegrationsReady
-                  ? "Live scheduling integrations are connected."
-                  : "Timing is still confirmed manually so we do not over-promise."}
+                {schedulingRead.customerWindowSummary}
               </p>
             </div>
           ) : null}
@@ -206,6 +236,21 @@ export function LaunchRequestForm() {
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         Fill out the details below and we&apos;ll screen the job before we confirm the promise.
       </p>
+
+      {allowedZipCodes?.length ? (
+        <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/10 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+            Service area for this launch
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            This page is only screening jobs in{" "}
+            <strong className="text-foreground">
+              {territoryLabel || allowedZipCodes.join(" and ")}
+            </strong>
+            . If the vehicle is outside that zone, call or text before submitting.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-6 rounded-2xl border border-border bg-background/60 p-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
@@ -300,6 +345,46 @@ export function LaunchRequestForm() {
             required
             value={formState.vehicle}
           />
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+            {zipFieldLabel || "Vehicle ZIP"}{" "}
+            {allowedZipCodes?.length || requiredZipCode ? (
+              <span className="text-destructive">*</span>
+            ) : null}
+          </span>
+          {allowedZipCodes?.length ? (
+            <select
+              className="form-input"
+              name="zipCode"
+              onChange={updateField}
+              required
+              value={formState.zipCode}
+            >
+              <option value="" disabled>
+                Select ZIP
+              </option>
+              {allowedZipCodes.map((zipCode) => (
+                <option key={zipCode} value={zipCode}>
+                  {zipCode}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              className="form-input"
+              inputMode="numeric"
+              name="zipCode"
+              onChange={updateField}
+              placeholder="ZIP code"
+              required={requiredZipCode}
+              value={formState.zipCode}
+            />
+          )}
+          {zipHelperCopy ? (
+            <p className="text-xs leading-relaxed text-muted-foreground">{zipHelperCopy}</p>
+          ) : null}
         </label>
 
         <label className="space-y-2 md:col-span-2">

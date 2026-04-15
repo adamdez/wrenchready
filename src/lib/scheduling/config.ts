@@ -58,10 +58,11 @@ export const SUPPORTED_TERRITORIES: TerritorySlug[] = [
 ];
 
 export const BUSINESS_HOURS: BusinessHours[] = [
-  { day: 1, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0 },
-  { day: 2, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0 },
-  { day: 3, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0 },
-  { day: 4, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0 },
-  { day: 5, startHour: 8, startMinute: 0, endHour: 18, endMinute: 0 },
-  { day: 6, startHour: 9, startMinute: 0, endHour: 15, endMinute: 0 },
+  { day: 1, startHour: 16, startMinute: 0, endHour: 19, endMinute: 0 },
+  { day: 2, startHour: 16, startMinute: 0, endHour: 19, endMinute: 0 },
+  { day: 3, startHour: 16, startMinute: 0, endHour: 19, endMinute: 0 },
+  { day: 4, startHour: 16, startMinute: 0, endHour: 19, endMinute: 0 },
+  { day: 5, startHour: 16, startMinute: 0, endHour: 19, endMinute: 0 },
+  { day: 6, startHour: 7, startMinute: 0, endHour: 19, endMinute: 0 },
+  { day: 0, startHour: 7, startMinute: 0, endHour: 19, endMinute: 0 },
 ];

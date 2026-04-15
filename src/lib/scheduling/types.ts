@@ -66,4 +66,5 @@ export type AvailabilityResponse = {
   requiredIntegrationsReady: boolean;
   missingIntegrations: string[];
   candidateSlots: AvailableSlot[];
+  customerWindowSummary: string;
 };
