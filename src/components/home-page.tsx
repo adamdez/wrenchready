@@ -184,6 +184,20 @@ function IntakeForm() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [serviceChoice, setServiceChoice] = useState("");
+  const [intakeEvaluation, setIntakeEvaluation] = useState<{
+    serviceLane: string;
+    territory: string;
+    readinessRisk: "low" | "medium" | "high";
+    promiseFit: "strong" | "conditional" | "review";
+    nextAction: string;
+  } | null>(null);
+  const [schedulingRead, setSchedulingRead] = useState<{
+    territorySupported: boolean;
+    durationMinutes: number;
+    autoBook: boolean;
+    customerWindowSummary: string;
+  } | null>(null);
+  const [confirmationEmailSent, setConfirmationEmailSent] = useState(false);
 
   const selectedWedge = launchWedges.find((wedge) => wedge.slug === serviceChoice);
   const problemPlaceholder = selectedWedge
@@ -210,7 +224,7 @@ function IntakeForm() {
         body: JSON.stringify({
           fullName: String(data.get("name") ?? "").trim(),
           phone: String(data.get("phone") ?? "").trim(),
-          email: "",
+          email: String(data.get("email") ?? "").trim(),
           vehicle,
           serviceNeeded: serviceChoice || String(data.get("service") ?? "").trim(),
           address: String(data.get("address") ?? "").trim(),
@@ -222,6 +236,10 @@ function IntakeForm() {
         const payload = await res.json().catch(() => null);
         throw new Error(payload?.error || "Submission failed");
       }
+      const payload = await res.json().catch(() => null);
+      setIntakeEvaluation(payload?.intakeEvaluation || null);
+      setSchedulingRead(payload?.schedulingRead || null);
+      setConfirmationEmailSent(Boolean(payload?.confirmationEmailSent));
       setSubmitted(true);
       setServiceChoice("");
       form.reset();
@@ -237,13 +255,92 @@ function IntakeForm() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="rounded-2xl border border-[--wr-teal]/20 bg-[--wr-teal]/5 p-8 text-center"
+        className="rounded-2xl border border-[--wr-teal]/20 bg-[--wr-teal]/5 p-8"
       >
-        <CheckCircle2 className="mx-auto h-12 w-12 text-[--wr-teal]" />
-        <h3 className="mt-4 text-xl font-bold text-foreground">Request received.</h3>
-        <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-          We will review the details and follow up with the right next step.
-        </p>
+        <div className="space-y-5 text-center">
+          <CheckCircle2 className="mx-auto h-12 w-12 text-[--wr-teal]" />
+          <div>
+            <h3 className="text-xl font-bold text-foreground">Request received.</h3>
+            <p className="mt-2 text-base leading-relaxed text-muted-foreground">
+              {intakeEvaluation?.promiseFit === "strong"
+                ? "This looks like a strong mobile-fit request. We will follow up with the next step as soon as we can."
+                : intakeEvaluation?.promiseFit === "conditional"
+                  ? "We received your request and will confirm the worksite, scope, and timing before we promise a slot."
+                  : "We received your request and will screen the fit carefully before we promise timing."}
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Most requests get a response within 15 minutes during service hours. If you need help faster, call or text{" "}
+              <a href={siteConfig.contact.phoneHref} className="font-semibold text-primary hover:underline">
+                {siteConfig.contact.phoneDisplay}
+              </a>
+              .
+            </p>
+          </div>
+          {confirmationEmailSent ? (
+            <div className="rounded-2xl border border-[--wr-teal]/20 bg-background/70 p-4 text-sm leading-relaxed text-foreground">
+              A confirmation email was sent so the next step is visible in writing too.
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-background/70 p-4 text-sm leading-relaxed text-muted-foreground">
+              No email was sent for this request, so keep an eye on your phone. If you do not hear from us soon, call or text directly.
+            </div>
+          )}
+          {intakeEvaluation ? (
+            <div className="rounded-2xl border border-border bg-background/70 p-4 text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                Screening read
+              </p>
+              <p className="mt-2 text-sm font-semibold text-foreground">{intakeEvaluation.serviceLane}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {intakeEvaluation.territory} · {intakeEvaluation.readinessRisk} risk
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {intakeEvaluation.nextAction}
+              </p>
+            </div>
+          ) : null}
+          {schedulingRead ? (
+            <div className="rounded-2xl border border-border bg-background/70 p-4 text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                Scheduling read
+              </p>
+              <p className="mt-2 text-sm font-semibold text-foreground">
+                {schedulingRead.territorySupported
+                  ? "Service area looks supported."
+                  : "Service area needs manual review before we promise timing."}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {schedulingRead.autoBook
+                  ? `${schedulingRead.durationMinutes} minute service profile.`
+                  : "This request should be scheduled manually after screening."}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {schedulingRead.customerWindowSummary}
+              </p>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap justify-center gap-3">
+            <a
+              href={siteConfig.contact.phoneHref}
+              className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
+            >
+              <Phone className="h-4 w-4" />
+              Call or Text {siteConfig.contact.phoneDisplay}
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                setSubmitted(false);
+                setIntakeEvaluation(null);
+                setSchedulingRead(null);
+                setConfirmationEmailSent(false);
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+            >
+              Send another
+            </button>
+          </div>
+        </div>
       </motion.div>
     );
   }
@@ -319,6 +416,7 @@ function IntakeForm() {
         <input type="text" name="name" placeholder="Your name" className="form-input" required />
         <input type="tel" name="phone" placeholder="Phone number" className="form-input" required />
       </div>
+      <input type="email" name="email" placeholder="Email for written confirmation" className="form-input" />
       <button
         type="submit"
         disabled={submitting}
