@@ -80,7 +80,7 @@ export default function OgImage() {
             }}
           >
             Oil changes, brakes, batteries, diagnostics, and inspections at your driveway,
-            curb, or workplace across Spokane County.
+            curb, or workplace across Spokane and nearby metro neighborhoods.
           </p>
         </div>
 

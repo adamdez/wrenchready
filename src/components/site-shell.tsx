@@ -336,7 +336,7 @@ export function SiteShell({ children }: SiteShellProps) {
                 </div>
               </div>
               <p className="pt-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                Spokane County, Washington
+                Spokane, Washington
               </p>
             </div>
           </div>
@@ -345,7 +345,7 @@ export function SiteShell({ children }: SiteShellProps) {
         <div className="border-t border-border">
           <div className="shell flex flex-wrap items-center justify-between gap-4 py-6 text-xs text-muted-foreground">
             <div className="flex flex-wrap items-center gap-4">
-              <p>&copy; 2026 {siteConfig.name} LLC — Spokane County, WA. All rights reserved.</p>
+              <p>&copy; 2026 {siteConfig.name} LLC — Spokane, WA. All rights reserved.</p>
               <span className="hidden h-3 w-px bg-border sm:block" />
               <span className="inline-flex items-center gap-1.5 rounded-full border border-[--wr-teal]/15 bg-[--wr-teal]/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[--wr-teal]">
                 <Shield className="h-3 w-3" />

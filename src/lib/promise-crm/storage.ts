@@ -81,6 +81,7 @@ import type {
   OwnerDailyPriority,
   OwnerExecutionMetrics,
   OwnerExecutionSnapshot,
+  PartsPlanningSnapshot,
   PublicProofSnapshot,
   ProofDisciplineSnapshot,
   PromiseBoardMetrics,
@@ -3172,6 +3173,9 @@ export async function getFieldExecutionSnapshot(): Promise<FieldExecutionSnapsho
         jobStage: record.jobStage,
         fieldExecution: record.fieldExecution,
         ...completeness,
+        paymentStatus: record.paymentCollection?.status,
+        balanceDueAmount: record.paymentCollection?.balanceDueAmount,
+        customerStatusPath: record.customerAccess.sharePath,
         taskPriority,
         nextStep:
           completeness.closeoutNotReady
@@ -3217,6 +3221,88 @@ export async function getFieldExecutionSnapshot(): Promise<FieldExecutionSnapsho
   };
 }
 
+export async function getPartsPlanningSnapshot(): Promise<PartsPlanningSnapshot> {
+  const promises = await getPromiseRecords();
+  const activePromises = promises.filter((record) => record.status !== "completed");
+
+  const tasks = activePromises
+    .map((record) => {
+      const partsPlan = record.fieldExecution?.partsPlan || [];
+      const outstandingParts = partsPlan.filter(
+        (item) => item.status !== "installed" && item.status !== "return-needed",
+      );
+      const requiredCount = partsPlan.filter((item) => item.requiredForVisit !== false).length;
+      const readyPickupCount = partsPlan.filter((item) => item.status === "ready-pickup").length;
+      const loadedCount = partsPlan.filter((item) => item.status === "loaded-tech").length;
+      const estimatedPartsCost = partsPlan.reduce(
+        (sum, item) => sum + (item.estimatedCost || 0) * (item.quantity || 1),
+        0,
+      );
+
+      if (partsPlan.length === 0 && (record.fieldExecution?.partsChecklist?.length || 0) === 0) {
+        return null;
+      }
+
+      const taskPriority: "high" | "medium" | "low" =
+        outstandingParts.some((item) => item.requiredForVisit !== false && item.status === "research-needed") ||
+        outstandingParts.some((item) => item.requiredForVisit !== false && item.status === "quoted")
+          ? "high"
+          : readyPickupCount > 0 || outstandingParts.some((item) => item.status === "ordered")
+            ? "medium"
+            : "low";
+
+      return {
+        promiseId: record.id,
+        customerName: record.customer.name,
+        owner: record.owner,
+        territory: record.location.territory,
+        serviceScope: record.serviceScope,
+        scheduledWindowLabel: record.scheduledWindow.label,
+        customerStatusPath: record.customerAccess.sharePath,
+        outstandingParts,
+        pickupWindow: record.fieldExecution?.partsRunPlan?.pickupWindow,
+        pickupAssignedTo: record.fieldExecution?.partsRunPlan?.assignedTo,
+        pickupNotes: record.fieldExecution?.partsRunPlan?.pickupNotes,
+        estimatedPartsCost,
+        readyPickupCount,
+        requiredCount,
+        loadedCount,
+        fieldExecution: record.fieldExecution,
+        taskPriority,
+        nextStep:
+          taskPriority === "high"
+            ? "Research fitment, choose the vendor, and lock the pickup plan before the visit gets close."
+            : taskPriority === "medium"
+              ? "Consolidate the pickup into one run and get the parts into the van."
+              : "Parts plan is mostly staged. Keep the final pickup and load-to-tech step honest.",
+      };
+    })
+    .filter((task): task is NonNullable<typeof task> => Boolean(task))
+    .sort((a, b) => {
+      const priorityRank: Record<"high" | "medium" | "low", number> = {
+        high: 0,
+        medium: 1,
+        low: 2,
+      };
+      const rankGap = priorityRank[a.taskPriority] - priorityRank[b.taskPriority];
+      if (rankGap !== 0) return rankGap;
+      return b.estimatedPartsCost - a.estimatedPartsCost;
+    });
+
+  const allParts = tasks.flatMap((task) => task.outstandingParts);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    total: tasks.length,
+    researching: allParts.filter((item) => item.status === "research-needed").length,
+    ordered: allParts.filter((item) => item.status === "ordered" || item.status === "quoted").length,
+    readyPickup: allParts.filter((item) => item.status === "ready-pickup" || item.status === "picked-up").length,
+    loadedTech: allParts.filter((item) => item.status === "loaded-tech").length,
+    estimatedPartsCost: tasks.reduce((sum, task) => sum + task.estimatedPartsCost, 0),
+    tasks,
+  };
+}
+
 export async function getCollectionSnapshot(): Promise<CollectionSnapshot> {
   const promises = await getPromiseRecords();
   const tasks = promises
@@ -3232,6 +3318,7 @@ export async function getCollectionSnapshot(): Promise<CollectionSnapshot> {
       owner: record.owner,
       territory: record.location.territory,
       serviceScope: record.serviceScope,
+      customerStatusPath: record.customerAccess.sharePath,
       status: record.paymentCollection?.status || "not-requested",
       method: record.paymentCollection?.method,
       amountCollected: record.paymentCollection?.amountCollected,

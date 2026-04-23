@@ -86,7 +86,7 @@ export function LocationsPageClient() {
           <div className="shell section-space">
             <SectionHeading
               eyebrow="Neighborhoods"
-              title="Specific coverage across Spokane County neighborhoods."
+              title="Specific coverage across Spokane-area neighborhoods."
               copy="Access, parking, and scheduling look different in each neighborhood — here is what mobile service looks like in each one."
             />
             <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" staggerDelay={0.05}>

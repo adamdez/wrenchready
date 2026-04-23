@@ -46,7 +46,7 @@ export const siteConfig = {
   state: "Washington",
   stateCode: "WA",
   description:
-    "WrenchReady Mobile brings mobile car repair to your driveway or workplace in Spokane County — batteries, brakes, diagnostics, inspections, and routine maintenance with clear quotes and approval before added work.",
+    "WrenchReady Mobile brings mobile car repair to your driveway or workplace across Spokane and nearby metro neighborhoods — batteries, brakes, diagnostics, inspections, and routine maintenance with clear quotes and approval before added work.",
   shortDescription:
     "Mobile auto repair in Spokane built around honest screening, clear communication, and approval before added work.",
   areaServed: ["Spokane", "Spokane Valley", "Liberty Lake", "South Hill"],
@@ -55,7 +55,7 @@ export const siteConfig = {
     phoneDisplay: "(509) 590-7091",
     phoneHref: "tel:+15095907091",
     smsHref: "sms:+15095907091",
-    schedule: "Spokane County mobile service",
+    schedule: "Spokane metro mobile service",
   },
   globalKeywords: [
     "mobile mechanic Spokane WA",
@@ -112,7 +112,7 @@ export const trustPoints = [
   },
   {
     kicker: "Focused Routes",
-    title: "Spokane County coverage that stays realistic",
+    title: "Spokane coverage that stays realistic",
     copy:
       "We keep the service area focused so arrival windows are reliable and each visit gets the time it needs.",
   },
@@ -703,7 +703,7 @@ export const locations: Location[] = [
       {
         question: "Is Liberty Lake part of the regular service area?",
         answer:
-          "Yes. Liberty Lake is part of the regular Spokane County service area. We confirm route fit when you book so the arrival window is reliable.",
+          "Yes. Liberty Lake is part of the regular Spokane metro service area. We confirm route fit when you book so the arrival window is reliable.",
       },
       {
         question: "Are workplace appointments possible in Liberty Lake?",
@@ -1456,7 +1456,7 @@ export type Market = {
 export const markets: Market[] = [
   {
     slug: "spokane-county",
-    name: "Spokane County",
+    name: "Spokane Metro",
     state: "Washington",
     stateCode: "WA",
     cities: ["spokane", "spokane-valley", "liberty-lake", "south-hill"],

@@ -48,7 +48,7 @@ const trustChips = [
   { icon: <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Licensed & insured" },
   { icon: <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Photo-backed findings" },
   { icon: <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Approval before added work" },
-  { icon: <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Spokane County mobile service" },
+  { icon: <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />, label: "Spokane metro mobile service" },
 ];
 
 const trustStrip = [
@@ -57,7 +57,7 @@ const trustStrip = [
   { icon: <Shield className="h-4 w-4" />, text: "Approval before added work" },
   { icon: <Clock className="h-4 w-4" />, text: "Real status updates" },
   { icon: <Star className="h-4 w-4" />, text: "Licensed & insured" },
-  { icon: <MapPin className="h-4 w-4" />, text: "Spokane County mobile service" },
+  { icon: <MapPin className="h-4 w-4" />, text: "Spokane metro mobile service" },
 ];
 
 const coreServices = [
@@ -396,7 +396,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
 
             <FadeIn delay={0.35}>
               <p className="max-w-xl text-base font-medium leading-snug text-white/80 sm:text-xl">
-                Dead battery, brake noise, warning lights, or a car that won&apos;t start? We come to your driveway or workplace anywhere in Spokane County, but we lead hardest with no-start help and brake repair because those are the clearest promises to make and keep.
+                Dead battery, brake noise, warning lights, or a car that won&apos;t start? We come to your driveway or workplace across Spokane and nearby metro neighborhoods, but we lead hardest with no-start help and brake repair because those are the clearest promises to make and keep.
               </p>
             </FadeIn>
 

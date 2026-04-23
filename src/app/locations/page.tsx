@@ -2,9 +2,9 @@ import { LocationsPageClient } from "@/components/locations-page-client";
 import { buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Mobile Mechanic Service Areas in Spokane County",
+  title: "Mobile Mechanic Service Areas in Spokane",
   description:
-    "See where WrenchReady Mobile serves drivers across Spokane County, including Spokane, Spokane Valley, Liberty Lake, and South Hill, with focused routes and honest screening.",
+    "See where WrenchReady Mobile serves drivers across Spokane and nearby metro neighborhoods, including Spokane, Spokane Valley, Liberty Lake, and South Hill, with focused routes and honest screening.",
   path: "/locations",
   keywords: [
     "mobile mechanic Spokane Valley",

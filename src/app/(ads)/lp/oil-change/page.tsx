@@ -39,7 +39,7 @@ export default function OilChangeLandingPage() {
           <div className="relative z-10 max-w-3xl space-y-6">
             <div className="flex flex-wrap items-center gap-3">
               <span className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary">Mobile Oil Change</span>
-              <span className="inline-flex rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">Spokane County, WA</span>
+              <span className="inline-flex rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">Spokane metro, WA</span>
             </div>
             <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
               Oil change at your home or office.{" "}

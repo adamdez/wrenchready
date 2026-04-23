@@ -1,6 +1,9 @@
 import type {
   PromiseFieldExecutionPacket,
   PromiseJobStage,
+  PromisePartItem,
+  PromisePartItemStatus,
+  PromisePartsRunPlan,
   PromisePaymentCollection,
   PromisePaymentMethod,
   PromiseRecurringAccountActivity,
@@ -42,6 +45,77 @@ function normalizeStringList(value: unknown) {
   return value
     .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
     .filter(Boolean);
+}
+
+function normalizePartItemStatus(value: unknown): PromisePartItemStatus {
+  switch (value) {
+    case "quoted":
+    case "ordered":
+    case "ready-pickup":
+    case "picked-up":
+    case "loaded-tech":
+    case "installed":
+    case "return-needed":
+      return value;
+    default:
+      return "research-needed";
+  }
+}
+
+function normalizePartsPlan(value: unknown): PromisePartItem[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.reduce<PromisePartItem[]>((items, entry) => {
+      if (!entry || typeof entry !== "object") return items;
+      const candidate = entry as Record<string, unknown>;
+      const label = toOptionalString(candidate.label);
+
+      if (!label) return items;
+
+      items.push({
+        label,
+        partNumber: toOptionalString(candidate.partNumber),
+        quantity: toOptionalNumber(candidate.quantity),
+        vendor: toOptionalString(candidate.vendor),
+        vendorLocation: toOptionalString(candidate.vendorLocation),
+        sourceUrl: toOptionalString(candidate.sourceUrl),
+        fitmentNotes: toOptionalString(candidate.fitmentNotes),
+        estimatedCost: toOptionalNumber(candidate.estimatedCost),
+        requiredForVisit:
+          typeof candidate.requiredForVisit === "boolean"
+            ? candidate.requiredForVisit
+            : undefined,
+        status: normalizePartItemStatus(candidate.status),
+        notes: toOptionalString(candidate.notes),
+      } satisfies PromisePartItem);
+
+      return items;
+    }, []);
+}
+
+function normalizePartsRunPlan(value: unknown): PromisePartsRunPlan | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as Record<string, unknown>;
+
+  const normalized: PromisePartsRunPlan = {
+    assignedTo:
+      candidate.assignedTo === "Dez" ||
+      candidate.assignedTo === "Simon" ||
+      candidate.assignedTo === "Unassigned" ||
+      candidate.assignedTo === "Ops"
+        ? candidate.assignedTo
+        : undefined,
+    pickupWindow: toOptionalString(candidate.pickupWindow),
+    pickupNotes: toOptionalString(candidate.pickupNotes),
+    consolidateBy: toOptionalString(candidate.consolidateBy),
+  };
+
+  return normalized.assignedTo ||
+    normalized.pickupWindow ||
+    normalized.pickupNotes ||
+    normalized.consolidateBy
+    ? normalized
+    : undefined;
 }
 
 function normalizeRecurringActivityList(value: unknown) {
@@ -128,6 +202,8 @@ export function normalizeFieldExecutionPacket(
   const normalized: PromiseFieldExecutionPacket = {
     serviceGoal: toOptionalString(value.serviceGoal),
     partsChecklist: normalizeStringList(value.partsChecklist),
+    partsPlan: normalizePartsPlan(value.partsPlan),
+    partsRunPlan: normalizePartsRunPlan(value.partsRunPlan),
     photosRequired: normalizeStringList(value.photosRequired),
     inspectionChecklist: normalizeStringList(value.inspectionChecklist),
     handoffChecklist: normalizeStringList(value.handoffChecklist),
@@ -140,6 +216,8 @@ export function normalizeFieldExecutionPacket(
   const meaningful =
     normalized.serviceGoal ||
     normalized.partsChecklist.length > 0 ||
+    (normalized.partsPlan?.length || 0) > 0 ||
+    normalized.partsRunPlan ||
     normalized.photosRequired.length > 0 ||
     normalized.inspectionChecklist.length > 0 ||
     normalized.handoffChecklist.length > 0 ||
@@ -161,6 +239,8 @@ export function mergeFieldExecutionPacket(
   return normalizeFieldExecutionPacket({
     serviceGoal: updates.serviceGoal ?? current?.serviceGoal,
     partsChecklist: updates.partsChecklist ?? current?.partsChecklist ?? [],
+    partsPlan: updates.partsPlan ?? current?.partsPlan ?? [],
+    partsRunPlan: updates.partsRunPlan ?? current?.partsRunPlan,
     photosRequired: updates.photosRequired ?? current?.photosRequired ?? [],
     inspectionChecklist: updates.inspectionChecklist ?? current?.inspectionChecklist ?? [],
     handoffChecklist: updates.handoffChecklist ?? current?.handoffChecklist ?? [],

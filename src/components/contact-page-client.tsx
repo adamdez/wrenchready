@@ -85,7 +85,7 @@ export function ContactPageClient() {
                       <MapPin className="h-5 w-5" />
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-foreground">Spokane County, WA</p>
+                      <p className="text-sm font-semibold text-foreground">Spokane metro, WA</p>
                       <p className="text-xs text-muted-foreground">Spokane, Spokane Valley, Liberty Lake, South Hill</p>
                     </div>
                   </div>
