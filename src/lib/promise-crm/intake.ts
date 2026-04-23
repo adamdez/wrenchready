@@ -13,6 +13,7 @@ type IntakePayload = {
   email: string;
   phone: string;
   vehicle: string;
+  zipCode?: string;
   serviceNeeded: string;
   address: string;
   timing: string;
@@ -98,7 +99,11 @@ function inferService(serviceNeeded: string, notes: string) {
   };
 }
 
-function inferTerritory(address: string) {
+function inferTerritory(address: string, zipCode?: string) {
+  const normalizedZip = normalizeText(zipCode ?? "");
+  if (normalizedZip === "99208") return "North Spokane 99208";
+  if (normalizedZip === "99218") return "North Spokane 99218";
+
   const normalizedAddress = normalizeText(address);
 
   if (normalizedAddress.includes("liberty lake")) return "Liberty Lake";
@@ -137,7 +142,7 @@ function inferReadinessRisk(payload: IntakePayload, normalizedService: string): 
 
 export function evaluateIntake(payload: IntakePayload): IntakeEvaluation {
   const service = inferService(payload.serviceNeeded, payload.notes);
-  const territory = inferTerritory(payload.address);
+  const territory = inferTerritory(payload.address, payload.zipCode);
   const readinessRisk = inferReadinessRisk(payload, service.normalizedService);
   const policy = resolveServicePolicy(service.normalizedService, service.serviceLane);
 
