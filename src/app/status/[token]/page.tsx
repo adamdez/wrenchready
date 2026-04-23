@@ -163,7 +163,12 @@ export default async function CustomerStatusPage({
               <Phone className="h-4 w-4 text-primary" />
               Contact
             </div>
-                <p className="mt-3 text-sm text-muted-foreground">{siteConfig.contact.phoneDisplay}</p>
+            <a
+              className="mt-3 inline-flex text-sm text-muted-foreground hover:text-foreground"
+              href={siteConfig.contact.phoneHref}
+            >
+              {siteConfig.contact.phoneDisplay}
+            </a>
             <p className="mt-1 text-sm text-muted-foreground">
               Preferred updates by {promise.customer.preferredContact}
             </p>
@@ -354,7 +359,12 @@ export default async function CustomerStatusPage({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
                   Best way to reach us
                 </p>
-                <p className="mt-2 text-sm text-muted-foreground">{siteConfig.contact.phoneDisplay}</p>
+                <a
+                  className="mt-2 inline-flex text-sm text-muted-foreground hover:text-foreground"
+                  href={siteConfig.contact.phoneHref}
+                >
+                  {siteConfig.contact.phoneDisplay}
+                </a>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {siteConfig.contact.email}
                 </p>

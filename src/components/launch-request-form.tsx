@@ -129,11 +129,17 @@ export function LaunchRequestForm({
         throw new Error(data?.error || "Submission failed");
       }
 
+      trackFormSubmit({
+        fullName: formState.fullName,
+        email: formState.email,
+        phoneNumber: formState.phone,
+        address: formState.address,
+        zipCode: formState.zipCode,
+      });
       setIntakeEvaluation(data?.intakeEvaluation || null);
       setSchedulingRead(data?.schedulingRead || null);
       setConfirmationEmailSent(Boolean(data?.confirmationEmailSent));
       setStatus("success");
-      trackFormSubmit();
     } catch (err) {
       setErrorMessage(
         err instanceof Error
@@ -154,10 +160,10 @@ export function LaunchRequestForm({
           <h2 className="text-3xl font-bold">Request received.</h2>
           <p className="mx-auto max-w-lg text-sm leading-relaxed text-muted-foreground">
             {intakeEvaluation?.promiseFit === "strong"
-              ? "This looks like a strong mobile-fit request. We’ll follow up with the next step as soon as we can."
+              ? "This looks like a strong mobile-fit request. We'll follow up with the next step as soon as we can."
               : intakeEvaluation?.promiseFit === "conditional"
-                ? "We received your request and we’ll confirm the worksite, scope, and timing before we promise a slot."
-                : "We received your request and we’ll screen the fit carefully before we promise timing."}
+                ? "We received your request and we'll confirm the worksite, scope, and timing before we promise a slot."
+                : "We received your request and we'll screen the fit carefully before we promise timing."}
             For anything urgent, call or text directly.
           </p>
           {confirmationEmailSent ? (
@@ -230,9 +236,7 @@ export function LaunchRequestForm({
   return (
     <section className="rounded-2xl border border-border bg-card/50 p-8">
       <p className="eyebrow">Appointment Request</p>
-      <h2 className="mt-3 text-2xl font-bold">
-        One clean message, faster screening.
-      </h2>
+      <h2 className="mt-3 text-2xl font-bold">One clean message, faster screening.</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         Fill out the details below and we&apos;ll screen the job before we confirm the promise.
       </p>
@@ -459,7 +463,7 @@ export function LaunchRequestForm({
           />
         </label>
 
-        <label className="flex items-start gap-3 md:col-span-2 cursor-pointer">
+        <label className="flex cursor-pointer items-start gap-3 md:col-span-2">
           <input
             checked={smsConsent}
             className="mt-1 h-4 w-4 shrink-0 rounded border-border accent-primary"
@@ -467,11 +471,10 @@ export function LaunchRequestForm({
             type="checkbox"
           />
           <span className="text-xs leading-relaxed text-muted-foreground">
-            I agree to receive text messages from WrenchReady Mobile Mechanic
-            regarding my service request. Message and data rates may apply.
-            Message frequency varies. Reply <strong className="text-foreground">STOP</strong> to
-            opt out, <strong className="text-foreground">HELP</strong> for help. See
-            our{" "}
+            I agree to receive text messages from WrenchReady Mobile Mechanic regarding my
+            service request. Message and data rates may apply. Message frequency varies. Reply{" "}
+            <strong className="text-foreground">STOP</strong> to opt out,{" "}
+            <strong className="text-foreground">HELP</strong> for help. See our{" "}
             <Link href="/privacy" className="text-primary hover:underline">
               Privacy Policy
             </Link>{" "}

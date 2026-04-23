@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { FaqList, SectionHeading } from "@/components/marketing";
+import { trackFormSubmit } from "@/components/analytics";
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
 import { SectionOrbs } from "@/components/motion/gradient-orbs";
 import { AnimatedHeading } from "@/components/motion/animated-text";
@@ -208,6 +209,10 @@ function IntakeForm() {
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
+    const fullName = String(data.get("name") ?? "").trim();
+    const phone = String(data.get("phone") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim();
+    const address = String(data.get("address") ?? "").trim();
     const vehicle = [
       String(data.get("year") ?? "").trim(),
       String(data.get("make") ?? "").trim(),
@@ -222,12 +227,12 @@ function IntakeForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: String(data.get("name") ?? "").trim(),
-          phone: String(data.get("phone") ?? "").trim(),
-          email: String(data.get("email") ?? "").trim(),
+          fullName,
+          phone,
+          email,
           vehicle,
           serviceNeeded: serviceChoice || String(data.get("service") ?? "").trim(),
-          address: String(data.get("address") ?? "").trim(),
+          address,
           timing: "",
           notes: String(data.get("problem") ?? "").trim(),
         }),
@@ -237,6 +242,12 @@ function IntakeForm() {
         throw new Error(payload?.error || "Submission failed");
       }
       const payload = await res.json().catch(() => null);
+      trackFormSubmit({
+        fullName,
+        email,
+        phoneNumber: phone,
+        address,
+      });
       setIntakeEvaluation(payload?.intakeEvaluation || null);
       setSchedulingRead(payload?.schedulingRead || null);
       setConfirmationEmailSent(Boolean(payload?.confirmationEmailSent));
