@@ -179,9 +179,42 @@ export type PromiseProofCapture = {
   assets: PromiseProofAsset[];
 };
 
+export type PromisePartItemStatus =
+  | "research-needed"
+  | "quoted"
+  | "ordered"
+  | "ready-pickup"
+  | "picked-up"
+  | "loaded-tech"
+  | "installed"
+  | "return-needed";
+
+export type PromisePartItem = {
+  label: string;
+  partNumber?: string;
+  quantity?: number;
+  vendor?: string;
+  vendorLocation?: string;
+  sourceUrl?: string;
+  fitmentNotes?: string;
+  estimatedCost?: number;
+  requiredForVisit?: boolean;
+  status: PromisePartItemStatus;
+  notes?: string;
+};
+
+export type PromisePartsRunPlan = {
+  assignedTo?: RecordOwner | "Ops";
+  pickupWindow?: string;
+  pickupNotes?: string;
+  consolidateBy?: string;
+};
+
 export type PromiseFieldExecutionPacket = {
   serviceGoal?: string;
   partsChecklist: string[];
+  partsPlan?: PromisePartItem[];
+  partsRunPlan?: PromisePartsRunPlan;
   photosRequired: string[];
   inspectionChecklist: string[];
   handoffChecklist: string[];
@@ -480,6 +513,9 @@ export type FieldExecutionTask = {
   missingHandoffChecklist: boolean;
   missingComebackPrevention: boolean;
   closeoutNotReady: boolean;
+  paymentStatus?: PromisePaymentCollectionStatus;
+  balanceDueAmount?: number;
+  customerStatusPath: string;
   taskPriority: "high" | "medium" | "low";
   nextStep: string;
 };
@@ -496,12 +532,45 @@ export type FieldExecutionSnapshot = {
   tasks: FieldExecutionTask[];
 };
 
+export type PartsPlanningTask = {
+  promiseId: string;
+  customerName: string;
+  owner: RecordOwner;
+  territory: string;
+  serviceScope: string;
+  scheduledWindowLabel: string;
+  customerStatusPath: string;
+  outstandingParts: PromisePartItem[];
+  pickupWindow?: string;
+  pickupAssignedTo?: RecordOwner | "Ops";
+  pickupNotes?: string;
+  estimatedPartsCost: number;
+  readyPickupCount: number;
+  requiredCount: number;
+  loadedCount: number;
+  taskPriority: "high" | "medium" | "low";
+  nextStep: string;
+  fieldExecution?: PromiseFieldExecutionPacket;
+};
+
+export type PartsPlanningSnapshot = {
+  generatedAt: string;
+  total: number;
+  researching: number;
+  ordered: number;
+  readyPickup: number;
+  loadedTech: number;
+  estimatedPartsCost: number;
+  tasks: PartsPlanningTask[];
+};
+
 export type CollectionTask = {
   promiseId: string;
   customerName: string;
   owner: RecordOwner;
   territory: string;
   serviceScope: string;
+  customerStatusPath: string;
   status: PromisePaymentCollectionStatus;
   method?: PromisePaymentMethod;
   amountCollected?: number;
