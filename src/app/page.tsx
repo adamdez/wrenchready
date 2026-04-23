@@ -5,9 +5,9 @@ import { getPublicProofSnapshot } from "@/lib/promise-crm/server";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Mobile Mechanic in Spokane, WA — Batteries, Brakes & Diagnostics | WrenchReady",
+  title: "Mobile Mechanic in Spokane, WA | Battery, Brake and Diagnostic Service",
   description:
-    "WrenchReady is a mobile mechanic in Spokane, WA. We come to your driveway or workplace for batteries, brakes, diagnostics, and inspections — clear quotes and approval before added work.",
+    "Need a mobile mechanic in Spokane, WA? WrenchReady comes to your driveway or workplace for battery replacement, brake repair, paid diagnostics, and inspections with clear quotes and approval before added work.",
   path: "/",
   keywords: [
     "mobile mechanic Spokane WA",
@@ -40,17 +40,51 @@ export default async function Home() {
     name: story.customerLabel,
     text: story.quote,
   }));
+  const brandImageUrls = [
+    absoluteUrl("/wrenchready-hero-service.webp"),
+    absoluteUrl("/wrenchready-battery-diagnostic.webp"),
+    absoluteUrl("/wrenchready-brake-service.webp"),
+    absoluteUrl("/wrenchready-technician-arrival.webp"),
+  ];
+  const organizationId = absoluteUrl("/#organization");
+  const localBusinessId = absoluteUrl("/#localbusiness");
+
+  const organizationStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": organizationId,
+    name: siteConfig.name,
+    url: siteConfig.domain,
+    logo: absoluteUrl("/wr-logo-full.png"),
+    image: brandImageUrls,
+    sameAs: ["https://www.google.com/maps/place/WrenchReady+Mobile"],
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        contactType: "customer service",
+        telephone: siteConfig.contact.phoneDisplay,
+        areaServed: "Spokane metro",
+        availableLanguage: "English",
+      },
+    ],
+  };
 
   const businessStructuredData = {
     "@context": "https://schema.org",
     "@type": "AutomotiveBusiness",
+    "@id": localBusinessId,
     name: siteConfig.name,
     url: siteConfig.domain,
     description: siteConfig.description,
     email: siteConfig.contact.email,
     telephone: siteConfig.contact.phoneDisplay,
     priceRange: "$$",
-    image: absoluteUrl("/opengraph-image"),
+    logo: absoluteUrl("/wr-logo-full.png"),
+    image: brandImageUrls,
+    sameAs: ["https://www.google.com/maps/place/WrenchReady+Mobile"],
+    parentOrganization: {
+      "@id": organizationId,
+    },
     geo: {
       "@type": "GeoCoordinates",
       latitude: 47.6588,
@@ -112,7 +146,7 @@ export default async function Home() {
 
   return (
     <>
-      <StructuredData data={[businessStructuredData, faqStructuredData]} />
+      <StructuredData data={[organizationStructuredData, businessStructuredData, faqStructuredData]} />
       <HomePage publicProofStories={publicProof.stories} />
     </>
   );

@@ -1,10 +1,11 @@
+import { StructuredData } from "@/components/structured-data";
 import { LocationsPageClient } from "@/components/locations-page-client";
-import { buildMetadata } from "@/lib/seo";
+import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Mobile Mechanic Service Areas in Spokane",
+  title: "Where We Work in Spokane | Mobile Mechanic Service Areas",
   description:
-    "See where WrenchReady Mobile serves drivers across Spokane and nearby metro neighborhoods, including Spokane, Spokane Valley, Liberty Lake, and South Hill, with focused routes and honest screening.",
+    "See where WrenchReady works across Spokane and nearby metro neighborhoods, including Spokane, Spokane Valley, Liberty Lake, and South Hill, with focused routes and honest screening.",
   path: "/locations",
   keywords: [
     "mobile mechanic Spokane Valley",
@@ -14,6 +15,30 @@ export const metadata = buildMetadata({
   ],
 });
 
+const breadcrumbData = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: absoluteUrl("/"),
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Locations",
+      item: absoluteUrl("/locations"),
+    },
+  ],
+};
+
 export default function LocationsPage() {
-  return <LocationsPageClient />;
+  return (
+    <>
+      <StructuredData data={breadcrumbData} />
+      <LocationsPageClient />
+    </>
+  );
 }

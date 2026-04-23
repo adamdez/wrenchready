@@ -1,10 +1,11 @@
+import { StructuredData } from "@/components/structured-data";
 import { ServicesPageClient } from "@/components/services-page-client";
-import { buildMetadata } from "@/lib/seo";
+import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Mobile Auto Repair Services in Spokane, WA | WrenchReady",
+  title: "Mobile Mechanic Services in Spokane, WA | Batteries, Brakes and More",
   description:
-    "WrenchReady Mobile handles batteries, brakes, paid diagnostics, pre-purchase inspections, and routine maintenance for Spokane drivers — at your driveway or workplace.",
+    "See WrenchReady's Spokane mobile mechanic services for batteries, brakes, paid diagnostics, pre-purchase inspections, and routine maintenance at your driveway or workplace.",
   path: "/services",
   keywords: [
     "mobile auto repair Spokane",
@@ -14,6 +15,30 @@ export const metadata = buildMetadata({
   ],
 });
 
+const breadcrumbData = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: absoluteUrl("/"),
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Services",
+      item: absoluteUrl("/services"),
+    },
+  ],
+};
+
 export default function ServicesPage() {
-  return <ServicesPageClient />;
+  return (
+    <>
+      <StructuredData data={breadcrumbData} />
+      <ServicesPageClient />
+    </>
+  );
 }

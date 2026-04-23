@@ -21,7 +21,7 @@ const bodyFont = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.domain),
   title: {
-    default: "Mobile Mechanic in Spokane, WA | WrenchReady",
+    default: "Mobile Mechanic in Spokane, WA | Batteries, Brakes and Diagnostics",
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
@@ -47,6 +47,16 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    "max-image-preview": "large",
+    "max-snippet": -1,
+    "max-video-preview": -1,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 

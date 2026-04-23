@@ -4,7 +4,7 @@ import { FaqList, SectionHeading } from "@/components/marketing";
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion/fade-in";
 import { SectionOrbs } from "@/components/motion/gradient-orbs";
 import { AnimatedHeading } from "@/components/motion/animated-text";
-import { homeFaqs, launchWedges, siteConfig } from "@/data/site";
+import { homeFaqs, launchWedges, locations, siteConfig } from "@/data/site";
 import type { PublicProofStory } from "@/lib/promise-crm/types";
 import {
   Shield,
@@ -174,6 +174,8 @@ const processSteps = [
     body: "If inspection changes the plan, we explain it first. No surprise scope.",
   },
 ];
+
+const primaryServiceAreas = locations.filter((location) => !location.parentSlug);
 
 /* ───────────────────────── Intake Form ───────────────────────── */
 
@@ -660,6 +662,69 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── AREAS WE SERVE ── */}
+      <section id="areas" className="relative border-y border-border">
+        <SectionOrbs variant="blue" />
+        <div className="shell section-space">
+          <SectionHeading
+            eyebrow="Service Areas"
+            title="Focused Spokane metro coverage so timing stays reliable."
+            copy="We serve Spokane plus nearby metro neighborhoods where driveway and workplace service stays efficient. That helps us protect arrival windows and keep the work quality high."
+            tint="blue"
+          />
+
+          <Stagger className="mt-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-4" staggerDelay={0.08}>
+            {primaryServiceAreas.map((location) => (
+              <StaggerItem key={location.slug}>
+                <Link
+                  href={`/locations/${location.slug}`}
+                  className="group flex h-full flex-col rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm transition-all hover:border-primary/20 hover:bg-card/70"
+                >
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <MapPin className="h-5 w-5" />
+                  </span>
+                  <h3 className="mt-4 text-xl font-bold text-foreground">{location.name}</h3>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                    {location.teaser}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {location.neighborhoods.slice(0, 3).map((neighborhood) => (
+                      <span
+                        key={neighborhood}
+                        className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground"
+                      >
+                        {neighborhood}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="mt-4 flex items-center gap-1.5 text-sm font-medium text-primary transition-transform group-hover:translate-x-1">
+                    See {location.name} service details <ArrowRight className="h-4 w-4" />
+                  </span>
+                </Link>
+              </StaggerItem>
+            ))}
+          </Stagger>
+
+          <FadeIn delay={0.25}>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/locations"
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
+              >
+                Browse All Service Areas
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/contact"
+                className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+              >
+                Check Your Address
+              </Link>
+            </div>
+          </FadeIn>
         </div>
       </section>
 

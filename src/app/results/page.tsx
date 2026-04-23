@@ -5,9 +5,9 @@ import { buildMetadata } from "@/lib/seo";
 export const dynamic = "force-dynamic";
 
 export const metadata = buildMetadata({
-  title: "Real Service Results | WrenchReady Mobile",
+  title: "Real Mobile Mechanic Results in Spokane",
   description:
-    "Real WrenchReady service proof pulled from completed visits with permission-safe recap, proof, and next-step detail.",
+    "See real WrenchReady visit results in Spokane with permission-safe proof, recap detail, and the next-step clarity customers actually received.",
   path: "/results",
 });
 

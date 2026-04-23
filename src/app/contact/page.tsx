@@ -2,9 +2,9 @@ import { ContactPageClient } from "@/components/contact-page-client";
 import { buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Request Service",
+  title: "Request Mobile Mechanic Service in Spokane",
   description:
-    "Start a screened WrenchReady Mobile request with your vehicle details, service request, parking notes, and Spokane-area location.",
+    "Request Spokane mobile mechanic service from WrenchReady with your vehicle details, parking notes, and service request so we can screen the right next step.",
   path: "/contact",
   keywords: [
     "request mobile mechanic Spokane",

@@ -68,7 +68,7 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
                 { label: "Home", href: "/#home" },
                 { label: "Services", href: "/#services" },
                 { label: "How It Works", href: "/#how-it-works" },
-                { label: "Areas We Serve", href: "/#areas" },
+                { label: "Areas We Serve", href: "/locations" },
                 { label: "Reviews", href: "/#reviews" },
               ].map((item) => (
                 <Link
