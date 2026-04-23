@@ -8,6 +8,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { siteConfig } from "@/data/site";
 
 type PromiseOutboundEmailProps = {
   customerName: string;
@@ -77,7 +78,7 @@ export function PromiseOutboundEmail({
               {headline}
             </Heading>
             <Text style={{ color: "#5e6a6a", fontSize: "15px", margin: "12px 0 0" }}>
-              {customerName}, this is part of keeping the visit clear from start to finish.
+              {customerName}, your request is in. We will follow up with clear next steps.
             </Text>
           </Section>
 
@@ -95,6 +96,22 @@ export function PromiseOutboundEmail({
               {paragraph}
             </Text>
           ))}
+
+          <Section
+            style={{
+              borderTop: "1px solid #e3d5bf",
+              marginTop: "24px",
+              paddingTop: "18px",
+            }}
+          >
+            <Text style={{ color: "#5e6a6a", fontSize: "13px", lineHeight: 1.6, margin: 0 }}>
+              WrenchReady Mobile
+              <br />
+              {siteConfig.contact.phoneDisplay}
+              <br />
+              {siteConfig.contact.email}
+            </Text>
+          </Section>
         </Container>
       </Body>
     </Html>

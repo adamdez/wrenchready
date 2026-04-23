@@ -6,6 +6,7 @@ import { createInboundFromAppointment } from "@/lib/promise-crm/server";
 import { evaluateIntake } from "@/lib/promise-crm/intake";
 import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
 import schedulingEngine from "@/lib/scheduling/engine";
+import { siteConfig } from "@/data/site";
 
 type AppointmentPayload = {
   fullName: string;
@@ -117,21 +118,22 @@ async function sendCustomerConfirmationEmail(
 
   const promiseFitMessage =
     intakeEvaluation.promiseFit === "strong"
-      ? "This looks like a strong mobile-fit request, so the next step is a fast confirmation call or text."
+      ? "This looks like a good fit for mobile service. We will follow up by call or text to confirm timing and next steps."
       : intakeEvaluation.promiseFit === "conditional"
-        ? "We received the request and need to confirm the worksite, scope, or timing before we promise a slot."
-        : "We received the request and will screen the fit carefully before we promise timing.";
+        ? "We got your request. Before we promise a slot, we just need to confirm the worksite, scope, or timing."
+        : "We got your request and will review the fit carefully before we promise timing.";
 
   const schedulingMessage = schedulingRead.territorySupported
-    ? `${schedulingRead.customerWindowSummary} Your requested timing was recorded as: ${payload.timing || "not specified"}.`
+    ? `${schedulingRead.customerWindowSummary} We recorded your requested timing as: ${payload.timing || "not specified"}.`
     : "Your address needs a quick service-area check before we promise timing.";
 
   const body = [
-    `We received your request for ${payload.vehicle}.`,
+    `We got your request for your ${payload.vehicle}.`,
     promiseFitMessage,
-    `Service lane: ${intakeEvaluation.serviceLane}.`,
+    `Requested service: ${payload.serviceNeeded || intakeEvaluation.serviceLane}.`,
     schedulingMessage,
-    "If anything about the job, parking, or symptoms changes, reply to this email or call/text us so we can keep the promise honest.",
+    `If anything changes, reply to this email or call/text WrenchReady at ${siteConfig.contact.phoneDisplay}.`,
+    `WrenchReady Mobile\n${siteConfig.contact.phoneDisplay}\n${siteConfig.contact.email}`,
   ].join("\n\n");
 
   await sendPromiseOutboundEmail({
