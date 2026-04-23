@@ -7,6 +7,7 @@ import {
   ClipboardList,
   DollarSign,
   HandCoins,
+  PackageSearch,
   Phone,
   ShieldAlert,
   TimerReset,
@@ -504,6 +505,13 @@ export function PromiseBoard(props: PromiseBoardProps) {
           >
             <DollarSign className="h-4 w-4" />
             Collections
+          </Link>
+          <Link
+            href="/ops/parts"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
+          >
+            <PackageSearch className="h-4 w-4" />
+            Parts planning
           </Link>
           <Link
             href="/ops/warranty"

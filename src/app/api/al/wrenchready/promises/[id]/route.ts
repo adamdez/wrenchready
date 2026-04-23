@@ -132,6 +132,25 @@ type UpdatePromisePayload = {
   fieldExecution?: {
     serviceGoal?: string;
     partsChecklist?: string[];
+    partsPlan?: Array<{
+      label: string;
+      partNumber?: string;
+      quantity?: number;
+      vendor?: string;
+      vendorLocation?: string;
+      sourceUrl?: string;
+      fitmentNotes?: string;
+      estimatedCost?: number;
+      requiredForVisit?: boolean;
+      status?: string;
+      notes?: string;
+    }>;
+    partsRunPlan?: {
+      assignedTo?: string;
+      pickupWindow?: string;
+      pickupNotes?: string;
+      consolidateBy?: string;
+    };
     photosRequired?: string[];
     inspectionChecklist?: string[];
     handoffChecklist?: string[];
@@ -404,6 +423,39 @@ function isStringArray(value: unknown) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
+function isPartItemPayload(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.label === "string" &&
+    (candidate.partNumber === undefined || typeof candidate.partNumber === "string") &&
+    (candidate.quantity === undefined || typeof candidate.quantity === "number") &&
+    (candidate.vendor === undefined || typeof candidate.vendor === "string") &&
+    (candidate.vendorLocation === undefined || typeof candidate.vendorLocation === "string") &&
+    (candidate.sourceUrl === undefined || typeof candidate.sourceUrl === "string") &&
+    (candidate.fitmentNotes === undefined || typeof candidate.fitmentNotes === "string") &&
+    (candidate.estimatedCost === undefined || typeof candidate.estimatedCost === "number") &&
+    (candidate.requiredForVisit === undefined ||
+      typeof candidate.requiredForVisit === "boolean") &&
+    (candidate.status === undefined || typeof candidate.status === "string") &&
+    (candidate.notes === undefined || typeof candidate.notes === "string")
+  );
+}
+
+function isPartsRunPlanPayload(value: unknown) {
+  if (value === null || value === undefined) return true;
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    (candidate.assignedTo === undefined || typeof candidate.assignedTo === "string") &&
+    (candidate.pickupWindow === undefined || typeof candidate.pickupWindow === "string") &&
+    (candidate.pickupNotes === undefined || typeof candidate.pickupNotes === "string") &&
+    (candidate.consolidateBy === undefined || typeof candidate.consolidateBy === "string")
+  );
+}
+
 function isFieldExecutionPayload(value: unknown) {
   if (value === null || value === undefined) return true;
   if (!value || typeof value !== "object") return false;
@@ -412,6 +464,9 @@ function isFieldExecutionPayload(value: unknown) {
   return (
     (candidate.serviceGoal === undefined || typeof candidate.serviceGoal === "string") &&
     (candidate.partsChecklist === undefined || isStringArray(candidate.partsChecklist)) &&
+    (candidate.partsPlan === undefined ||
+      (Array.isArray(candidate.partsPlan) && candidate.partsPlan.every(isPartItemPayload))) &&
+    isPartsRunPlanPayload(candidate.partsRunPlan) &&
     (candidate.photosRequired === undefined || isStringArray(candidate.photosRequired)) &&
     (candidate.inspectionChecklist === undefined ||
       isStringArray(candidate.inspectionChecklist)) &&

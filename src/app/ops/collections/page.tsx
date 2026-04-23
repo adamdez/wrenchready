@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CreditCard } from "lucide-react";
 import { CollectionActionForm } from "@/components/collection-action-form";
+import { OpsPaymentLinkForm } from "@/components/ops-payment-link-form";
 import { getCollectionSnapshot } from "@/lib/promise-crm/server";
 
 export const metadata: Metadata = {
@@ -83,6 +84,12 @@ export default async function CollectionsPage() {
                   Customer can use online balance checkout from the public status page.
                 </p>
               ) : null}
+              <OpsPaymentLinkForm
+                canRequestBalance={Boolean(task.balanceCheckoutReady)}
+                canRequestDeposit={task.status === "deposit-requested"}
+                customerStatusPath={`/status/${task.promiseId}`}
+                promiseId={task.promiseId}
+              />
               <CollectionActionForm task={task} />
             </div>
           )) : (
