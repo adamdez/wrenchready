@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { Phone, MessageSquare, Calendar, Wrench, MapPin, ArrowRight, Menu, X, ExternalLink, Mail, Shield } from "lucide-react";
 import { getServicesInPriorityOrder, locations, services, siteConfig } from "@/data/site";
@@ -31,6 +32,48 @@ function BrandMark() {
           Spokane&apos;s Premier Mobile Auto Service
         </span>
       </span>
+    </Link>
+  );
+}
+
+function scrollToSection(sectionId: string) {
+  if (typeof window === "undefined") return false;
+
+  const section = document.getElementById(sectionId);
+  if (!section) return false;
+
+  section.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.history.replaceState(null, "", `/#${sectionId}`);
+  return true;
+}
+
+function SectionLink({
+  sectionId,
+  className,
+  children,
+  onNavigate,
+}: {
+  sectionId: string;
+  className: string;
+  children: ReactNode;
+  onNavigate?: () => void;
+}) {
+  const pathname = usePathname();
+
+  return (
+    <Link
+      href={`/#${sectionId}`}
+      scroll
+      onClick={(event) => {
+        onNavigate?.();
+
+        if (pathname === "/" && scrollToSection(sectionId)) {
+          event.preventDefault();
+        }
+      }}
+      className={className}
+    >
+      {children}
     </Link>
   );
 }
@@ -64,22 +107,41 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
               </button>
             </div>
             <div className="space-y-1 p-4">
-              {[
-                { label: "Home", href: "/#home" },
-                { label: "Services", href: "/#services" },
-                { label: "How It Works", href: "/#how-it-works" },
-                { label: "Areas We Serve", href: "/locations" },
-                { label: "Reviews", href: "/#reviews" },
-              ].map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onClose}
-                  className="block rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              <SectionLink
+                sectionId="home"
+                onNavigate={onClose}
+                className="block rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                Home
+              </SectionLink>
+              <SectionLink
+                sectionId="services"
+                onNavigate={onClose}
+                className="block rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                Services
+              </SectionLink>
+              <SectionLink
+                sectionId="how-it-works"
+                onNavigate={onClose}
+                className="block rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                How It Works
+              </SectionLink>
+              <Link
+                href="/locations"
+                onClick={onClose}
+                className="block rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                Areas We Serve
+              </Link>
+              <SectionLink
+                sectionId="reviews"
+                onNavigate={onClose}
+                className="block rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                Reviews
+              </SectionLink>
               <div className="my-3 h-px bg-border" />
               <a
                 href={siteConfig.contact.phoneHref}
@@ -88,14 +150,14 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
                 <Phone className="h-4 w-4" style={{ color: "var(--wr-teal)" }} />
                 {siteConfig.contact.phoneDisplay}
               </a>
-              <Link
-                href="/#book"
-                onClick={onClose}
+              <SectionLink
+                sectionId="book"
+                onNavigate={onClose}
                 className="mt-2 flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
               >
                 <Calendar className="h-4 w-4" />
                 Request
-              </Link>
+              </SectionLink>
             </div>
           </motion.nav>
         </>
@@ -114,49 +176,49 @@ export function SiteShell({ children }: SiteShellProps) {
         <div className="shell flex items-center justify-between gap-4 py-3">
           <BrandMark />
           <nav className="hidden items-center gap-1 lg:flex">
-            <Link
-              href="/#home"
+            <SectionLink
+              sectionId="home"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Home
-            </Link>
+            </SectionLink>
             <Link
               href="/services"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Services
             </Link>
-            <Link
-              href="/#how-it-works"
+            <SectionLink
+              sectionId="how-it-works"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               How It Works
-            </Link>
+            </SectionLink>
             <Link
               href="/locations"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Areas We Serve
             </Link>
-            <Link
-              href="/#reviews"
+            <SectionLink
+              sectionId="reviews"
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               Reviews
-            </Link>
+            </SectionLink>
             <a
               href={siteConfig.contact.phoneHref}
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               {siteConfig.contact.phoneDisplay}
             </a>
-            <Link
-              href="/#book"
+            <SectionLink
+              sectionId="book"
               className="ml-2 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
             >
               <Calendar className="h-4 w-4" />
               Request
-            </Link>
+            </SectionLink>
           </nav>
           <div className="flex items-center gap-2 lg:hidden">
             <a
@@ -165,12 +227,12 @@ export function SiteShell({ children }: SiteShellProps) {
             >
               <Phone className="h-4 w-4" />
             </a>
-            <Link
-              href="/#book"
+            <SectionLink
+              sectionId="book"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
             >
               Book
-            </Link>
+            </SectionLink>
             <button
               onClick={() => setMobileMenuOpen(true)}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-secondary"
@@ -255,28 +317,28 @@ export function SiteShell({ children }: SiteShellProps) {
             <p className="mt-8 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Quick Links</p>
             <ul className="mt-4 space-y-2.5">
               <li>
-                <Link
-                  href="/#how-it-works"
+                <SectionLink
+                  sectionId="how-it-works"
                   className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   How It Works
-                </Link>
+                </SectionLink>
               </li>
               <li>
-                <Link
-                  href="/#reviews"
+                <SectionLink
+                  sectionId="reviews"
                   className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Reviews
-                </Link>
+                </SectionLink>
               </li>
               <li>
-                <Link
-                  href="/#faq"
+                <SectionLink
+                  sectionId="faq"
                   className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   FAQ
-                </Link>
+                </SectionLink>
               </li>
               <li>
                 <Link
