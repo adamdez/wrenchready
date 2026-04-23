@@ -1,5 +1,6 @@
 import type { InboundRecord, PromiseRecord } from "@/lib/promise-crm/types";
 import { readEnv } from "@/lib/env";
+import { sendSlackAlert } from "@/lib/slack";
 import { getOpsNotifyPhones, sendTwilioSms } from "@/lib/twilio";
 
 function alertsEnabled() {
@@ -17,8 +18,21 @@ async function sendOpsSms(message: string) {
   return true;
 }
 
+async function sendOpsSlack(message: string) {
+  return sendSlackAlert(message);
+}
+
+async function sendOpsAlerts(message: string) {
+  const [smsSent, slackSent] = await Promise.all([
+    sendOpsSms(message),
+    sendOpsSlack(message),
+  ]);
+
+  return smsSent || slackSent;
+}
+
 export async function sendNewAppointmentAlert(inbound: InboundRecord) {
-  return sendOpsSms(
+  return sendOpsAlerts(
     [
       "WR new apt",
       `${inbound.customer.name} / ${inbound.requestedService}`,
@@ -31,7 +45,7 @@ export async function sendNewAppointmentAlert(inbound: InboundRecord) {
 export async function sendHighRiskInboundAlert(inbound: InboundRecord) {
   if (inbound.readinessRisk !== "high") return false;
 
-  return sendOpsSms(
+  return sendOpsAlerts(
     [
       "WrenchReady high-risk inbound",
       `${inbound.customer.name} / ${inbound.requestedService}`,
@@ -54,7 +68,7 @@ export async function sendPromiseOpsAlert(promise: PromiseRecord) {
   const riskLine =
     promise.topRisks[0] || promise.nextAction || "Review promise detail in ops.";
 
-  return sendOpsSms(
+  return sendOpsAlerts(
     [
       header,
       `${promise.customer.name} / ${promise.serviceScope}`,
