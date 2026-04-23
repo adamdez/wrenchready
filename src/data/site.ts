@@ -52,9 +52,9 @@ export const siteConfig = {
   areaServed: ["Spokane", "Spokane Valley", "Liberty Lake", "South Hill"],
   contact: {
     email: "admin@wrenchreadymobile.com",
-    phoneDisplay: "(509) 309-0617",
-    phoneHref: "tel:+15093090617",
-    smsHref: "sms:+15093090617",
+    phoneDisplay: "(509) 590-7091",
+    phoneHref: "tel:+15095907091",
+    smsHref: "sms:+15095907091",
     schedule: "Spokane County mobile service",
   },
   globalKeywords: [

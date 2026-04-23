@@ -88,10 +88,10 @@ export default function TermsPage() {
             </a>{" "}
             or{" "}
             <a
-              href="tel:+15093090617"
+                    href="tel:+15095907091"
               className="text-primary hover:underline"
             >
-              (509) 309-0617
+                    (509) 590-7091
             </a>
             .
           </p>
@@ -161,10 +161,10 @@ export default function TermsPage() {
             <li>
               Phone:{" "}
               <a
-                href="tel:+15093090617"
+                    href="tel:+15095907091"
                 className="text-primary hover:underline"
               >
-                (509) 309-0617
+                    (509) 590-7091
               </a>
             </li>
           </ul>
