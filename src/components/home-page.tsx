@@ -36,6 +36,8 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { useState, type FormEvent } from "react";
 
+const APPOINTMENT_REQUEST_SEND_TO = "AW-18052940746/Ku9vCIGEjKEcEMqHqKBD";
+
 /* ───────────────────────── helpers ───────────────────────── */
 
 function scrollToBook() {
@@ -207,6 +209,7 @@ function IntakeForm() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submitting) return;
     const form = e.currentTarget;
     const data = new FormData(form);
     const fullName = String(data.get("name") ?? "").trim();
@@ -248,6 +251,16 @@ function IntakeForm() {
         phoneNumber: phone,
         address,
       });
+      if (typeof window !== "undefined") {
+        const globalWindow = window as Window & {
+          gtag?: (command: string, eventName: string, params?: Record<string, string>) => void;
+        };
+        if (typeof globalWindow.gtag === "function") {
+          globalWindow.gtag("event", "conversion", {
+            send_to: APPOINTMENT_REQUEST_SEND_TO,
+          });
+        }
+      }
       setIntakeEvaluation(payload?.intakeEvaluation || null);
       setSchedulingRead(payload?.schedulingRead || null);
       setConfirmationEmailSent(Boolean(payload?.confirmationEmailSent));

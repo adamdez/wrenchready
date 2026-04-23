@@ -7,6 +7,8 @@ import { trackFormSubmit } from "@/components/analytics";
 import { CheckCircle2, Phone, Send, RotateCcw } from "lucide-react";
 import Link from "next/link";
 
+const APPOINTMENT_REQUEST_SEND_TO = "AW-18052940746/Ku9vCIGEjKEcEMqHqKBD";
+
 type RequestFormState = {
   fullName: string;
   email: string;
@@ -98,6 +100,7 @@ export function LaunchRequestForm({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (status === "submitting") return;
 
     if (!formState.vehicle.trim()) {
       setErrorMessage("Please enter the vehicle information so we can screen the job.");
@@ -136,6 +139,16 @@ export function LaunchRequestForm({
         address: formState.address,
         zipCode: formState.zipCode,
       });
+      if (typeof window !== "undefined") {
+        const globalWindow = window as Window & {
+          gtag?: (command: string, eventName: string, params?: Record<string, string>) => void;
+        };
+        if (typeof globalWindow.gtag === "function") {
+          globalWindow.gtag("event", "conversion", {
+            send_to: APPOINTMENT_REQUEST_SEND_TO,
+          });
+        }
+      }
       setIntakeEvaluation(data?.intakeEvaluation || null);
       setSchedulingRead(data?.schedulingRead || null);
       setConfirmationEmailSent(Boolean(data?.confirmationEmailSent));
