@@ -168,7 +168,12 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 export function SiteShell({ children }: SiteShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
   const footerServices = getServicesInPriorityOrder(services).slice(0, 5);
+
+  if (pathname === "/ops-slate") {
+    return children;
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -271,17 +276,17 @@ export function SiteShell({ children }: SiteShellProps) {
                 <Phone className="h-4 w-4" />
                 Call Now
               </a>
-              <a
-                href={siteConfig.contact.smsHref}
+              <Link
+                href="/contact"
                 className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary"
               >
                 <MessageSquare className="h-4 w-4" />
-                Text Us
-              </a>
+                Request
+              </Link>
             </div>
             {/* Google Business Profile link */}
             <a
-              href="https://www.google.com/maps/place/WrenchReady+Mobile"
+              href={siteConfig.profiles.googleBusiness}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -440,13 +445,13 @@ export function SiteShell({ children }: SiteShellProps) {
             <Phone className="h-4 w-4" />
             Call
           </a>
-          <a
+          <Link
+            href="/contact"
             className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border py-3 text-sm font-medium text-foreground"
-            href={siteConfig.contact.smsHref}
           >
             <MessageSquare className="h-4 w-4" />
-            Text
-          </a>
+            Request
+          </Link>
           <Link
             className="inline-flex items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 py-3 text-sm font-medium text-primary"
             href="/contact"

@@ -57,7 +57,7 @@ export default async function Home() {
     url: siteConfig.domain,
     logo: absoluteUrl("/wr-logo-full.png"),
     image: brandImageUrls,
-    sameAs: ["https://www.google.com/maps/place/WrenchReady+Mobile"],
+    sameAs: [siteConfig.profiles.googleBusiness],
     contactPoint: [
       {
         "@type": "ContactPoint",
@@ -81,7 +81,8 @@ export default async function Home() {
     priceRange: "$$",
     logo: absoluteUrl("/wr-logo-full.png"),
     image: brandImageUrls,
-    sameAs: ["https://www.google.com/maps/place/WrenchReady+Mobile"],
+    sameAs: [siteConfig.profiles.googleBusiness],
+    hasMap: siteConfig.profiles.googleBusiness,
     parentOrganization: {
       "@id": organizationId,
     },

@@ -52,10 +52,13 @@ export const siteConfig = {
   areaServed: ["Spokane", "Spokane Valley", "Liberty Lake", "South Hill"],
   contact: {
     email: "admin@wrenchreadymobile.com",
-    phoneDisplay: "(509) 590-7091",
-    phoneHref: "tel:+15095907091",
-    smsHref: "sms:+15095907091",
+    phoneDisplay: "(509) 309-0617",
+    phoneHref: "tel:+15093090617",
     schedule: "Spokane metro mobile service",
+  },
+  profiles: {
+    googleBusiness:
+      "https://www.google.com/search?kgmid=/g/11nblfp_kv&q=WrenchReady+Mobile",
   },
   globalKeywords: [
     "mobile mechanic Spokane WA",
@@ -784,7 +787,7 @@ export const locations: Location[] = [
     headline:
       "Battery, diagnostic, and no-start work during your lunch break.",
     teaser:
-      "Park in your office lot, text us the spot number, stay at your desk. High-fit work gets the downtown treatment without pretending every repair belongs in a garage.",
+      "Park in your office lot, share the spot number in the request form, stay at your desk. High-fit work gets the downtown treatment without pretending every repair belongs in a garage.",
     metaDescription:
       "Book a mobile mechanic in Downtown Spokane, WA. Battery, diagnostic, brake, and inspection work at your office lot or parking garage during the workday.",
     neighborhoods: ["West End", "Riverside", "Davenport District"],
