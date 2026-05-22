@@ -66,6 +66,22 @@ export function ServicePageClient({
         </div>
       </section>
 
+      <section className="border-y border-border bg-card/30">
+        <div className="shell py-10">
+          <FadeIn>
+            <div className="max-w-3xl">
+              <p className="eyebrow">Direct Answer</p>
+              <h2 className="mt-3 text-2xl font-bold">
+                Can WrenchReady handle this in Spokane?
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+                {service.directAnswer}
+              </p>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
       {/* What's Included + Ideal For */}
       <section className="shell section-space">
         <div className="grid gap-6 lg:grid-cols-2">

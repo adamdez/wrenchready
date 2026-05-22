@@ -13,6 +13,8 @@ WrenchReady Mobile is a mobile mechanic and mobile auto repair business serving 
 - pre-purchase inspection Spokane
 - no-start mobile mechanic Spokane
 - mobile oil change Spokane
+- mechanic that comes to your house Spokane
+- car diagnostic at home Spokane
 
 ## Key pages
 - ${siteConfig.domain}/

@@ -71,7 +71,7 @@ export default async function Home() {
 
   const businessStructuredData = {
     "@context": "https://schema.org",
-    "@type": "AutomotiveBusiness",
+    "@type": ["AutoRepair", "AutomotiveBusiness"],
     "@id": localBusinessId,
     name: siteConfig.name,
     url: siteConfig.domain,

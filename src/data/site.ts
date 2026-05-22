@@ -9,6 +9,7 @@ export type Service = {
   seoTitle: string;
   headline: string;
   teaser: string;
+  directAnswer: string;
   metaDescription: string;
   priceFrom: string;
   duration: string;
@@ -224,6 +225,11 @@ export const homeFaqs: Faq[] = [
       "No. Battery work is one of the clearest mobile jobs, but WrenchReady handles a wider set of high-fit services including no-start evaluation, brake work, paid diagnostics, inspections, and selected common repairs.",
   },
   {
+    question: "Does WrenchReady come to my house or workplace in Spokane?",
+    answer:
+      "Yes, when the job is a good mobile fit. WrenchReady Mobile comes to driveways, workplaces, and safe parking locations across the Spokane metro for batteries, brakes, diagnostics, inspections, oil changes, and other route-friendly work.",
+  },
+  {
     question: "What if I am not sure what is wrong?",
     answer:
       "If the problem is not obvious, we will say so. In those cases, diagnosis is the first service. We explain that upfront so you know what the visit is for and what happens after the findings.",
@@ -282,6 +288,8 @@ export const services: Service[] = [
     headline: "Oil change at your place, with a quick look around.",
     teaser:
       "Fresh oil, the right filter, and a simple inspection so routine maintenance stays convenient without turning into a shop day.",
+    directAnswer:
+      "Yes, WrenchReady Mobile offers mobile oil changes in Spokane when the vehicle, oil spec, parking setup, and route fit. The visit includes fresh oil, the correct filter, and a quick look at fluids, lights, leaks, tires, and visible wear so routine maintenance does not require a shop drop-off.",
     metaDescription:
       "Book a mobile oil change in Spokane, WA. Fresh oil, the right filter, and a quick inspection — routine maintenance at your driveway or workplace with clear notes on what to watch next.",
     priceFrom: "From $85",
@@ -340,6 +348,8 @@ export const services: Service[] = [
     headline: "Brake service with an inspection first.",
     teaser:
       "Squealing, grinding, vibration, or soft pedal? We inspect the system, explain what is worn, and quote the work clearly before anything changes.",
+    directAnswer:
+      "WrenchReady Mobile handles mobile brake repair in Spokane for pad-and-rotor jobs that fit a safe, level driveway or parking lot. The visit starts with an inspection, then the repair is quoted clearly before parts go on or the scope changes.",
     metaDescription:
       "Need mobile brake repair in Spokane, WA? WrenchReady Mobile handles brake pad and rotor service at your home or workplace with clear inspection notes.",
     priceFrom: "From $280 per axle",
@@ -398,6 +408,8 @@ export const services: Service[] = [
     headline: "Battery service that starts with a test.",
     teaser:
       "If the car will not start, we come to you, test the battery and charging system, and replace the battery only if that is the real problem.",
+    directAnswer:
+      "WrenchReady Mobile provides mobile battery replacement in Spokane for cars that will not start at home, work, or another safe parking spot. The battery and charging system are tested first, and the battery is replaced only when testing shows it is the real no-start cause.",
     metaDescription:
       "Get mobile battery replacement in Spokane, WA with on-site testing, installation, and a clear explanation of what caused the no-start condition.",
     priceFrom: "From $180 installed",
@@ -456,6 +468,8 @@ export const services: Service[] = [
     headline: "Check engine light on? Start with diagnosis.",
     teaser:
       "We scan the codes, explain what they actually mean, and tell you the next step without guessing from the light alone.",
+    directAnswer:
+      "WrenchReady Mobile offers mobile car diagnostics in Spokane when the vehicle can be safely checked where it sits. A check-engine light starts with testing and plain-English findings, not a blind parts swap; if the next repair is not a mobile fit, WrenchReady says so early.",
     metaDescription:
       "Book check-engine light diagnostics in Spokane, WA with a mobile mechanic who starts from the symptom, screens the job honestly, and explains the next repair step clearly.",
     priceFrom: "From $150",
@@ -514,6 +528,8 @@ export const services: Service[] = [
     headline: "Know what you're buying before money changes hands.",
     teaser:
       "We meet you at the seller's location, inspect the vehicle, and give you a plain summary of what looks solid, what should change the price, and what should make you walk away.",
+    directAnswer:
+      "WrenchReady Mobile performs pre-purchase inspections in Spokane at the seller's driveway, lot, or another safe meeting spot. The inspection gives used-car buyers a plain summary of visible mechanical concerns, price-changing issues, and deal-breaker red flags before money changes hands.",
     metaDescription:
       "Need a pre-purchase inspection in Spokane, WA? WrenchReady Mobile checks used vehicles on site and gives buyers a clearer picture before money changes hands.",
     priceFrom: "From $150",

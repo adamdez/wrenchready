@@ -75,13 +75,15 @@ export default async function LocationPage({ params }: LocationPageProps) {
 
   const locationStructuredData = {
     "@context": "https://schema.org",
-    "@type": "AutomotiveBusiness",
+    "@type": ["AutoRepair", "AutomotiveBusiness"],
     name: `${siteConfig.name} — ${location.name}`,
     url: absoluteUrl(`/locations/${location.slug}`),
     description: location.metaDescription,
     telephone: siteConfig.contact.phoneDisplay,
     email: siteConfig.contact.email,
     priceRange: "$$",
+    sameAs: [siteConfig.profiles.googleBusiness],
+    hasMap: siteConfig.profiles.googleBusiness,
     address: {
       "@type": "PostalAddress",
       addressLocality: location.name,

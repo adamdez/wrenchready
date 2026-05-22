@@ -65,14 +65,16 @@ export default async function ServicePage({ params }: ServicePageProps) {
     "@type": "Service",
     name: service.name,
     serviceType: service.name,
-    description: service.metaDescription,
+    description: service.directAnswer,
     url: absoluteUrl(`/services/${service.slug}`),
     provider: {
-      "@type": "AutomotiveBusiness",
+      "@type": ["AutoRepair", "AutomotiveBusiness"],
       name: siteConfig.name,
       url: siteConfig.domain,
       telephone: siteConfig.contact.phoneDisplay,
       priceRange: "$$",
+      sameAs: [siteConfig.profiles.googleBusiness],
+      hasMap: siteConfig.profiles.googleBusiness,
       geo: {
         "@type": "GeoCoordinates",
         latitude: 47.6588,

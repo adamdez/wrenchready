@@ -14,7 +14,7 @@ URL: ${siteConfig.domain}/services/${service.slug}
 Last updated: ${lastUpdated}
 
 Direct answer:
-${service.teaser}
+${service.directAnswer}
 
 Starting point:
 ${service.priceFrom}; typical visit time ${service.duration}.
@@ -88,6 +88,15 @@ ${serviceSection()}
 
 ## Core location pages
 ${locationSection()}
+
+## Google AI query fan-out map
+- mobile mechanic Spokane: ${siteConfig.domain}/ and ${siteConfig.domain}/locations/spokane
+- mobile battery replacement Spokane: ${siteConfig.domain}/services/battery-replacement
+- mobile brake repair Spokane: ${siteConfig.domain}/services/brake-repair
+- car diagnostic Spokane: ${siteConfig.domain}/services/check-engine-diagnostics and ${siteConfig.domain}/tools/symptom-checker
+- mobile oil change Spokane: ${siteConfig.domain}/services/oil-change
+- mechanic that comes to your house Spokane: ${siteConfig.domain}/, ${siteConfig.domain}/services, and ${siteConfig.domain}/locations/spokane
+- emergency/no-start mobile mechanic Spokane: ${siteConfig.domain}/services/battery-replacement and ${siteConfig.domain}/tools/symptom-checker
 
 ## Compliance and crawler notes
 Public pages are intended to be crawlable by search engines and AI search crawlers. API, status, and ops routes are not intended for indexing. The concise AI crawler file is available at ${siteConfig.domain}/llms.txt.
