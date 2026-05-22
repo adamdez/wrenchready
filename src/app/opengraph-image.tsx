@@ -1,7 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
-export const alt = "WrenchReady Mobile — Mobile Mechanic in Spokane, WA";
+export const alt = "WrenchReady Mobile - Mobile Mechanic in Spokane, WA";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
