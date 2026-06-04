@@ -1,4 +1,9 @@
 import type { InboundRecord, PromiseRecord } from "@/lib/promise-crm/types";
+import {
+  buildHighRiskInboundAlertText,
+  buildNewAppointmentAlertText,
+  buildPromiseOpsAlertText,
+} from "@/lib/promise-crm/alert-payloads";
 import { readEnv } from "@/lib/env";
 import { sendSlackAlert } from "@/lib/slack";
 import { getOpsNotifyPhones, sendTwilioSms } from "@/lib/twilio";
@@ -32,48 +37,15 @@ async function sendOpsAlerts(message: string) {
 }
 
 export async function sendNewAppointmentAlert(inbound: InboundRecord) {
-  return sendOpsAlerts(
-    [
-      "WR new apt",
-      `${inbound.customer.name} / ${inbound.requestedService}`,
-      `${inbound.location.territory} / ${inbound.preferredWindow.label}`,
-      inbound.customer.phone,
-    ].join("\n"),
-  );
+  return sendOpsAlerts(buildNewAppointmentAlertText(inbound));
 }
 
 export async function sendHighRiskInboundAlert(inbound: InboundRecord) {
-  if (inbound.readinessRisk !== "high") return false;
-
-  return sendOpsAlerts(
-    [
-      "WrenchReady high-risk inbound",
-      `${inbound.customer.name} / ${inbound.requestedService}`,
-      `${inbound.location.territory} / ${inbound.owner}`,
-      `Next: ${inbound.nextAction}`,
-    ].join("\n"),
-  );
+  const message = buildHighRiskInboundAlertText(inbound);
+  return message ? sendOpsAlerts(message) : false;
 }
 
 export async function sendPromiseOpsAlert(promise: PromiseRecord) {
-  if (promise.status !== "tomorrow-at-risk" && promise.status !== "follow-through-due") {
-    return false;
-  }
-
-  const header =
-    promise.status === "tomorrow-at-risk"
-      ? "WrenchReady tomorrow-at-risk promise"
-      : "WrenchReady follow-through due";
-
-  const riskLine =
-    promise.topRisks[0] || promise.nextAction || "Review promise detail in ops.";
-
-  return sendOpsAlerts(
-    [
-      header,
-      `${promise.customer.name} / ${promise.serviceScope}`,
-      `${promise.scheduledWindow.label} / ${promise.owner}`,
-      `Next: ${riskLine}`,
-    ].join("\n"),
-  );
+  const message = buildPromiseOpsAlertText(promise);
+  return message ? sendOpsAlerts(message) : false;
 }

@@ -39,6 +39,8 @@ This packet is read-only. It must not send Slack alerts, review requests, custom
 
 Treat Slack as internal review-packet and urgent-ops visibility only until Adam approves a specific target channel and behavior.
 
+For deeper internal alert proof, run `node scripts/wrenchready-alert-proof.mjs --markdown`. That packet validates sample alert text and held/ready state without sending Slack, SMS, or webhook events.
+
 Treat the review loop as configured only when the packet says `Google review destination` is `ready`. Do not invent or guess a review URL.
 
 Verified review destination as of 2026-06-04:
