@@ -122,6 +122,18 @@ export async function getSystemsReadinessSnapshot(): Promise<SystemsReadinessSna
       accessNeed: reviewUrl ? "none" : "config",
     },
     {
+      name: "Internal Slack alerts",
+      status: integrations.opsSlackAlerts.configured ? "ready" : "held",
+      priority: "now",
+      summary: integrations.opsSlackAlerts.summary,
+      whyItMatters:
+        "Internal alerts are useful only when they go to a real ops surface and stay separate from customer sends.",
+      nextStep: integrations.opsSlackAlerts.configured
+        ? "Use Slack for internal review packets and urgent ops alerts only."
+        : "Configure WR_ENABLE_SLACK_ALERTS and WR_SLACK_ALERT_WEBHOOK_URL after the target channel is approved.",
+      accessNeed: integrations.opsSlackAlerts.configured ? "none" : "config",
+    },
+    {
       name: "Modern payments and wallets",
       status: paymentsReady ? "ready" : "buy-or-provision",
       priority: "soon",

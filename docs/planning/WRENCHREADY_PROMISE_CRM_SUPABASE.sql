@@ -110,3 +110,6 @@ alter table public.wrenchready_promise enable row level security;
 
 -- Start conservative. Server-side routes should use SUPABASE_SERVICE_ROLE_KEY.
 -- Add finer-grained authenticated policies later when internal auth exists.
+grant usage on schema public to service_role;
+grant select, insert, update, delete on table public.wrenchready_inbound to service_role;
+grant select, insert, update, delete on table public.wrenchready_promise to service_role;
