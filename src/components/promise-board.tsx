@@ -9,6 +9,7 @@ import {
   TimerReset,
   Wrench,
 } from "lucide-react";
+import { QuickDispatchForm } from "@/components/quick-dispatch-form";
 import type {
   InboundRecord,
   PromiseBoardMetrics,
@@ -286,22 +287,18 @@ export function PromiseBoard(props: PromiseBoardProps) {
               Calls, promises, follow-up.
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Start here when a request hits Slack. New requests are not appointments yet. Open the
-              lead, confirm the facts, and promote only when the promise is specific enough to keep.
+              Log dispatched jobs first. Then work new requests and follow-up.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:items-end">
-            <Link
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
-              href="/ops/inbound/new"
-            >
-              <Phone className="h-4 w-4" />
-              Add manual inbound
-            </Link>
             <p className="text-sm text-muted-foreground">
               Snapshot {formatBoardTime(props.generatedAt)}
             </p>
           </div>
+        </div>
+
+        <div className="mt-8">
+          <QuickDispatchForm />
         </div>
 
         <div className="mt-8 grid gap-3 sm:grid-cols-3">

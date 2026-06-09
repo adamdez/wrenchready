@@ -169,6 +169,7 @@ function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
 export function SiteShell({ children }: SiteShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const isOpsPath = pathname.startsWith("/ops");
   const footerServices = getServicesInPriorityOrder(services).slice(0, 5);
 
   if (pathname === "/ops-slate") {
@@ -436,31 +437,33 @@ export function SiteShell({ children }: SiteShellProps) {
         </div>
       </footer>
 
-      <div className="mobile-cta-bar fixed inset-x-0 bottom-0 z-40 md:hidden">
-        <div className="shell grid grid-cols-3 gap-2 py-3">
-          <a
-            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"
-            href={siteConfig.contact.phoneHref}
-          >
-            <Phone className="h-4 w-4" />
-            Call
-          </a>
-          <Link
-            href="/contact"
-            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border py-3 text-sm font-medium text-foreground"
-          >
-            <MessageSquare className="h-4 w-4" />
-            Request
-          </Link>
-          <Link
-            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 py-3 text-sm font-medium text-primary"
-            href="/contact"
-          >
-            <Calendar className="h-4 w-4" />
-            Request
-          </Link>
+      {!isOpsPath ? (
+        <div className="mobile-cta-bar fixed inset-x-0 bottom-0 z-40 md:hidden">
+          <div className="shell grid grid-cols-3 gap-2 py-3">
+            <a
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"
+              href={siteConfig.contact.phoneHref}
+            >
+              <Phone className="h-4 w-4" />
+              Call
+            </a>
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border py-3 text-sm font-medium text-foreground"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Request
+            </Link>
+            <Link
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 py-3 text-sm font-medium text-primary"
+              href="/contact"
+            >
+              <Calendar className="h-4 w-4" />
+              Request
+            </Link>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
