@@ -160,24 +160,29 @@ export async function POST(request: NextRequest) {
 
     const evaluation = evaluateIntake(body);
     const schedulingRead = buildSchedulingRead(body);
-    const [legacyResult, webhookResult, inboundResult, confirmationEmailResult] = await Promise.allSettled([
+    const inbound = await createInboundFromAppointment(body, evaluation);
+
+    if (!inbound) {
+      return NextResponse.json(
+        { error: "We could not save your request. Please call or text us instead." },
+        { status: 503 },
+      );
+    }
+
+    const [legacyResult, webhookResult, confirmationEmailResult] = await Promise.allSettled([
       storeToSupabase(body),
       sendWebhook(body),
-      createInboundFromAppointment(body, evaluation),
       sendCustomerConfirmationEmail(body, evaluation, schedulingRead),
     ]);
 
-    if (inboundResult.status === "fulfilled" && inboundResult.value) {
-      await sendNewAppointmentAlert(inboundResult.value).catch(() => false);
-      await sendHighRiskInboundAlert(inboundResult.value).catch(() => false);
-    }
+    await sendNewAppointmentAlert(inbound).catch(() => false);
+    await sendHighRiskInboundAlert(inbound).catch(() => false);
 
     return NextResponse.json({
       success: true,
       intakeEvaluation: evaluation,
       schedulingRead,
-      inboundCreated:
-        inboundResult.status === "fulfilled" && !!inboundResult.value,
+      inboundCreated: true,
       legacyStored:
         legacyResult.status === "fulfilled" && !!legacyResult.value,
       webhookDelivered:

@@ -6,11 +6,17 @@ import {
 import { getIntegrationSnapshot } from "@/lib/promise-crm/integrations";
 
 const sampleInbound = {
+  id: "sample-inbound-001",
   customer: {
     name: "Sample Customer",
     phone: "(509) 000-0000",
     email: "sample@example.com",
     preferredContact: "text" as const,
+  },
+  vehicle: {
+    year: 2017,
+    make: "Toyota",
+    model: "RAV4",
   },
   requestedService: "No-start diagnostic",
   location: {

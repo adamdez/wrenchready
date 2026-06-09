@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
+  CalendarClock,
+  CheckCircle2,
   ClipboardCheck,
+  Mail,
   MapPin,
   MessageSquareText,
   Phone,
+  ShieldAlert,
   UserRound,
   Wrench,
 } from "lucide-react";
@@ -19,41 +24,7 @@ type InboundDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-type InboundDetailRecord = Awaited<ReturnType<typeof getInboundRecord>>;
-
-function formatVehicle(record: NonNullable<InboundDetailRecord>) {
-  return `${record.vehicle.year} ${record.vehicle.make} ${record.vehicle.model}`;
-}
-
-function serviceClassLabel(value?: NonNullable<InboundDetailRecord>["serviceClass"]) {
-  if (value === "hero-core") return "Hero / core";
-  if (value === "selective") return "Selective";
-  if (value === "never-standalone") return "Never standalone";
-  return "Needs policy";
-}
-
-function acceptancePolicyLabel(value?: NonNullable<InboundDetailRecord>["acceptancePolicy"]) {
-  if (value === "dispatch-first") return "Dispatch first";
-  if (value === "screen-hard") return "Screen hard";
-  if (value === "accept-if-bundled") return "Accept if bundled";
-  if (value === "decline-if-standalone") return "Decline if standalone";
-  return "Human call";
-}
-
-function marketingRoleLabel(value?: NonNullable<InboundDetailRecord>["marketingRole"]) {
-  if (value === "hero") return "Hero";
-  if (value === "demand-capture") return "Demand capture";
-  if (value === "hero-b2b") return "Hero for B2B";
-  return "Needs role";
-}
-
-function dispatchTierLabel(value?: NonNullable<InboundDetailRecord>["dispatchTier"]) {
-  if (value === "dispatch-first") return "Dispatch first";
-  if (value === "selective-screening") return "Selective screening";
-  if (value === "bundle-only") return "Bundle only";
-  if (value === "decline-standalone") return "Decline standalone";
-  return "Needs tier";
-}
+type InboundDetailRecord = NonNullable<Awaited<ReturnType<typeof getInboundRecord>>>;
 
 export const metadata: Metadata = {
   title: "Inbound Detail",
@@ -63,9 +34,129 @@ export const metadata: Metadata = {
   },
 };
 
+function formatVehicle(record: InboundDetailRecord) {
+  return [record.vehicle.year, record.vehicle.make, record.vehicle.model]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function phoneHref(phone?: string) {
+  const digits = phone?.replace(/[^\d+]/g, "");
+  return digits ? `tel:${digits}` : undefined;
+}
+
+function smsHref(phone?: string) {
+  const digits = phone?.replace(/[^\d+]/g, "");
+  return digits ? `sms:${digits}` : undefined;
+}
+
+function statusLabel(record: InboundDetailRecord) {
+  if (record.qualificationStatus === "promoted") return "Promoted to promise";
+  if (record.qualificationStatus === "screening") return "Screening";
+  return "New request";
+}
+
+function isPromised(record: InboundDetailRecord) {
+  return record.qualificationStatus === "promoted";
+}
+
+function isMissingTiming(label?: string) {
+  const normalized = (label || "").trim().toLowerCase();
+  return (
+    !normalized ||
+    normalized === "no timing selected" ||
+    normalized.includes("not selected") ||
+    normalized.includes("tbd")
+  );
+}
+
+function riskClasses(record: InboundDetailRecord) {
+  if (record.readinessRisk === "high") return "border-red-500/30 bg-red-500/10 text-red-200";
+  if (record.readinessRisk === "medium") {
+    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  }
+  return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+}
+
+function DataUnavailable({ message }: { message: string }) {
+  return (
+    <div className="shell py-10 sm:py-14">
+      <section className="rounded-3xl border border-red-500/30 bg-red-500/10 p-6 text-red-100 sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-200">
+          Promise CRM unavailable
+        </p>
+        <h1 className="mt-4 text-3xl font-bold text-foreground">Inbound record cannot load live data.</h1>
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-red-100">
+          WrenchReady is not showing demo or fallback CRM data. Check Supabase before using this
+          page for appointment decisions.
+        </p>
+        <p className="mt-4 text-xs text-red-100/80">{message}</p>
+      </section>
+    </div>
+  );
+}
+
+function FactCard({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card/50 p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-3 text-sm leading-relaxed text-muted-foreground">{children}</div>
+    </div>
+  );
+}
+
+function ListBlock({
+  title,
+  items,
+  empty,
+}: {
+  title: string;
+  items?: string[];
+  empty: string;
+}) {
+  return (
+    <section className="rounded-3xl border border-border bg-card/50 p-6">
+      <h2 className="text-xl font-bold text-foreground">{title}</h2>
+      {items?.length ? (
+        <ul className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
+          {items.map((item) => (
+            <li key={item} className="flex gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+              {item}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{empty}</p>
+      )}
+    </section>
+  );
+}
+
 export default async function InboundDetailPage({ params }: InboundDetailPageProps) {
   const { id } = await params;
-  const inbound = await getInboundRecord(id);
+  let inbound: InboundDetailRecord | undefined;
+
+  try {
+    inbound = (await getInboundRecord(id)) || undefined;
+  } catch (error) {
+    return (
+      <DataUnavailable
+        message={error instanceof Error ? error.message : "Unknown inbound read failure."}
+      />
+    );
+  }
 
   if (!inbound) {
     notFound();
@@ -74,6 +165,10 @@ export default async function InboundDetailPage({ params }: InboundDetailPagePro
   const playbook = getPlaybookRecommendation(
     `${inbound.requestedService} ${inbound.symptomSummary} ${inbound.marketingOffer || ""}`,
   );
+  const promised = isPromised(inbound);
+  const timingMissing = isMissingTiming(inbound.preferredWindow.label);
+  const callHref = phoneHref(inbound.customer.phone);
+  const textHref = smsHref(inbound.customer.phone);
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -82,285 +177,205 @@ export default async function InboundDetailPage({ params }: InboundDetailPagePro
         className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
+        Back to Today Queue
       </Link>
 
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <ClipboardCheck className="h-3.5 w-3.5" />
-          Inbound Detail
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground">
-          {inbound.customer.name}
-        </h1>
-        <p className="mt-3 text-lg text-muted-foreground">{inbound.requestedService}</p>
+      <header className="mt-6 border-b border-border pb-8">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                <ClipboardCheck className="h-3.5 w-3.5" />
+                Inbound request
+              </span>
+              <span
+                className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+                  promised
+                    ? "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+                    : "border-red-500/30 bg-red-500/10 text-red-200"
+                }`}
+              >
+                {promised ? <CheckCircle2 className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                {promised ? "Promise exists" : "No appointment promised yet"}
+              </span>
+            </div>
 
-        <div className="mt-8 grid gap-4 lg:grid-cols-4">
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <UserRound className="h-4 w-4 text-primary" />
-              Customer
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">{inbound.customer.name}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{inbound.customer.phone}</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Wrench className="h-4 w-4 text-primary" />
-              Vehicle
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">{formatVehicle(inbound)}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {inbound.vehicle.mileage?.toLocaleString()} miles
+            <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+              {inbound.customer.name}
+            </h1>
+            <p className="mt-3 text-lg text-muted-foreground">
+              {inbound.requestedService} · {formatVehicle(inbound)}
             </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <MapPin className="h-4 w-4 text-primary" />
-              Worksite
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">{inbound.location.label}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {inbound.location.accessNotes || inbound.location.territory}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Phone className="h-4 w-4 text-primary" />
-              Ownership
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">{inbound.owner}</p>
-            <p className="mt-1 text-sm text-muted-foreground">Risk: {inbound.readinessRisk}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Policy: {acceptancePolicyLabel(inbound.acceptancePolicy)}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.9fr]">
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">What the customer said</h2>
-            <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-              {inbound.symptomSummary}
-            </p>
-
-            <div className="mt-6 rounded-2xl border border-border bg-background/60 p-4">
+            <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/10 p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                Preferred window
+                Next action
               </p>
-              <p className="mt-2 text-sm text-muted-foreground">{inbound.preferredWindow.label}</p>
+              <p className="mt-2 text-base leading-relaxed text-foreground">{inbound.nextAction}</p>
             </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Service class
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {serviceClassLabel(inbound.serviceClass)}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">{inbound.serviceLane}</p>
-              </div>
-              <div className="rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Promise fit
-                </p>
-                <p className="mt-2 text-sm capitalize text-muted-foreground">
-                  {inbound.promiseFit || "review"}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {acceptancePolicyLabel(inbound.acceptancePolicy)}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Marketing role
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {marketingRoleLabel(inbound.marketingRole)}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {inbound.marketingOffer || inbound.requestedService}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Dispatch tier
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {dispatchTierLabel(inbound.dispatchTier)}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Keep marketing and dispatch logic separate.
-                </p>
-              </div>
-            </div>
-
-            {inbound.wedgePromise || inbound.dispatchGate ? (
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-background/60 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Wedge promise
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {inbound.wedgePromise || "This lane still needs a sharper promise."}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-border bg-background/60 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Dispatch gate
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {inbound.dispatchGate || "Human screening should hold this until the promise is believable."}
-                  </p>
-                </div>
-              </div>
-            ) : null}
           </div>
 
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Operator notes</h2>
-            <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-              {inbound.notes.map((note) => (
-                <li key={note} className="flex gap-2">
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                  {note}
-                </li>
-              ))}
-            </ul>
+          <div className="min-w-0 rounded-2xl border border-border bg-card/50 p-4 xl:w-[22rem]">
+            <p className="text-sm font-semibold text-foreground">Contact now</p>
+            <p className="mt-1 text-sm text-muted-foreground">Preferred: {inbound.customer.preferredContact}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {callHref ? (
+                <a
+                  className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
+                  href={callHref}
+                >
+                  <Phone className="h-4 w-4" />
+                  Call
+                </a>
+              ) : null}
+              {textHref ? (
+                <a
+                  className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-secondary"
+                  href={textHref}
+                >
+                  Text
+                </a>
+              ) : null}
+              {inbound.customer.email ? (
+                <a
+                  className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-secondary"
+                  href={`mailto:${inbound.customer.email}`}
+                >
+                  <Mail className="h-4 w-4" />
+                  Email
+                </a>
+              ) : null}
+            </div>
+            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
+              <p>{inbound.customer.phone}</p>
+              {inbound.customer.email ? <p>{inbound.customer.email}</p> : null}
+            </div>
           </div>
-
-          {inbound.pricingGuardrails?.length ? (
-            <div className="rounded-3xl border border-border bg-card/50 p-6">
-              <h2 className="text-xl font-bold text-foreground">Pricing guardrails</h2>
-              <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-                {inbound.pricingGuardrails.map((rule) => (
-                  <li key={rule} className="flex gap-2">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    {rule}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {inbound.screeningQuestions?.length ? (
-            <div className="rounded-3xl border border-border bg-card/50 p-6">
-              <h2 className="text-xl font-bold text-foreground">Wedge screening questions</h2>
-              <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-                {inbound.screeningQuestions.map((question) => (
-                  <li key={question} className="flex gap-2">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    {question}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {inbound.redFlagTriggers?.length ? (
-            <div className="rounded-3xl border border-border bg-card/50 p-6">
-              <h2 className="text-xl font-bold text-foreground">Red flags before dispatch</h2>
-              <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-                {inbound.redFlagTriggers.map((trigger) => (
-                  <li key={trigger} className="flex gap-2">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    {trigger}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {inbound.followOnPath?.length ? (
-            <div className="rounded-3xl border border-border bg-card/50 p-6">
-              <h2 className="text-xl font-bold text-foreground">Follow-on path</h2>
-              <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-                {inbound.followOnPath.map((path) => (
-                  <li key={path} className="flex gap-2">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    {path}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
         </div>
 
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <FactCard icon={<UserRound className="h-4 w-4 text-primary" />} label="Status">
+            <p className="font-semibold text-foreground">{statusLabel(inbound)}</p>
+            <p className="mt-1">{inbound.owner}</p>
+            <span className={`mt-3 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${riskClasses(inbound)}`}>
+              {inbound.readinessRisk} risk
+            </span>
+          </FactCard>
+
+          <FactCard icon={<Wrench className="h-4 w-4 text-primary" />} label="Vehicle">
+            <p>{formatVehicle(inbound)}</p>
+            <p className="mt-1">
+              {inbound.vehicle.mileage
+                ? `${inbound.vehicle.mileage.toLocaleString()} miles`
+                : "Mileage not recorded"}
+            </p>
+          </FactCard>
+
+          <FactCard icon={<MapPin className="h-4 w-4 text-primary" />} label="Where">
+            <p>{inbound.location.label}</p>
+            <p className="mt-1">{inbound.location.accessNotes || inbound.location.territory}</p>
+          </FactCard>
+
+          <FactCard icon={<CalendarClock className="h-4 w-4 text-primary" />} label="Timing">
+            <p className={timingMissing ? "font-semibold text-red-200" : "text-muted-foreground"}>
+              {inbound.preferredWindow.label}
+            </p>
+            {timingMissing ? <p className="mt-1 text-red-100">Timing must be confirmed before promise.</p> : null}
+          </FactCard>
+        </div>
+      </header>
+
+      <section className="mt-8 grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="space-y-6">
+          <section className="rounded-3xl border border-border bg-card/50 p-6">
+            <h2 className="text-xl font-bold text-foreground">What the customer said</h2>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+              {inbound.symptomSummary || inbound.requestedService}
+            </p>
+            <dl className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-background/50 p-4">
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Service lane
+                </dt>
+                <dd className="mt-2 text-sm text-muted-foreground">{inbound.serviceLane}</dd>
+              </div>
+              <div className="rounded-2xl border border-border bg-background/50 p-4">
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Dispatch gate
+                </dt>
+                <dd className="mt-2 text-sm text-muted-foreground">
+                  {inbound.dispatchGate || "Human screening decides whether this becomes a promise."}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <ListBlock
+            title="Screen before promising"
+            items={inbound.screeningQuestions}
+            empty="No screening questions were generated for this inbound request."
+          />
+
+          <ListBlock
+            title="Pricing and dispatch guardrails"
+            items={inbound.pricingGuardrails}
+            empty="No pricing guardrails were generated for this inbound request."
+          />
+
+          <ListBlock
+            title="Slow down if you hear"
+            items={inbound.redFlagTriggers}
+            empty="No red flags were generated for this inbound request."
+          />
+
+          <ListBlock title="Operator notes" items={inbound.notes} empty="No operator notes recorded." />
+        </div>
+
+        <aside className="space-y-6">
           <InboundTriageForm inbound={inbound} />
 
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Next best move</h2>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{inbound.nextAction}</p>
-          </div>
-
           {(playbook.dispatchRule || playbook.quoteScript || playbook.addOnPlays.length > 0) ? (
-            <div className="rounded-3xl border border-border bg-card/50 p-6">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-xl font-bold text-foreground">Relevant playbook</h2>
-                <Link
-                  href="/ops/playbooks"
-                  className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
-                >
-                  Open full playbooks
-                </Link>
-              </div>
-
+            <section className="rounded-3xl border border-border bg-card/50 p-6">
+              <h2 className="text-xl font-bold text-foreground">Relevant playbook</h2>
               {playbook.dispatchRule ? (
-                <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
+                <div className="mt-4 rounded-2xl border border-border bg-background/50 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
                     Dispatch decision
                   </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     {playbook.dispatchRule.lane}: {playbook.dispatchRule.firstPromise}
                   </p>
                 </div>
               ) : null}
-
               {playbook.quoteScript ? (
-                <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
+                <div className="mt-4 rounded-2xl border border-border bg-background/50 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
                     Quote opener
                   </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     {playbook.quoteScript.opener}
                   </p>
                 </div>
               ) : null}
-
-              {playbook.addOnPlays[0] ? (
-                <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Honest next-step offer
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {playbook.addOnPlays[0].honestOffer}
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {playbook.addOnPlays[0].customerWords}
-                  </p>
-                </div>
-              ) : null}
-            </div>
+            </section>
           ) : null}
 
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Qualification reminder</h2>
-            <div className="mt-4 flex gap-2 text-sm text-muted-foreground">
+          <section className="rounded-3xl border border-border bg-card/50 p-6">
+            <h2 className="text-xl font-bold text-foreground">Promise reminder</h2>
+            <div className="mt-4 flex gap-2 text-sm leading-relaxed text-muted-foreground">
               <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              Do not turn this into a promise until the location, scope, owner, and window are
-              clear enough to keep.
+              Do not promote until the customer, scope, timing, owner, and price expectation are
+              clear enough to say back to the customer in one sentence.
             </div>
-          </div>
+            {!promised ? (
+              <div className="mt-4 flex gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm leading-relaxed text-red-100">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                This request is still not an appointment.
+              </div>
+            ) : null}
+          </section>
 
           <PromoteInboundForm inbound={inbound} />
-        </div>
+        </aside>
       </section>
     </div>
   );

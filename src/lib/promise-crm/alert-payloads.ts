@@ -1,8 +1,17 @@
 import type { InboundRecord, PromiseRecord } from "@/lib/promise-crm/types";
+import { readEnv } from "@/lib/env";
 
 type AlertInbound = Pick<
   InboundRecord,
-  "customer" | "requestedService" | "location" | "preferredWindow" | "readinessRisk" | "owner" | "nextAction"
+  | "id"
+  | "customer"
+  | "vehicle"
+  | "requestedService"
+  | "location"
+  | "preferredWindow"
+  | "readinessRisk"
+  | "owner"
+  | "nextAction"
 >;
 
 type AlertPromise = Pick<
@@ -10,13 +19,40 @@ type AlertPromise = Pick<
   "customer" | "serviceScope" | "scheduledWindow" | "owner" | "status" | "topRisks" | "nextAction"
 >;
 
+function getBaseUrl() {
+  const configured = readEnv(
+    "NEXT_PUBLIC_SITE_URL",
+    "WR_SITE_URL",
+    "NEXT_PUBLIC_BASE_URL",
+    "VERCEL_PROJECT_PRODUCTION_URL",
+    "VERCEL_URL",
+  );
+  const value = configured || "https://www.wrenchreadymobile.com";
+  const withProtocol = value.startsWith("http") ? value : `https://${value}`;
+  return withProtocol.replace(/\/+$/, "");
+}
+
+function vehicleLabel(vehicle: AlertInbound["vehicle"]) {
+  return [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ");
+}
+
 export function buildNewAppointmentAlertText(inbound: AlertInbound) {
-  return [
-    "WR new apt",
-    `${inbound.customer.name} / ${inbound.requestedService}`,
-    `${inbound.location.territory} / ${inbound.preferredWindow.label}`,
-    inbound.customer.phone,
-  ].join("\n");
+  const lines = [
+    "New WrenchReady request - not promised yet",
+    `Customer: ${inbound.customer.name}`,
+    `Phone: ${inbound.customer.phone}`,
+    inbound.customer.email ? `Email: ${inbound.customer.email}` : null,
+    `Vehicle: ${vehicleLabel(inbound.vehicle) || "Vehicle not parsed"}`,
+    `Service: ${inbound.requestedService}`,
+    `Location: ${inbound.location.label || inbound.location.territory}`,
+    `Timing: ${inbound.preferredWindow.label}`,
+    `Owner: ${inbound.owner}`,
+    `Risk: ${inbound.readinessRisk}`,
+    `Next: ${inbound.nextAction}`,
+    `CRM: ${getBaseUrl()}/ops/inbound/${inbound.id}`,
+  ];
+
+  return lines.filter((line): line is string => Boolean(line)).join("\n");
 }
 
 export function buildHighRiskInboundAlertText(inbound: AlertInbound) {

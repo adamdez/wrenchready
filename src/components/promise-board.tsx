@@ -3,78 +3,38 @@ import {
   AlertTriangle,
   ArrowRight,
   CalendarClock,
-  CircleCheckBig,
-  ClipboardList,
-  DollarSign,
-  HandCoins,
-  PackageSearch,
+  CheckCircle2,
+  Mail,
   Phone,
-  ShieldAlert,
   TimerReset,
-  UserRound,
   Wrench,
 } from "lucide-react";
-import { computePromiseEconomics } from "@/lib/promise-crm/economics";
 import type {
   InboundRecord,
   PromiseBoardMetrics,
-  PromiseEconomicsRollup,
   PromiseRecord,
   ReadinessRisk,
 } from "@/lib/promise-crm/types";
-import type { WrenchReadyIntegrationSnapshot } from "@/lib/promise-crm/integrations";
 
 type PromiseBoardProps = {
   generatedAt: string;
   metrics: PromiseBoardMetrics;
-  economics: PromiseEconomicsRollup;
   inbound: InboundRecord[];
   promisesWaiting: PromiseRecord[];
   tomorrowAtRisk: PromiseRecord[];
   followThroughDue: PromiseRecord[];
-  integrations: WrenchReadyIntegrationSnapshot;
 };
 
 function riskClasses(risk: ReadinessRisk) {
-  if (risk === "high") {
-    return "border-red-500/20 bg-red-500/10 text-red-300";
-  }
-
+  if (risk === "high") return "border-red-500/30 bg-red-500/10 text-red-200";
   if (risk === "medium") {
-    return "border-[--wr-gold]/20 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
   }
-
-  return "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
-}
-
-function sourceLabel(source: InboundRecord["source"]) {
-  return source.replace(/^\w/, (value) => value.toUpperCase());
-}
-
-function serviceClassLabel(value?: InboundRecord["serviceClass"]) {
-  if (value === "hero-core") return "Hero / core";
-  if (value === "selective") return "Selective";
-  if (value === "never-standalone") return "Never standalone";
-  return "Needs policy";
-}
-
-function marketingRoleLabel(value?: InboundRecord["marketingRole"]) {
-  if (value === "hero") return "Hero";
-  if (value === "demand-capture") return "Demand capture";
-  if (value === "hero-b2b") return "Hero for B2B";
-  return "Needs role";
-}
-
-function dispatchTierLabel(value?: InboundRecord["dispatchTier"]) {
-  if (value === "dispatch-first") return "Dispatch first";
-  if (value === "selective-screening") return "Selective screening";
-  if (value === "bundle-only") return "Bundle only";
-  if (value === "decline-standalone") return "Decline standalone";
-  return "Needs tier";
+  return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
 }
 
 function vehicleLabel(vehicle: InboundRecord["vehicle"] | PromiseRecord["vehicle"]) {
-  return `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+  return [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ");
 }
 
 function formatBoardTime(value: string) {
@@ -86,540 +46,352 @@ function formatBoardTime(value: string) {
   }).format(new Date(value));
 }
 
-function formatCompactCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    notation: "compact",
-    maximumFractionDigits: 1,
-  }).format(value);
+function telHref(phone?: string) {
+  const digits = phone?.replace(/[^\d+]/g, "");
+  return digits ? `tel:${digits}` : undefined;
 }
 
-function formatPercent(value: number) {
-  return `${Math.round(value * 100)}%`;
+function smsHref(phone?: string) {
+  const digits = phone?.replace(/[^\d+]/g, "");
+  return digits ? `sms:${digits}` : undefined;
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  tone: string;
-}) {
+function isMissingTiming(label?: string) {
+  const normalized = (label || "").trim().toLowerCase();
   return (
-    <div className="rounded-2xl border border-border bg-card/60 p-5 backdrop-blur-sm">
-      <div className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl ${tone}`}>
-        {icon}
-      </div>
-      <p className="mt-4 text-3xl font-bold text-foreground">{value}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{label}</p>
+    !normalized ||
+    normalized === "no timing selected" ||
+    normalized.includes("not selected") ||
+    normalized.includes("tbd")
+  );
+}
+
+function EmptyState({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border px-4 py-6 text-sm leading-relaxed text-muted-foreground">
+      {children}
     </div>
   );
 }
 
-function InboundCard({ record }: { record: InboundRecord }) {
-  return (
-    <Link
-      href={`/ops/inbound/${record.id}`}
-      className="block rounded-2xl border border-border bg-background/60 p-4 transition-all hover:border-primary/30 hover:bg-background/80"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">{record.customer.name}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{vehicleLabel(record.vehicle)}</p>
-        </div>
-        <span
-          className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${riskClasses(record.readinessRisk)}`}
-        >
-          {record.readinessRisk} risk
-        </span>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
-          {sourceLabel(record.source)}
-        </span>
-        <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
-          {record.location.territory}
-        </span>
-        <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
-          {serviceClassLabel(record.serviceClass)}
-        </span>
-        <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
-          {dispatchTierLabel(record.dispatchTier)}
-        </span>
-      </div>
-
-      <p className="mt-4 text-sm font-medium text-foreground">{record.requestedService}</p>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{record.symptomSummary}</p>
-
-      <div className="mt-4 rounded-xl border border-border/70 bg-card/50 p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Next action</p>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{record.nextAction}</p>
-        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          Marketed as: {record.marketingOffer || record.requestedService} ({marketingRoleLabel(record.marketingRole)})
-        </p>
-        {record.pricingGuardrails?.[0] ? (
-          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-            Guardrail: {record.pricingGuardrails[0]}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-        <span>{record.owner}</span>
-        <span>{record.preferredWindow.label}</span>
-      </div>
-    </Link>
-  );
-}
-
-function PromiseCard({ record }: { record: PromiseRecord }) {
-  const economics = computePromiseEconomics(record.economics);
-
-  return (
-    <Link
-      href={`/ops/promises/${record.id}`}
-      className="block rounded-2xl border border-border bg-background/60 p-4 transition-all hover:border-primary/30 hover:bg-background/80"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">{record.customer.name}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{vehicleLabel(record.vehicle)}</p>
-        </div>
-        <span
-          className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${riskClasses(record.readinessRisk)}`}
-        >
-          {record.readinessRisk} risk
-        </span>
-      </div>
-
-      <p className="mt-4 text-sm font-medium text-foreground">{record.serviceScope}</p>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{record.readinessSummary}</p>
-
-      <div className="mt-4 rounded-xl border border-border/70 bg-card/50 p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-          What could break the promise
-        </p>
-        {record.topRisks.length > 0 ? (
-          <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
-            {record.topRisks.slice(0, 2).map((risk) => (
-              <li key={risk} className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[--wr-gold]" />
-                {risk}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-sm text-muted-foreground">No active blockers right now.</p>
-        )}
-      </div>
-
-      {economics ? (
-        <div className="mt-4 rounded-xl border border-border/70 bg-card/50 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-            Economics snapshot
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Revenue ${economics.revenue.toFixed(2)} / Net profit ${economics.netProfitEstimateAmount.toFixed(2)}
-          </p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {economics.netProfitPerClockHour !== undefined
-              ? `$${economics.netProfitPerClockHour.toFixed(2)} net profit per clock hour`
-              : "Add labor + travel hours for per-hour view"}
-          </p>
-        </div>
-      ) : null}
-
-      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-        <span>{record.owner}</span>
-        <span>{record.scheduledWindow.label}</span>
-      </div>
-    </Link>
-  );
-}
-
-function BoardColumn({
+function QueueHeader({
   title,
-  description,
-  icon,
   count,
+  icon,
   children,
 }: {
   title: string;
-  description: string;
-  icon: React.ReactNode;
   count: number;
+  icon: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-border bg-card/50 p-5 backdrop-blur-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            {icon}
-          </div>
-          <h2 className="mt-4 text-xl font-bold text-foreground">{title}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+    <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
+      <div>
+        <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          {icon}
         </div>
-        <span className="rounded-full border border-border bg-background/70 px-3 py-1 text-sm font-semibold text-foreground">
-          {count}
-        </span>
+        <h2 className="mt-4 text-xl font-bold text-foreground">{title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{children}</p>
       </div>
-      <div className="mt-6 space-y-4">{children}</div>
-    </section>
+      <span className="rounded-full border border-border bg-background px-3 py-1 text-sm font-semibold text-foreground">
+        {count}
+      </span>
+    </div>
   );
 }
 
-function IntegrationCard({
-  label,
-  configured,
-  summary,
-}: {
-  label: string;
-  configured: boolean;
-  summary: string;
-}) {
+function ContactActions({ customer }: { customer: InboundRecord["customer"] }) {
+  const phoneHref = telHref(customer.phone);
+  const textHref = smsHref(customer.phone);
+
   return (
-    <div className="rounded-2xl border border-border bg-background/60 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-foreground">{label}</p>
-        <span
-          className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-            configured
-              ? "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
-              : "border-red-500/20 bg-red-500/10 text-red-200"
-          }`}
+    <div className="flex flex-wrap gap-2">
+      {phoneHref ? (
+        <a
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-all hover:brightness-110"
+          href={phoneHref}
         >
-          {configured ? "Ready" : "Missing"}
+          <Phone className="h-3.5 w-3.5" />
+          Call
+        </a>
+      ) : null}
+      {textHref ? (
+        <a
+          className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-xs font-semibold text-foreground transition-all hover:bg-secondary"
+          href={textHref}
+        >
+          Text
+        </a>
+      ) : null}
+      {customer.email ? (
+        <a
+          className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-xs font-semibold text-foreground transition-all hover:bg-secondary"
+          href={`mailto:${customer.email}`}
+        >
+          <Mail className="h-3.5 w-3.5" />
+          Email
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function InboundQueueItem({ record }: { record: InboundRecord }) {
+  const timingMissing = isMissingTiming(record.preferredWindow.label);
+
+  return (
+    <article className="rounded-2xl border border-border bg-card/50 p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-bold text-foreground">{record.customer.name}</h3>
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+              Not promised yet
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">{record.requestedService}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{vehicleLabel(record.vehicle)}</p>
+        </div>
+        <span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-semibold ${riskClasses(record.readinessRisk)}`}>
+          {record.readinessRisk} risk
         </span>
       </div>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{summary}</p>
-    </div>
+
+      <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+            Location
+          </dt>
+          <dd className="mt-1 text-muted-foreground">{record.location.label}</dd>
+        </div>
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+            Timing
+          </dt>
+          <dd className={timingMissing ? "mt-1 font-semibold text-red-200" : "mt-1 text-muted-foreground"}>
+            {record.preferredWindow.label}
+          </dd>
+        </div>
+      </dl>
+
+      <div className="mt-4 rounded-2xl border border-border bg-background/50 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+          Next action
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-foreground">{record.nextAction}</p>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <ContactActions customer={record.customer} />
+        <Link
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-secondary"
+          href={`/ops/inbound/${record.id}`}
+        >
+          Open lead
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+function PromiseQueueItem({
+  record,
+  tone,
+}: {
+  record: PromiseRecord;
+  tone: "waiting" | "risk" | "follow";
+}) {
+  const label =
+    tone === "risk" ? "At risk" : tone === "follow" ? "Follow-up due" : "Promised";
+
+  return (
+    <article className="rounded-2xl border border-border bg-card/50 p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-bold text-foreground">{record.customer.name}</h3>
+            <span
+              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                tone === "risk"
+                  ? "border-red-500/30 bg-red-500/10 text-red-200"
+                  : tone === "follow"
+                    ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
+                    : "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+              }`}
+            >
+              {label}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">{record.serviceScope}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{vehicleLabel(record.vehicle)}</p>
+        </div>
+        <span className={`w-fit rounded-full border px-2.5 py-1 text-xs font-semibold ${riskClasses(record.readinessRisk)}`}>
+          {record.owner}
+        </span>
+      </div>
+
+      <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+            Window
+          </dt>
+          <dd className="mt-1 text-muted-foreground">{record.scheduledWindow.label}</dd>
+        </div>
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+            Location
+          </dt>
+          <dd className="mt-1 text-muted-foreground">{record.location.label}</dd>
+        </div>
+      </dl>
+
+      <div className="mt-4 rounded-2xl border border-border bg-background/50 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+          Next action
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-foreground">{record.nextAction}</p>
+        {record.topRisks[0] ? (
+          <p className="mt-2 text-sm leading-relaxed text-red-200">{record.topRisks[0]}</p>
+        ) : null}
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <Link
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-secondary"
+          href={`/ops/promises/${record.id}`}
+        >
+          Open promise
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    </article>
   );
 }
 
 export function PromiseBoard(props: PromiseBoardProps) {
+  const promisedJobs = [...props.tomorrowAtRisk, ...props.promisesWaiting];
+
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
+      <header className="border-b border-border pb-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
               <Wrench className="h-3.5 w-3.5" />
-              WrenchReady Promise Board
+              WrenchReady Today Queue
             </span>
             <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-              Make promises carefully. Keep them visibly.
+              Calls, promises, follow-up.
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              This board is the operating heartbeat: what just came in, what is promised, what
-              could break tomorrow, and what still needs follow-through after the wrench stops
-              turning.
+              Start here when a request hits Slack. New requests are not appointments yet. Open the
+              lead, confirm the facts, and promote only when the promise is specific enough to keep.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href="/ops/inbound/new"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
-              >
-                <Phone className="h-4 w-4" />
-                Add manual inbound
-              </Link>
-              <Link
-                href="/contact"
-                className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-              >
-                Public request flow
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/ops/wedges"
-                className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-              >
-                Wedge focus
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/ops/management"
-                className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-              >
-                Management review
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
           </div>
-
-          <div className="rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
-            Snapshot generated {formatBoardTime(props.generatedAt)}
+          <div className="flex flex-col gap-3 sm:items-end">
+            <Link
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
+              href="/ops/inbound/new"
+            >
+              <Phone className="h-4 w-4" />
+              Add manual inbound
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              Snapshot {formatBoardTime(props.generatedAt)}
+            </p>
           </div>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            icon={<ClipboardList className="h-5 w-5" />}
-            label="New inbound needing qualification"
-            value={props.metrics.newInbound}
-            tone="bg-primary/10 text-primary"
-          />
-          <StatCard
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-card/50 p-4">
+            <p className="text-3xl font-bold text-foreground">{props.metrics.newInbound}</p>
+            <p className="mt-1 text-sm text-muted-foreground">new requests</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card/50 p-4">
+            <p className="text-3xl font-bold text-foreground">
+              {props.metrics.promisesWaiting + props.metrics.tomorrowAtRisk}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">promised jobs</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card/50 p-4">
+            <p className="text-3xl font-bold text-foreground">{props.metrics.followThroughDue}</p>
+            <p className="mt-1 text-sm text-muted-foreground">follow-up due</p>
+          </div>
+        </div>
+      </header>
+
+      <section className="grid gap-8 xl:grid-cols-[1.1fr_1fr_1fr]">
+        <div className="space-y-4">
+          <QueueHeader title="New Requests" count={props.inbound.length} icon={<Phone className="h-5 w-5" />}>
+            Contact these first. Nothing here has a real appointment promise yet.
+          </QueueHeader>
+          {props.inbound.length ? (
+            props.inbound.map((record) => <InboundQueueItem key={record.id} record={record} />)
+          ) : (
+            <EmptyState>No new requests need qualification.</EmptyState>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <QueueHeader
+            title="Promised Jobs"
+            count={promisedJobs.length}
             icon={<CalendarClock className="h-5 w-5" />}
-            label="Promises waiting on clean execution"
-            value={props.metrics.promisesWaiting}
-            tone="bg-[--wr-teal]/10 text-[--wr-teal]"
-          />
-          <StatCard
-            icon={<ShieldAlert className="h-5 w-5" />}
-            label="Tomorrow promises at risk"
-            value={props.metrics.tomorrowAtRisk}
-            tone="bg-[--wr-gold]/10 text-[--wr-gold]"
-          />
-          <StatCard
+          >
+            These customers believe something specific will happen. Reduce risk before the day starts.
+          </QueueHeader>
+          {promisedJobs.length ? (
+            promisedJobs.map((record) => (
+              <PromiseQueueItem
+                key={record.id}
+                record={record}
+                tone={record.status === "tomorrow-at-risk" ? "risk" : "waiting"}
+              />
+            ))
+          ) : (
+            <EmptyState>No active promised jobs are waiting.</EmptyState>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <QueueHeader
+            title="Follow-Up Due"
+            count={props.followThroughDue.length}
             icon={<TimerReset className="h-5 w-5" />}
-            label="Follow-through due today"
-            value={props.metrics.followThroughDue}
-            tone="bg-red-500/10 text-red-300"
-          />
-        </div>
-
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-              Promises with economics
-            </p>
-            <p className="mt-2 text-2xl font-bold text-foreground">{props.economics.trackedPromises}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Promises currently teaching the machine what healthy work looks like.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-              Revenue in view
-            </p>
-            <p className="mt-2 text-2xl font-bold text-foreground">
-              {formatCompactCurrency(props.economics.totalRevenue)}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Sum of captured quote or invoice values on tracked promises.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-              Net profit in view
-            </p>
-            <p className="mt-2 text-2xl font-bold text-foreground">
-              {formatCompactCurrency(props.economics.totalNetProfitEstimate)}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {props.economics.averageNetProfitPerClockHour !== undefined
-                ? `${formatCompactCurrency(props.economics.averageNetProfitPerClockHour)} avg net profit per clock hour`
-                : "Add labor and travel hours to unlock per-hour economics."}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Link
-            href="/ops/insights"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
           >
-            Offer performance report
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link
-            href="/ops/follow-through"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <HandCoins className="h-4 w-4" />
-            Follow-through worklist
-          </Link>
-          <Link
-            href="/ops/outbound"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <Phone className="h-4 w-4" />
-            Outbound queue
-          </Link>
-          <Link
-            href="/ops/cadence"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <ClipboardList className="h-4 w-4" />
-            Operating cadence
-          </Link>
-          <Link
-            href="/ops/recapture"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <TimerReset className="h-4 w-4" />
-            Weekly recapture
-          </Link>
-          <Link
-            href="/ops/proof"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <ShieldAlert className="h-4 w-4" />
-            Proof discipline
-          </Link>
-          <Link
-            href="/ops/accounts"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <HandCoins className="h-4 w-4" />
-            Recurring accounts
-          </Link>
-          <Link
-            href="/ops/systems"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <Wrench className="h-4 w-4" />
-            Systems readiness
-          </Link>
-          <Link
-            href="/ops/tomorrow"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <CalendarClock className="h-4 w-4" />
-            Tomorrow readiness
-          </Link>
-          <Link
-            href="/ops/owners"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <UserRound className="h-4 w-4" />
-            Owner cockpits
-          </Link>
-          <Link
-            href="/ops/field"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <ClipboardList className="h-4 w-4" />
-            Field execution
-          </Link>
-          <Link
-            href="/ops/collections"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <DollarSign className="h-4 w-4" />
-            Collections
-          </Link>
-          <Link
-            href="/ops/parts"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <PackageSearch className="h-4 w-4" />
-            Parts planning
-          </Link>
-          <Link
-            href="/ops/warranty"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <ShieldAlert className="h-4 w-4" />
-            Warranty lane
-          </Link>
-          <Link
-            href="/ops/playbooks"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary"
-          >
-            <ClipboardList className="h-4 w-4" />
-            Operator playbooks
-          </Link>
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-2 text-sm text-muted-foreground">
-            {formatPercent(
-              props.metrics.promisesWaiting /
-                Math.max(
-                  props.metrics.promisesWaiting +
-                    props.metrics.tomorrowAtRisk +
-                    props.metrics.followThroughDue,
-                  1,
-                ),
-            )}{" "}
-            of active promises are currently in clean waiting state
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <IntegrationCard
-            label="Supabase"
-            configured={props.integrations.supabase.configured}
-            summary={props.integrations.supabase.summary}
-          />
-          <IntegrationCard
-            label="Ops Webhook"
-            configured={props.integrations.opsWebhook.configured}
-            summary={props.integrations.opsWebhook.summary}
-          />
-          <IntegrationCard
-            label="Twilio Voice"
-            configured={props.integrations.twilioVoice.configured}
-            summary={props.integrations.twilioVoice.summary}
-          />
-          <IntegrationCard
-            label="Twilio Messaging"
-            configured={props.integrations.twilioMessaging.configured}
-            summary={props.integrations.twilioMessaging.summary}
-          />
-          <IntegrationCard
-            label="Voicemail Alerts"
-            configured={props.integrations.twilioNotifications.configured}
-            summary={props.integrations.twilioNotifications.summary}
-          />
-          <IntegrationCard
-            label="Ops SMS Alerts"
-            configured={props.integrations.opsSmsAlerts.configured}
-            summary={props.integrations.opsSmsAlerts.summary}
-          />
+            The job is not finished until the recap, payment, review ask, or next step is clear.
+          </QueueHeader>
+          {props.followThroughDue.length ? (
+            props.followThroughDue.map((record) => (
+              <PromiseQueueItem key={record.id} record={record} tone="follow" />
+            ))
+          ) : (
+            <EmptyState>No follow-up is due from the promise records.</EmptyState>
+          )}
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-4">
-        <BoardColumn
-          title="New Inbound"
-          description="Every lead lands here first. Nothing should skip qualification and become a fake promise by accident."
-          icon={<Phone className="h-5 w-5" />}
-          count={props.inbound.length}
-        >
-          {props.inbound.map((record) => (
-            <InboundCard key={record.id} record={record} />
-          ))}
-        </BoardColumn>
-
-        <BoardColumn
-          title="Promises Waiting"
-          description="These customers already believe something specific will happen. Protect the day, the parts, and the arrival window."
-          icon={<CircleCheckBig className="h-5 w-5" />}
-          count={props.promisesWaiting.length}
-        >
-          {props.promisesWaiting.map((record) => (
-            <PromiseCard key={record.id} record={record} />
-          ))}
-        </BoardColumn>
-
-        <BoardColumn
-          title="Tomorrow At Risk"
-          description="These are the promises most likely to break if someone does not intervene early."
-          icon={<AlertTriangle className="h-5 w-5" />}
-          count={props.tomorrowAtRisk.length}
-        >
-          {props.tomorrowAtRisk.map((record) => (
-            <PromiseCard key={record.id} record={record} />
-          ))}
-        </BoardColumn>
-
-        <BoardColumn
-          title="Follow-through Due"
-          description="The visit is not over until the recap, deferred work, and next visit path are clear to the customer."
-          icon={<ArrowRight className="h-5 w-5" />}
-          count={props.followThroughDue.length}
-        >
-          {props.followThroughDue.map((record) => (
-            <PromiseCard key={record.id} record={record} />
-          ))}
-        </BoardColumn>
-      </section>
+      {props.metrics.tomorrowAtRisk > 0 ? (
+        <section className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm leading-relaxed text-red-100">
+          <div className="flex gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+            <p>
+              {props.metrics.tomorrowAtRisk} promised job
+              {props.metrics.tomorrowAtRisk === 1 ? "" : "s"} need risk reduction before the
+              route starts.
+            </p>
+          </div>
+        </section>
+      ) : (
+        <section className="rounded-2xl border border-[--wr-teal]/20 bg-[--wr-teal]/10 p-4 text-sm leading-relaxed text-[--wr-teal-soft]">
+          <div className="flex gap-3">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+            <p>No tomorrow-at-risk promises are currently flagged.</p>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

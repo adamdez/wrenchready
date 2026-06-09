@@ -66,6 +66,7 @@ import {
   recurringAccountOutreachScripts,
   recurringAccountStarterOffer,
 } from "@/lib/promise-crm/recurring-accounts";
+import { readEnv } from "@/lib/env";
 import { evaluateIntake, type IntakeEvaluation } from "@/lib/promise-crm/intake";
 import { inboundRecords, promiseRecords } from "@/lib/promise-crm/mock-data";
 import { hasPromiseCrmSupabase, supabaseRestRequest } from "@/lib/promise-crm/supabase";
@@ -259,6 +260,57 @@ function appendNoteList(existing: string[], noteToAdd?: string) {
   return [noteToAdd, ...existing];
 }
 
+function normalizeStringList(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+
+  return values.flatMap((value) => {
+    if (typeof value === "string") {
+      return value.trim() ? [value] : [];
+    }
+
+    if (!value) return [];
+
+    if (typeof value === "object") {
+      const candidate = value as Record<string, unknown>;
+      if (typeof candidate.risk === "string" && typeof candidate.detail === "string") {
+        return [`${candidate.risk}: ${candidate.detail}`];
+      }
+
+      for (const key of ["text", "note", "body", "summary", "message"]) {
+        const text = candidate[key];
+        if (typeof text === "string" && text.trim()) return [text];
+      }
+
+      return [JSON.stringify(candidate)];
+    }
+
+    return [String(value)];
+  });
+}
+
+function normalizeNoteList(notes: unknown): string[] {
+  return normalizeStringList(notes);
+}
+
+function demoFallbackEnabled() {
+  return readEnv("WR_ENABLE_PROMISE_CRM_DEMO_FALLBACK") === "true";
+}
+
+function crmUnavailable(message: string, error?: unknown) {
+  const detail = error instanceof Error ? ` ${error.message}` : "";
+  return new Error(`${message}${detail}`);
+}
+
+function getDemoInboundRecords() {
+  return sortNewestFirst(uniqueById([...getRuntimeState().inbound, ...inboundRecords]));
+}
+
+function getDemoPromiseRecords() {
+  return sortNewestFirst(
+    uniqueById([...getRuntimeState().promises, ...promiseRecords]).map(reconcilePromiseRecord),
+  );
+}
+
 function markInboundPromoted(
   inbound: InboundRecord,
   owner: InboundRecord["owner"],
@@ -429,12 +481,13 @@ function mapInboundRow(row: SupabaseInboundRow): InboundRecord {
       endIso: row.preferred_window_end || undefined,
     },
     nextAction: row.next_action,
-    notes: row.notes || [],
+    notes: normalizeNoteList(row.notes),
   };
 }
 
 function mapPromiseRow(row: SupabasePromiseRow): PromiseRecord {
-  const { economics, visibleNotes: notesWithoutEconomics } = extractPromiseEconomics(row.notes || []);
+  const rowNotes = normalizeNoteList(row.notes);
+  const { economics, visibleNotes: notesWithoutEconomics } = extractPromiseEconomics(rowNotes);
   const { commercialOutcome, visibleNotes: notesWithoutOutcome } =
     extractCommercialOutcome(notesWithoutEconomics);
   const {
@@ -496,7 +549,7 @@ function mapPromiseRow(row: SupabasePromiseRow): PromiseRecord {
     },
     readinessSummary: row.readiness_summary,
     nextAction: row.next_action,
-    topRisks: row.top_risks || [],
+    topRisks: normalizeStringList(row.top_risks),
     notes: visibleNotesWithoutReadinessState,
     jobStage,
     customerCertainty,
@@ -680,6 +733,111 @@ function reconcilePromiseRecord(promise: PromiseRecord): PromiseRecord {
   };
 }
 
+const OPERATOR_QUEUE_RECENCY_DAYS = 14;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const NON_OPERATOR_RECORD_MARKERS = [
+  "codex",
+  "mock customer",
+  "system test",
+  "slack test",
+  "sms alert verification",
+  "alert verification",
+  "launch verification",
+  "webhook test",
+  "policy test",
+  "ops test",
+  "test lead",
+  "test sms",
+  "text lead",
+  "webhook@example.com",
+];
+
+function textFromParts(parts: Array<string | string[] | undefined>) {
+  return parts.flat().filter(Boolean).join(" ").toLowerCase();
+}
+
+function hasNonOperatorMarker(text: string) {
+  return NON_OPERATOR_RECORD_MARKERS.some((marker) => text.includes(marker));
+}
+
+function isRecentForOperatorQueue(value: string | undefined, now: Date) {
+  if (!value) return false;
+  const time = new Date(value).getTime();
+  if (!Number.isFinite(time)) return false;
+
+  return now.getTime() - time <= OPERATOR_QUEUE_RECENCY_DAYS * MS_PER_DAY;
+}
+
+function inboundOperatorText(record: InboundRecord) {
+  return textFromParts([
+    record.customer.name,
+    record.customer.email,
+    record.customer.phone,
+    record.requestedService,
+    record.normalizedService,
+    record.serviceLane,
+    record.symptomSummary,
+    record.location.label,
+    record.notes,
+  ]);
+}
+
+function promiseOperatorText(record: PromiseRecord) {
+  return textFromParts([
+    record.customer.name,
+    record.customer.email,
+    record.customer.phone,
+    record.serviceScope,
+    record.readinessSummary,
+    record.nextAction,
+    record.location.label,
+    record.notes,
+    record.topRisks,
+  ]);
+}
+
+function isOperatorQueueInbound(record: InboundRecord, now: Date) {
+  return (
+    record.qualificationStatus !== "promoted" &&
+    isRecentForOperatorQueue(record.createdAt, now) &&
+    !hasNonOperatorMarker(inboundOperatorText(record))
+  );
+}
+
+function isOperatorQueuePromise(record: PromiseRecord, now: Date) {
+  const isCurrent =
+    isRecentForOperatorQueue(record.createdAt, now) ||
+    isRecentForOperatorQueue(record.updatedAt, now) ||
+    isRecentForOperatorQueue(record.followThroughDueAt, now);
+
+  return isCurrent && !hasNonOperatorMarker(promiseOperatorText(record));
+}
+
+function getOperatorQueueRecords(
+  inbound: InboundRecord[],
+  promises: PromiseRecord[],
+  now = new Date(),
+) {
+  const queueInbound = inbound.filter((record) => isOperatorQueueInbound(record, now));
+  const queuePromises = promises.filter((record) => isOperatorQueuePromise(record, now));
+
+  return {
+    inbound: queueInbound,
+    promisesWaiting: queuePromises.filter((record) => record.status === "promises-waiting"),
+    tomorrowAtRisk: queuePromises.filter((record) => record.status === "tomorrow-at-risk"),
+    followThroughDue: queuePromises.filter((record) => record.status === "follow-through-due"),
+  };
+}
+
+function getMetricsFromOperatorQueues(queues: ReturnType<typeof getOperatorQueueRecords>) {
+  return {
+    newInbound: queues.inbound.length,
+    promisesWaiting: queues.promisesWaiting.length,
+    tomorrowAtRisk: queues.tomorrowAtRisk.length,
+    followThroughDue: queues.followThroughDue.length,
+  };
+}
+
 async function listSupabaseInboundRecords() {
   const rows = await supabaseRestRequest<SupabaseInboundRow[]>(
     "wrenchready_inbound?select=*&order=created_at.desc",
@@ -698,13 +856,17 @@ async function listSupabasePromiseRecords() {
 
 export async function getInboundRecords(): Promise<InboundRecord[]> {
   if (!hasPromiseCrmSupabase()) {
-    return sortNewestFirst(uniqueById([...getRuntimeState().inbound, ...inboundRecords]));
+    if (demoFallbackEnabled()) return getDemoInboundRecords();
+    throw crmUnavailable(
+      "Promise CRM live data unavailable: Supabase URL or server credential is missing.",
+    );
   }
 
   try {
     return await listSupabaseInboundRecords();
-  } catch {
-    return sortNewestFirst(uniqueById([...getRuntimeState().inbound, ...inboundRecords]));
+  } catch (error) {
+    if (demoFallbackEnabled()) return getDemoInboundRecords();
+    throw crmUnavailable("Promise CRM live inbound read failed.", error);
   }
 }
 
@@ -715,17 +877,17 @@ export async function getInboundRecord(id: string) {
 
 export async function getPromiseRecords(): Promise<PromiseRecord[]> {
   if (!hasPromiseCrmSupabase()) {
-    return sortNewestFirst(
-      uniqueById([...getRuntimeState().promises, ...promiseRecords]).map(reconcilePromiseRecord),
+    if (demoFallbackEnabled()) return getDemoPromiseRecords();
+    throw crmUnavailable(
+      "Promise CRM live data unavailable: Supabase URL or server credential is missing.",
     );
   }
 
   try {
     return (await listSupabasePromiseRecords()).map(reconcilePromiseRecord);
-  } catch {
-    return sortNewestFirst(
-      uniqueById([...getRuntimeState().promises, ...promiseRecords]).map(reconcilePromiseRecord),
-    );
+  } catch (error) {
+    if (demoFallbackEnabled()) return getDemoPromiseRecords();
+    throw crmUnavailable("Promise CRM live promise read failed.", error);
   }
 }
 
@@ -742,12 +904,7 @@ export async function getPromiseRecordByCustomerToken(token: string) {
 export async function getPromiseBoardMetrics(): Promise<PromiseBoardMetrics> {
   const [inbound, promises] = await Promise.all([getInboundRecords(), getPromiseRecords()]);
 
-  return {
-    newInbound: inbound.filter((record) => record.qualificationStatus !== "promoted").length,
-    promisesWaiting: promises.filter((record) => record.status === "promises-waiting").length,
-    tomorrowAtRisk: promises.filter((record) => record.status === "tomorrow-at-risk").length,
-    followThroughDue: promises.filter((record) => record.status === "follow-through-due").length,
-  };
+  return getMetricsFromOperatorQueues(getOperatorQueueRecords(inbound, promises));
 }
 
 export async function getPromiseEconomicsRollup(): Promise<PromiseEconomicsRollup> {
@@ -1365,21 +1522,21 @@ export async function getWedgeFocusSnapshot(): Promise<WedgeFocusSnapshot> {
 }
 
 export async function getPromiseBoardSnapshot() {
-  const [inbound, promises, metrics, economics] = await Promise.all([
+  const [inbound, promises, economics] = await Promise.all([
     getInboundRecords(),
     getPromiseRecords(),
-    getPromiseBoardMetrics(),
     getPromiseEconomicsRollup(),
   ]);
+  const queues = getOperatorQueueRecords(inbound, promises);
 
   return {
     generatedAt: new Date().toISOString(),
-    metrics,
+    metrics: getMetricsFromOperatorQueues(queues),
     economics,
-    inbound: inbound.filter((record) => record.qualificationStatus !== "promoted"),
-    promisesWaiting: promises.filter((record) => record.status === "promises-waiting"),
-    tomorrowAtRisk: promises.filter((record) => record.status === "tomorrow-at-risk"),
-    followThroughDue: promises.filter((record) => record.status === "follow-through-due"),
+    inbound: queues.inbound,
+    promisesWaiting: queues.promisesWaiting,
+    tomorrowAtRisk: queues.tomorrowAtRisk,
+    followThroughDue: queues.followThroughDue,
   };
 }
 
@@ -1451,6 +1608,11 @@ export async function createInboundRecord(
   };
 
   if (!hasPromiseCrmSupabase()) {
+    if (!demoFallbackEnabled()) {
+      throw crmUnavailable(
+        "Promise CRM live inbound create unavailable: Supabase URL or server credential is missing.",
+      );
+    }
     const created: InboundRecord = mapInboundRow({
       id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
@@ -1470,7 +1632,10 @@ export async function createInboundRecord(
     );
 
     return rows[0] ? mapInboundRow(rows[0]) : null;
-  } catch {
+  } catch (error) {
+    if (!demoFallbackEnabled()) {
+      throw crmUnavailable("Promise CRM live inbound create failed.", error);
+    }
     const created: InboundRecord = mapInboundRow({
       id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
@@ -1510,6 +1675,12 @@ type CreatePromiseInput = {
   scheduledWindowLabel: string;
   readinessSummary: string;
   nextAction: string;
+  customerContacted: boolean;
+  scopeConfirmed: boolean;
+  priceExpectation: string;
+  priceExpectationTbd: boolean;
+  inspectionDeliverable?: string;
+  customerPromiseSummary: string;
 };
 
 export async function createPromiseFromInbound(input: CreatePromiseInput) {
@@ -1520,6 +1691,22 @@ export async function createPromiseFromInbound(input: CreatePromiseInput) {
   }
 
   const customerAccess = createPromiseCustomerAccess();
+  const promotionNotes = [
+    "Promise promotion gates completed.",
+    input.customerContacted
+      ? "Customer contact or contact attempt was recorded before promotion."
+      : "Customer contact was not recorded.",
+    input.scopeConfirmed
+      ? `Confirmed scope before promotion: ${input.serviceScope}`
+      : "Scope was not confirmed before promotion.",
+    input.priceExpectationTbd
+      ? `Price expectation TBD: ${input.priceExpectation}`
+      : `Price / fee expectation: ${input.priceExpectation}`,
+    input.inspectionDeliverable
+      ? `Inspection deliverable: ${input.inspectionDeliverable}`
+      : null,
+    `Customer-facing promise: ${input.customerPromiseSummary}`,
+  ].filter((note): note is string => Boolean(note));
   const promiseRow: Omit<SupabasePromiseRow, "id" | "created_at" | "updated_at"> = {
     inbound_id: inbound.id,
     customer_name: inbound.customer.name,
@@ -1551,7 +1738,7 @@ export async function createPromiseFromInbound(input: CreatePromiseInput) {
       ...mergePromiseNotesWithExecutionOps(
         mergePromiseNotesWithReadinessState(
           mergePromiseNotesWithCustomerState(
-            ["Promoted from inbound record.", ...inbound.notes],
+            ["Promoted from inbound record.", ...promotionNotes, ...inbound.notes],
             customerAccess,
           ),
           getDefaultCustomerCertainty(),
@@ -1564,6 +1751,11 @@ export async function createPromiseFromInbound(input: CreatePromiseInput) {
   };
 
   if (!hasPromiseCrmSupabase()) {
+    if (!demoFallbackEnabled()) {
+      throw crmUnavailable(
+        "Promise CRM live promise create unavailable: Supabase URL or server credential is missing.",
+      );
+    }
     const created: PromiseRecord = mapPromiseRow({
       id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
@@ -1595,7 +1787,10 @@ export async function createPromiseFromInbound(input: CreatePromiseInput) {
     ]);
 
     return rows[0] ? mapPromiseRow(rows[0]) : null;
-  } catch {
+  } catch (error) {
+    if (!demoFallbackEnabled()) {
+      throw crmUnavailable("Promise CRM live promise create failed.", error);
+    }
     const created: PromiseRecord = mapPromiseRow({
       id: crypto.randomUUID(),
       created_at: new Date().toISOString(),
@@ -1628,6 +1823,11 @@ export async function updateInboundRecord(id: string, updates: UpdateInboundInpu
   };
 
   if (!hasPromiseCrmSupabase()) {
+    if (!demoFallbackEnabled()) {
+      throw crmUnavailable(
+        "Promise CRM live inbound update unavailable: Supabase URL or server credential is missing.",
+      );
+    }
     const updated: InboundRecord = {
       ...current,
       owner: patch.owner,
@@ -1655,7 +1855,10 @@ export async function updateInboundRecord(id: string, updates: UpdateInboundInpu
     );
 
     return rows[0] ? mapInboundRow(rows[0]) : current;
-  } catch {
+  } catch (error) {
+    if (!demoFallbackEnabled()) {
+      throw crmUnavailable("Promise CRM live inbound update failed.", error);
+    }
     const updated: InboundRecord = {
       ...current,
       owner: patch.owner,
@@ -1819,6 +2022,11 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
   };
 
   if (!hasPromiseCrmSupabase()) {
+    if (!demoFallbackEnabled()) {
+      throw crmUnavailable(
+        "Promise CRM live promise update unavailable: Supabase URL or server credential is missing.",
+      );
+    }
     const updated: PromiseRecord = {
       ...current,
       updatedAt: new Date().toISOString(),
@@ -1885,7 +2093,10 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
     );
 
     return rows[0] ? mapPromiseRow(rows[0]) : current;
-  } catch {
+  } catch (error) {
+    if (!demoFallbackEnabled()) {
+      throw crmUnavailable("Promise CRM live promise update failed.", error);
+    }
     const updated: PromiseRecord = {
       ...current,
       updatedAt: new Date().toISOString(),

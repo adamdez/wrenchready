@@ -35,7 +35,10 @@ const faqStructuredData = {
 };
 
 export default async function Home() {
-  const publicProof = await getPublicProofSnapshot();
+  const publicProof = await getPublicProofSnapshot().catch(() => ({
+    generatedAt: new Date().toISOString(),
+    stories: [],
+  }));
   const publicReviews = publicProof.stories.map((story) => ({
     name: story.customerLabel,
     text: story.quote,
