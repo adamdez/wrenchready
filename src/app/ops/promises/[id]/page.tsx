@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { OutboundResultForm } from "@/components/outbound-result-form";
 import { PromiseStatusForm } from "@/components/promise-status-form";
+import { QuickCloseoutForm } from "@/components/quick-closeout-form";
 import { getNextProbableVisit } from "@/lib/promise-crm/closeout-recapture";
 import { computePromiseEconomics } from "@/lib/promise-crm/economics";
 import { getPromiseOutboundSnapshot } from "@/lib/promise-crm/outbound-drafts";
@@ -240,6 +241,10 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
           </div>
         </div>
       </section>
+
+      <div className="mt-6">
+        <QuickCloseoutForm promise={promise} />
+      </div>
 
       <section className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.9fr]">
         <div className="space-y-6">
