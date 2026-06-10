@@ -51,6 +51,8 @@ next-env.d.ts
 
 # dev logs
 .next-dev*.log
+codex-start-*.log
+output/
 
 # intermediate video clips (only final stitched hero matters)
 public/wrenchready-clip-*.mp4
