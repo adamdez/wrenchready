@@ -57,6 +57,7 @@ assert(config.config?.model?.tools?.some((tool) => tool.function?.name === "get_
 assert(config.config?.model?.tools?.some((tool) => tool.function?.name === "analyze_field_photo"), "config should include field photo analysis Vapi tool");
 assert(config.config?.brain?.middlemanPolicy?.includes("OpenAI"), "config should document OpenAI as Jeff's brain");
 assert(config.config?.brain?.reasoningEffort === "low", "config should default Jeff backend reasoning effort to low");
+assert(!/customer or vehicle you are on/i.test(config.config?.firstMessage || ""), "first message should not force job context before helping");
 
 const assistantRequest = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
@@ -234,6 +235,42 @@ assert(orientationReview.review?.orientationReadiness?.ready, "orientation revie
 assert(
   !orientationReview.review?.transcript?.includes("You are Jeff"),
   "artifact-message transcript should exclude system prompt text",
+);
+
+const shortCall = await request("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "end-of-call-report",
+    call: {
+      id: "call-test-short-call",
+      assistantId: "assistant-test",
+      customer: { number: "+15095550102" },
+    },
+    artifact: {
+      transcript: "AI: Hey, Simon. This is Jeff. What are we working on?",
+    },
+  },
+});
+assert(shortCall.workspace?.conversationMode === "missed-or-short-call", "greeting-only calls should be classified as missed/short");
+assert(shortCall.workspace?.needsReview === false, "greeting-only calls should not pollute the operator review queue");
+assert(!shortCall.review, "greeting-only calls should not create a transcript review");
+
+const contextNarrationReview = await request("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "end-of-call-report",
+    call: {
+      id: "call-test-context-narration",
+      assistantId: "assistant-test",
+      customer: { number: "+15095550102" },
+    },
+    artifact: {
+      transcript:
+        "AI: One second. I'm checking the WrenchReady job context.\nUser: Oh, you're confused already.\nAI: I'm not confused. I can talk Simon through diagnostics and give the next test.",
+    },
+  },
+});
+assert(
+  contextNarrationReview.review?.issues?.some((issue) => /internal lookup narration/i.test(issue.summary)),
+  "review should flag internal context lookup narration",
 );
 
 const personalCall = await request("/api/al/wrenchready/jeff/vapi/server", {

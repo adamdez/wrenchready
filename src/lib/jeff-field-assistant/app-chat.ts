@@ -55,16 +55,30 @@ type JeffAppMessageInput = {
   text?: string;
   jobId?: string;
   jobLabel?: string;
+  selectedJobId?: string;
+  selectedJobLabel?: string;
+  contextMode?: JeffAppContextMode;
+  inferredVehicle?: string;
+  inferredPartName?: string;
   sender?: string;
   attachments?: JeffAppAttachment[];
   fieldPhotoStatus?: string;
 };
+
+type JeffAppContextMode =
+  | "selected-job"
+  | "different-job"
+  | "personal"
+  | "admin"
+  | "parts-only"
+  | "no-job";
 
 type MessageToolAction = {
   tool: string;
   success: boolean;
   assistantSay?: string;
   warning?: string;
+  data?: unknown;
 };
 
 export type JeffAppThreadMessage = {
@@ -484,7 +498,13 @@ function messageActionFromResult(result: unknown, fallbackTool = "jeff_tool"): M
     success: value.success === true,
     assistantSay: optionalString(value.assistantSay),
     warning: warnings[0],
+    data: isObject(value.data) ? value.data : value,
   };
+}
+
+function hasAny(text: string, patterns: string[]) {
+  const normalized = text.toLowerCase();
+  return patterns.some((pattern) => normalized.includes(pattern));
 }
 
 function likelyWantsEmail(text: string) {
@@ -512,7 +532,7 @@ function likelyWantsPhotoAnalysis(text: string, attachments: JeffAppAttachment[]
 }
 
 function likelyWantsPartStore(text: string) {
-  return /\b(part|parts|starter|alternator|battery|sensor|spark plugs?|coil|brake|caliper|rotor|filter)\b/i.test(text) &&
+  return /\b(part|parts|starter|alternator|battery|sensor|spark plugs?|coil|brake|caliper|rotor|filter|fuel pump|pump)\b/i.test(text) &&
     /\b(find|near|close|store|oreilly|o'reilly|autozone|napa|buy|order|reserve|cart|pickup|pick up|get)\b/i.test(text);
 }
 
@@ -534,23 +554,96 @@ function likelyWantsCloseout(text: string) {
 
 function extractPartName(text: string) {
   const patterns = [
-    /\b(?:find|buy|order|reserve|get|add)\s+(?:a|an|the)?\s*([a-z0-9][a-z0-9\s-]{2,60}?)(?:\s+(?:near|close|from|at|for|to|and|please)\b|$)/i,
-    /\b(?:need|needs)\s+(?:a|an|the)?\s*([a-z0-9][a-z0-9\s-]{2,60}?)(?:\s+(?:near|close|from|at|for|to|and|please)\b|$)/i,
+    /\b(?:find|buy|order|reserve|get|add)\s+(?:a|an|the)?\s*([a-z0-9][a-z0-9\s-]{2,80}?)(?:\s+(?:near|close|from|at|for|to|and|please|asap|right now|where)\b|$)/i,
+    /\b(?:need|needs)\s+(?:to\s+buy\s+)?(?:a|an|the)?\s*([a-z0-9][a-z0-9\s-]{2,80}?)(?:\s+(?:near|close|from|at|for|to|and|please|asap|right now|where)\b|$)/i,
   ];
+
+  const explicitFuelPump = text.match(/\b((?:fuel|water|power steering)\s+pump)\b/i)?.[1];
+  if (explicitFuelPump) return explicitFuelPump.trim();
 
   for (const pattern of patterns) {
     const match = text.match(pattern)?.[1];
     if (match) {
       return match
-        .replace(/\b(that|this|cart|part|parts|store|pickup|pick up)\b/gi, "")
+        .replace(/\b(that|this|cart|part|parts|store|pickup|pick up|someone has one|where|i can go|asap|right now)\b/gi, "")
         .replace(/\s+/g, " ")
         .trim()
         .slice(0, 80);
     }
   }
 
-  const knownPart = text.match(/\b(starter|alternator|battery|spark plugs?|ignition coils?|sensor|brake pads?|caliper|rotor|oil filter|air filter)\b/i)?.[1];
+  const knownPart = text.match(/\b(fuel pump|starter|alternator|battery|spark plugs?|ignition coils?|sensor|brake pads?|caliper|rotor|oil filter|air filter)\b/i)?.[1];
   return knownPart?.trim();
+}
+
+function extractVehicleFromText(text: string) {
+  const normalized = text.replace(/\s+/g, " ");
+  const vehicle = normalized.match(
+    /\b((?:19|20)\d{2}\s+(?:chevy|chevrolet|ford|subaru|dodge|ram|toyota|honda|nissan|jeep|gmc|chrysler|cadillac|buick|kia|hyundai|mazda|volkswagen|vw)\s+[a-z0-9][a-z0-9 -]{1,35})\b/i,
+  )?.[1];
+  if (vehicle) return vehicle.replace(/\bchevy\b/i, "Chevy").trim();
+
+  const astro = normalized.match(/\bastro\s+van\b/i)?.[0];
+  if (astro) return "Chevy Astro";
+
+  return undefined;
+}
+
+function selectedJobAppearsDifferent(jobLabel: string | undefined, vehicle: string | undefined) {
+  if (!jobLabel || !vehicle) return false;
+  const job = jobLabel.toLowerCase();
+  const candidate = vehicle.toLowerCase();
+  const year = candidate.match(/\b(19|20)\d{2}\b/)?.[0];
+  const words = candidate
+    .replace(/\b(19|20)\d{2}\b/g, "")
+    .split(/\s+/)
+    .filter((word) => word.length > 2);
+
+  if (year && !job.includes(year)) return true;
+  return words.some((word) => !job.includes(word));
+}
+
+function detectMessageContextMode(input: JeffAppMessageInput): JeffAppContextMode {
+  const text = input.text || "";
+  const normalized = text.toLowerCase();
+  const vehicle = extractVehicleFromText(text);
+
+  if (hasAny(normalized, ["different job", "another job", "not this job", "not the selected job", "for a different customer"])) {
+    return "different-job";
+  }
+  if (hasAny(normalized, ["for me personally", "personal vehicle", "my truck", "my car", "for myself"])) {
+    return "personal";
+  }
+  if (likelyWantsPartStore(text) && selectedJobAppearsDifferent(input.jobLabel, vehicle)) {
+    return "different-job";
+  }
+  if (likelyWantsPartStore(text) && !input.jobId) {
+    return "parts-only";
+  }
+  if (!input.jobId) return "no-job";
+  if (likelyWantsCalendarSync(text) || likelyWantsGmailSync(text)) return "admin";
+
+  return "selected-job";
+}
+
+function applyMessageContext(input: JeffAppMessageInput): JeffAppMessageInput {
+  const contextMode = detectMessageContextMode(input);
+  const shouldDetachFromSelectedJob =
+    contextMode === "different-job" ||
+    contextMode === "personal" ||
+    contextMode === "parts-only" ||
+    contextMode === "no-job";
+
+  return {
+    ...input,
+    selectedJobId: input.jobId,
+    selectedJobLabel: input.jobLabel,
+    jobId: shouldDetachFromSelectedJob ? undefined : input.jobId,
+    jobLabel: shouldDetachFromSelectedJob ? undefined : input.jobLabel,
+    contextMode,
+    inferredVehicle: extractVehicleFromText(input.text || ""),
+    inferredPartName: extractPartName(input.text || ""),
+  };
 }
 
 async function runMessageActionTools(input: JeffAppMessageInput): Promise<MessageToolAction[]> {
@@ -590,10 +683,11 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
   }
 
   if (likelyWantsPartStore(text)) {
-    const partName = extractPartName(text);
+    const partName = input.inferredPartName || extractPartName(text);
+    const vehicle = input.inferredVehicle || input.jobLabel;
     actions.push(messageActionFromResult(await findNearbyPartsStoresForSimon({
       partName,
-      vehicle: input.jobLabel,
+      vehicle,
     }), "find_nearby_parts_stores"));
   }
 
@@ -632,11 +726,38 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
   return actions;
 }
 
+function partsStoreActionSummary(data: unknown) {
+  if (!isObject(data) || !Array.isArray(data.stores)) return undefined;
+  const question = optionalString(data.inventoryQuestion);
+  const rows = data.stores.slice(0, 3).flatMap((store, index) => {
+    if (!isObject(store)) return [];
+    const route = isObject(store.route) ? store.route : {};
+    const name = optionalString(store.name) || `Store ${index + 1}`;
+    const phone = optionalString(store.phone);
+    const address = optionalString(store.address);
+    const map = optionalString(store.googleMapsUri);
+    const duration = typeof route.durationMinutes === "number" ? `${route.durationMinutes} min` : undefined;
+    const distance = typeof route.distanceMiles === "number" ? `${route.distanceMiles} mi` : undefined;
+
+    return [
+      `${index + 1}. ${[name, duration, distance, phone ? `phone ${phone}` : undefined, address, map].filter(Boolean).join(" / ")}`,
+    ];
+  });
+
+  return [...rows, question ? `Inventory question: ${question}` : undefined].filter(Boolean).join("\n");
+}
+
 function buildActionContext(actions: MessageToolAction[]) {
   if (actions.length === 0) return "- No tool-backed action was run for this message.";
 
   return actions
-    .map((action) => `- ${action.tool}: ${action.success ? "success" : "blocked/failed"}${action.assistantSay ? ` - ${action.assistantSay}` : ""}${action.warning ? ` Warning: ${action.warning}` : ""}`)
+    .map((action) => {
+      const partsSummary = action.tool === "find_nearby_parts_stores" ? partsStoreActionSummary(action.data) : undefined;
+      return [
+        `- ${action.tool}: ${action.success ? "success" : "blocked/failed"}${action.assistantSay ? ` - ${action.assistantSay}` : ""}${action.warning ? ` Warning: ${action.warning}` : ""}`,
+        partsSummary ? `  ${partsSummary.replace(/\n/g, "\n  ")}` : undefined,
+      ].filter(Boolean).join("\n");
+    })
     .join("\n");
 }
 
@@ -671,9 +792,12 @@ async function askJeffTextModel(
               "",
               "You are replying inside Jeff's phone-style field text thread.",
               "Keep answers concise, practical, and safe for a mobile mechanic in the field.",
+              "Assume Simon is usually working alone. Give one-person-safe steps and one physical action at a time.",
+              "If the message context says different-job, parts-only, personal, or no-job, do not drag the answer back to the selected CRM job.",
               "If Simon asks for a part, test, purchase, diagnosis, safety judgment, invoice, or customer message, say what you can do now and what must be verified.",
               "Do not pretend a purchase, email, SMS, upload, or job update happened unless a tool or system state proves it.",
               "When tool-backed actions are listed, treat those outcomes as ground truth and summarize them plainly.",
+              "For nearby parts-store results, include store names plus phone/address/map when available and the exact inventory-confirmation question. Do not claim live inventory unless a vendor-confirmed source proves it.",
               "Use live capability status quietly. Do not recite system internals unless Simon asks what is connected or why something is blocked.",
               "",
               buildJeffCapabilityPromptContext(capabilities),
@@ -698,6 +822,12 @@ async function askJeffTextModel(
             text: [
               input.jobLabel ? `Job: ${input.jobLabel}` : undefined,
               input.jobId ? `Job id: ${input.jobId}` : undefined,
+              input.contextMode ? `Message context: ${input.contextMode}` : undefined,
+              input.selectedJobLabel && input.selectedJobLabel !== input.jobLabel
+                ? `Selected app job ignored for this reply: ${input.selectedJobLabel}`
+                : undefined,
+              input.inferredVehicle ? `Vehicle from Simon's message: ${input.inferredVehicle}` : undefined,
+              input.inferredPartName ? `Part from Simon's message: ${input.inferredPartName}` : undefined,
               input.attachments?.length
                 ? `Attachments mentioned: ${input.attachments.map((attachment) => attachment.fileName).join(", ")}`
                 : undefined,
@@ -738,7 +868,7 @@ async function askJeffTextModel(
 }
 
 export async function sendJeffAppMessage(payload: unknown) {
-  const input = normalizeInput(payload);
+  const input = applyMessageContext(normalizeInput(payload));
   const text = input.text;
 
   if (!text && !input.attachments?.length) {
@@ -772,17 +902,40 @@ export async function sendJeffAppMessage(payload: unknown) {
   const actions = await runMessageActionTools(input);
   const answer = await askJeffTextModel(input, recent.messages, actions);
   const timestamp = nowIso();
-  const subject = input.jobLabel || text?.slice(0, 90) || "Jeff app message";
+  const subject = input.jobLabel || input.inferredVehicle || input.inferredPartName || text?.slice(0, 90) || "Jeff app message";
   const transcript = [
     text ? `${input.sender || "Simon"}: ${text}` : undefined,
     answer.reply ? `Jeff: ${answer.reply}` : undefined,
   ].filter(Boolean).join("\n\n");
+  const callType = input.jobId
+    ? "job"
+    : input.contextMode === "personal"
+      ? "personal"
+      : input.contextMode === "admin"
+        ? "admin"
+        : "unknown";
+  const summaryKind = input.jobId
+    ? "after_call"
+    : input.contextMode === "no-job"
+      ? "unresolved_call"
+      : "manual_compaction";
+  const reviewReason = input.jobId
+    ? "Jeff app message attached by selected job."
+    : input.contextMode === "different-job"
+      ? "Jeff app message was intentionally detached because Simon said it was for a different job."
+      : input.contextMode === "parts-only"
+        ? "Jeff parts-only message captured without a selected job."
+        : input.contextMode === "personal"
+          ? "Jeff personal message captured outside CRM job context."
+          : input.contextMode === "admin"
+            ? "Jeff admin message captured outside CRM job context."
+            : "Jeff app message is not attached to a confirmed job.";
   const conversation: JeffConversation = {
     id: conversationId,
     jobId: input.jobId,
     jobLabel: input.jobLabel,
     jobMatchStatus: input.jobId ? "manual" : "unresolved",
-    callType: input.jobId ? "job" : "unknown",
+    callType,
     subjectLabel: subject,
     channel: input.attachments?.length ? "mms" : "sms",
     endedAt: timestamp,
@@ -790,12 +943,15 @@ export async function sendJeffAppMessage(payload: unknown) {
     rawSummary: answer.reply,
     followUpRequested: false,
     followUpStatus: "none",
-    needsReview: !input.jobId,
-    reviewReason: input.jobId
-      ? "Jeff app message attached by selected job."
-      : "Jeff app message is not attached to a confirmed job.",
+    needsReview: !input.jobId && input.contextMode !== "parts-only",
+    reviewReason,
     sourcePayload: {
       source: "jeff-app-message",
+      contextMode: input.contextMode,
+      selectedJobId: input.selectedJobId,
+      selectedJobLabel: input.selectedJobLabel,
+      inferredVehicle: input.inferredVehicle,
+      inferredPartName: input.inferredPartName,
       userMessage: text,
       assistantMessage: answer.reply,
       model: answer.model,
@@ -821,10 +977,13 @@ export async function sendJeffAppMessage(payload: unknown) {
     id: `${conversationId}-summary`,
     conversationId,
     jobId: input.jobId,
-    summaryKind: input.jobId ? "after_call" : "unresolved_call",
+    summaryKind,
     summary: transcript || answer.reply,
     knownFacts: [
       input.jobLabel ? `Job: ${input.jobLabel}` : undefined,
+      input.contextMode ? `Context: ${input.contextMode}` : undefined,
+      input.inferredVehicle ? `Vehicle: ${input.inferredVehicle}` : undefined,
+      input.inferredPartName ? `Part: ${input.inferredPartName}` : undefined,
       input.attachments?.length ? `Attachments: ${input.attachments.length}` : undefined,
     ].filter((entry): entry is string => Boolean(entry)),
     testsPerformed: [],
@@ -837,11 +996,15 @@ export async function sendJeffAppMessage(payload: unknown) {
     requestedFollowUps: [],
     emailRequested: false,
     emailStatus: "none",
-    blockers: input.jobId ? [] : ["Message is not attached to a confirmed job."],
+    blockers: !input.jobId && input.contextMode === "no-job" ? ["Message is not attached to a confirmed job."] : [],
     confidence: "medium",
     createdAt: timestamp,
     metadata: {
       source: "jeff-app-message",
+      contextMode: input.contextMode,
+      selectedJobLabel: input.selectedJobLabel,
+      inferredVehicle: input.inferredVehicle,
+      inferredPartName: input.inferredPartName,
       model: answer.model,
       warning: answer.warning,
       attachmentStorageWarnings: savedAttachments.warnings,

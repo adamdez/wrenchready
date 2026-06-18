@@ -47,6 +47,37 @@ function optionalNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function minutesText(value?: number) {
+  return value === undefined ? "drive time unknown" : `${value} min`;
+}
+
+function milesText(value?: number) {
+  return value === undefined ? "distance unknown" : `${value} mi`;
+}
+
+function storeLine(
+  store: Awaited<ReturnType<typeof findNearbyPartsStores>>[number],
+  index: number,
+) {
+  const route = store.route;
+  const details = [
+    `${index + 1}. ${store.name}`,
+    `${minutesText(route?.durationMinutes)} / ${milesText(route?.distanceMiles ?? store.straightLineDistanceMiles)}`,
+    store.phone ? `phone ${store.phone}` : "phone not listed",
+    store.address,
+    store.googleMapsUri ? `map ${store.googleMapsUri}` : undefined,
+  ].filter(Boolean);
+
+  return details.join(" - ");
+}
+
+function inventoryQuestion(partName?: string, vehicle?: string) {
+  const part = partName || "the part";
+  const vehicleText = vehicle ? ` for ${vehicle}` : "";
+
+  return `Ask: "Do you have ${part}${vehicleText} in stock right now, what is the exact part number, price, core charge, and how soon can Simon pick it up?"`;
+}
+
 function normalizeLocationInput(payload: unknown): SimonLocationCheckInInput {
   const input = isObject(payload) ? payload : {};
 
@@ -260,17 +291,20 @@ export async function findNearbyPartsStoresForSimon(payload: unknown) {
     maxResults: 5,
   });
   const best = stores[0];
+  const storeDetails = stores.slice(0, 3).map(storeLine).join(" ");
+  const question = inventoryQuestion(input.partName, input.vehicle);
 
   return {
     success: true,
     status: "ready",
     assistantSay: best
-      ? `${best.name} looks closest by drive time: about ${best.route?.durationMinutes ?? "unknown"} minutes and ${best.route?.distanceMiles ?? "unknown"} miles. Next step is inventory confirmation: exact fitment, part number, price, core charge, and pickup timing. I can save the vendor-confirmed result, but I cannot reserve, pay, or order yet.`
+      ? `${best.name} looks closest by drive time: ${minutesText(best.route?.durationMinutes)} and ${milesText(best.route?.distanceMiles)}. Top options: ${storeDetails} ${question} I can save the vendor-confirmed result, but I cannot reserve, pay, or order yet.`
       : "I could not find nearby parts stores from Simon's current location.",
     location,
     partName: input.partName,
     vehicle: input.vehicle,
     stores,
+    inventoryQuestion: question,
     policy: "Jeff may rank stores, prepare fitment/inventory questions, and save vendor-confirmed results. Jeff may not claim inventory from nearby-store results alone and may not reserve, pay, purchase, or order parts yet.",
     warnings: latest.warnings,
   };

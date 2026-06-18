@@ -200,11 +200,37 @@ function classifyCallType(input: {
   if (hasAny(normalized, ["this is for me", "this is for simon", "for simon williams", "simon williams"])) {
     return "personal" as const;
   }
-  if (hasAny(normalized, ["invoice", "payment", "schedule", "calendar", "customer text", "call customer"])) {
+  if (hasAny(normalized, [
+    "invoice",
+    "payment",
+    "schedule",
+    "calendar",
+    "customer text",
+    "call customer",
+    "what i can help with",
+    "explain what i can help",
+    "field assistant",
+    "orientation",
+  ])) {
     return "admin" as const;
   }
 
   return "unknown" as const;
+}
+
+function conversationModeFromTranscript(input: {
+  transcript: string;
+  callType: ReturnType<typeof classifyCallType>;
+  jobId?: string;
+}) {
+  const normalized = input.transcript.toLowerCase();
+  if (isShortOrMissedCall(input.transcript)) return "missed-or-short-call";
+  if (input.jobId) return "selected-job";
+  if (input.callType === "personal") return "personal";
+  if (input.callType === "admin") return "admin";
+  if (hasAny(normalized, ["different job", "another job", "not this job", "not the selected job"])) return "different-job";
+  if (hasAny(normalized, ["parts store", "where can i buy", "where someone has", "asap", "pick up", "pickup"])) return "parts-only";
+  return "ad-hoc";
 }
 
 function subjectLabelFromTranscript(
@@ -221,6 +247,7 @@ function subjectLabelFromTranscript(
   const vehicleMatch = normalized.match(/\b(?:19|20)\d{2}\s+[A-Z][a-z]+(?:\s+[A-Z0-9][a-zA-Z0-9-]+){0,3}/);
   if (vehicleMatch) return vehicleMatch[0];
 
+  if (isShortOrMissedCall(transcript)) return "Short or missed Jeff call";
   return callType === "personal" ? "Personal tech call" : undefined;
 }
 
@@ -267,18 +294,35 @@ function compactTranscript(input: {
   jobLabel?: string;
   callType?: ReturnType<typeof classifyCallType>;
 }) {
-  const transcript = input.transcript.trim();
+  const originalTranscript = input.transcript.trim();
+  const transcript = stripAssistantFiller(originalTranscript);
+  const extractionTranscript = simonOnlyTranscript(transcript) || transcript;
+  const shortOrMissed = isShortOrMissedCall(originalTranscript);
   const rawSummary = input.rawSummary?.trim();
   const baseSummary =
-    rawSummary ||
-    (transcript
-      ? transcript.replace(/\s+/g, " ").slice(0, 420)
-      : "No transcript was captured for this Jeff call.");
-  const knownFacts = [
-    input.jobLabel ? `Call was attached to ${input.jobLabel}.` : undefined,
-    ...stringListFromTranscript(transcript, ["customer", "vehicle", "job", "battery", "starter", "no-start", "no start"], 5),
-  ].filter((entry): entry is string => Boolean(entry));
-  const testsPerformed = stringListFromTranscript(transcript, [
+    shortOrMissed
+      ? "Short or unanswered Jeff call. No usable Simon request was captured."
+      : rawSummary ||
+        (transcript
+          ? transcript.replace(/\s+/g, " ").slice(0, 420)
+          : "No transcript was captured for this Jeff call.");
+  const knownFacts = shortOrMissed
+    ? []
+    : [
+      input.jobLabel ? `Call was attached to ${input.jobLabel}.` : undefined,
+      ...stringListFromTranscript(extractionTranscript, [
+        "customer",
+        "vehicle",
+        "job",
+        "battery",
+        "starter",
+        "no-start",
+        "no start",
+        "part",
+        "fuel pump",
+      ], 5),
+    ].filter((entry): entry is string => Boolean(entry));
+  const testsPerformed = shortOrMissed ? [] : stringListFromTranscript(transcript, [
     "test",
     "checked",
     "check",
@@ -288,8 +332,8 @@ function compactTranscript(input: {
     "scan",
     "code",
   ]);
-  const readings = transcriptReadings(transcript);
-  const suspectedIssues = stringListFromTranscript(transcript, [
+  const readings = shortOrMissed ? [] : transcriptReadings(transcript);
+  const suspectedIssues = shortOrMissed ? [] : stringListFromTranscript(transcript, [
     "suspect",
     "likely",
     "points to",
@@ -298,28 +342,38 @@ function compactTranscript(input: {
     "cable",
     "ground",
     "alternator",
+    "fuel",
+    "pump",
   ], 5);
-  const unprovenAssumptions = [
+  const unprovenAssumptions = shortOrMissed ? [] : [
     ...stringListFromTranscript(transcript, ["not proved", "verify", "confirm", "uncertain", "need to"], 5),
   ];
-  const proofNeeded = stringListFromTranscript(transcript, ["photo", "evidence", "scan report", "vin", "odometer", "label"], 5);
-  const nextActions = stringListFromTranscript(transcript, ["next", "do this", "check", "verify", "send", "upload"], 6);
-  const requestedFollowUps = requestedFollowUpsFromTranscript(transcript);
-  const emailRequested = emailRequestedFromTranscript(transcript);
+  const proofNeeded = shortOrMissed ? [] : stringListFromTranscript(transcript, ["photo", "evidence", "scan report", "vin", "odometer", "label"], 5);
+  const nextActions = shortOrMissed ? [] : stringListFromTranscript(transcript, ["next", "do this", "check", "verify", "send", "upload"], 6);
+  const requestedFollowUps = shortOrMissed ? [] : requestedFollowUpsFromTranscript(transcript);
+  const emailRequested = shortOrMissed ? false : emailRequestedFromTranscript(transcript);
   const blockers = [
-    !input.jobId && input.callType !== "personal" && input.callType !== "test"
+    !input.jobId &&
+      !shortOrMissed &&
+      input.callType !== "personal" &&
+      input.callType !== "admin" &&
+      input.callType !== "test"
       ? "Call is not attached to a confirmed job workspace."
       : undefined,
-    !transcript ? "No transcript captured; review Vapi recording/transcript configuration." : undefined,
+    !transcript && !shortOrMissed ? "No transcript captured; review Vapi recording/transcript configuration." : undefined,
   ].filter((entry): entry is string => Boolean(entry));
   const fallbackNextAction =
-    input.jobId
-      ? "Review the call summary and update the job workspace."
-      : input.callType === "personal"
-        ? "Keep this as a personal Jeff call and complete any requested follow-up."
-        : input.callType === "test"
-          ? "Review the test call only if it exposed a Jeff behavior issue."
-          : "Resolve whether this call belongs to a job, personal workspace, or admin action.";
+    shortOrMissed
+      ? "Keep this in call history only; no operator review needed unless the pattern repeats."
+      : input.jobId
+        ? "Review the call summary and update the job workspace."
+        : input.callType === "personal"
+          ? "Keep this as a personal Jeff call and complete any requested follow-up."
+          : input.callType === "admin"
+            ? "Keep this as an admin Jeff call and complete any requested follow-up."
+            : input.callType === "test"
+              ? "Review the test call only if it exposed a Jeff behavior issue."
+              : "Resolve whether this call belongs to a job, personal workspace, or admin action.";
 
   return {
     summary: baseSummary,
@@ -332,16 +386,18 @@ function compactTranscript(input: {
     nextActions: nextActions.length > 0
       ? nextActions.slice(0, 6)
       : [fallbackNextAction],
-    recommendationSummary: recommendationSummary({
-      nextActions,
-      suspectedIssues,
-      proofNeeded,
-    }),
+    recommendationSummary: shortOrMissed
+      ? undefined
+      : recommendationSummary({
+        nextActions,
+        suspectedIssues,
+        proofNeeded,
+      }),
     requestedFollowUps,
     emailRequested,
     emailStatus: emailRequested ? "requested" as const : "none" as const,
     blockers,
-    customerSafeRecap: rawSummary,
+    customerSafeRecap: shortOrMissed ? undefined : rawSummary,
     confidence: transcript && input.jobId ? "medium" as const : "low" as const,
   };
 }
@@ -534,7 +590,7 @@ export function getJeffVapiPilotConfig(baseUrl = getAppBaseUrl()) {
   return {
     name: "WrenchReady Simon Tech Expert",
     firstMessage:
-      "Hey Simon, this is Jeff. Tell me the customer or vehicle you are on, and what you are seeing.",
+      "Hey Simon, this is Jeff. What are we working on?",
     serverUrl: `${normalizedBaseUrl}/api/al/wrenchready/jeff/vapi/server`,
     serverAuthHeader: "X-Vapi-Secret",
     startSpeakingPlan: {
@@ -696,6 +752,46 @@ function transcriptFromArtifactMessages(messages: unknown[]) {
     .join("\n");
 }
 
+function stripAssistantFiller(transcript: string) {
+  return transcript
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/\b(checking|check)\s+(the\s+)?(wrenchready|ranch ready|job|field|current)\s+context\b/i.test(line))
+    .filter((line) => !/\b(one second|one sec|one moment|just a second)\b\.?$/i.test(line.replace(/^Jeff:|^AI:/i, "").trim()))
+    .filter((line) => !/\bi am doing the setup step\b/i.test(line))
+    .join("\n");
+}
+
+function simonOnlyTranscript(transcript: string) {
+  return transcript
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => /^(Simon|User|Customer):/i.test(line))
+    .map((line) => line.replace(/^(Simon|User|Customer):\s*/i, "").trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+function assistantOnlyGreeting(transcript: string) {
+  const clean = transcript.replace(/\s+/g, " ").trim();
+  if (!clean) return true;
+
+  const simonText = simonOnlyTranscript(transcript);
+  if (simonText.length > 8) return false;
+
+  return /^((Jeff|AI):\s*)?(hey|hi|hello|ready|ready when you are)/i.test(clean) && clean.length < 140;
+}
+
+function hasUsableSimonRequest(transcript: string) {
+  return simonOnlyTranscript(transcript).length > 8 || /\bUser:\s*\S.{8,}/i.test(transcript);
+}
+
+function isShortOrMissedCall(transcript: string) {
+  return !hasUsableSimonRequest(transcript) && assistantOnlyGreeting(transcript);
+}
+
 function callIdFromMessage(message: VapiServerMessage) {
   return message.call?.id;
 }
@@ -769,14 +865,18 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
   const jobId = liveSession?.activeJobId;
   const jobLabel = liveSession?.activeJobLabel;
   const callType = classifyCallType({ transcript, callId, jobId });
+  const conversationMode = conversationModeFromTranscript({ transcript, callType, jobId });
+  const shortOrMissed = conversationMode === "missed-or-short-call";
   const subjectLabel = subjectLabelFromTranscript(transcript, callType, jobLabel);
   const jobMatchStatus = jobId
     ? liveSession?.activeJobConfidence === "confirmed"
       ? "confirmed"
       : "inferred"
     : "unresolved";
-  const needsReview = !jobId || !transcript.trim();
-  const reviewReason = !transcript.trim()
+  const needsReview = shortOrMissed ? false : !jobId || !transcript.trim();
+  const reviewReason = shortOrMissed
+    ? "Short or unanswered Jeff call; kept in call history without operator review."
+    : !transcript.trim()
     ? "Call ended without a transcript."
     : !jobId && callType === "personal"
       ? "Personal Jeff call captured; review any follow-up actions."
@@ -837,6 +937,8 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
     sourcePayload: {
       ...sourcePayloadFromMessage(message),
       callType,
+      conversationMode,
+      shortOrMissed,
       subjectLabel,
       emailRequested: compacted.emailRequested,
       requestedFollowUps: compacted.requestedFollowUps,
@@ -848,7 +950,11 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
     id: `${conversationId}-summary`,
     conversationId,
     jobId,
-    summaryKind: jobId ? "after_call" : "unresolved_call",
+    summaryKind: jobId
+      ? "after_call"
+      : callType === "unknown" && !shortOrMissed
+        ? "unresolved_call"
+        : "manual_compaction",
     summary: compacted.summary,
     knownFacts: compacted.knownFacts,
     testsPerformed: compacted.testsPerformed,
@@ -867,8 +973,10 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
     confidence: compacted.confidence,
     createdAt,
     metadata: {
-      compaction: "deterministic-v1",
+      compaction: "deterministic-v2",
       source: "vapi-end-of-call-report",
+      conversationMode,
+      shortOrMissed,
       subjectLabel,
       preservedFollowUpStatus: existingConversation?.followUpStatus,
       preservedEmailStatus: existingSummary?.emailStatus,
@@ -1138,6 +1246,28 @@ export function reviewJeffTranscript(input: {
     });
   }
 
+  if (hasAny(normalized, [
+    "checking the wrenchready job context",
+    "checking the ranch ready job context",
+    "checking job context",
+    "checking context",
+    "setup step",
+  ])) {
+    issues.push({
+      severity: "watch",
+      summary: "Transcript includes internal lookup narration that makes Jeff sound slow or confused.",
+      recommendedFix: "Answer the user first and keep job/context/tool lookups silent unless a real delay requires a short useful status.",
+    });
+  }
+
+  if (hasAny(normalized, ["ranch ready"])) {
+    issues.push({
+      severity: "watch",
+      summary: "Transcript appears to misrecognize WrenchReady as Ranch Ready.",
+      recommendedFix: "Tune voice spelling/brand prompt and clean transcript summaries so brand ASR errors do not become job facts.",
+    });
+  }
+
   if (
     hasAny(normalized, [
       "i bought",
@@ -1300,14 +1430,16 @@ export async function handleJeffVapiServerPayload(payload: unknown) {
       upsertLiveSessionFromMessage(message);
       if (shouldReviewTranscript(message)) {
         const workspace = await persistWorkspaceFromEndOfCall(message);
-        const review = reviewJeffTranscript({
-          callId: callIdFromMessage(message),
-          customerNumber: customerNumberFromMessage(message),
-          assistantId: assistantIdFromMessage(message),
-          transcript: transcriptFromMessage(message),
-          scenario: message.summary || message.artifact?.summary,
-          callType: workspace.conversation.callType,
-        });
+        const review = workspace.conversation.sourcePayload.shortOrMissed === true
+          ? undefined
+          : reviewJeffTranscript({
+            callId: callIdFromMessage(message),
+            customerNumber: customerNumberFromMessage(message),
+            assistantId: assistantIdFromMessage(message),
+            transcript: transcriptFromMessage(message),
+            scenario: message.summary || message.artifact?.summary,
+            callType: workspace.conversation.callType,
+          });
 
         return {
           received: true,
@@ -1317,6 +1449,7 @@ export async function handleJeffVapiServerPayload(payload: unknown) {
             jobId: workspace.conversation.jobId,
             jobMatchStatus: workspace.conversation.jobMatchStatus,
             callType: workspace.conversation.callType,
+            conversationMode: workspace.conversation.sourcePayload.conversationMode,
             subjectLabel: workspace.conversation.subjectLabel,
             followUpStatus: workspace.conversation.followUpStatus,
             needsReview: workspace.conversation.needsReview,
