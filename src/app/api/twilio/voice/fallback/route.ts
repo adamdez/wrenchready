@@ -31,7 +31,7 @@ function getJeffFallbackTimeoutSeconds() {
 function buildJeffFallbackTwiml(jeffPhone: string, callerId: string) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="alice">Adam is tied up right now. I am connecting you to Jeff, WrenchReady's assistant, so we can still help.</Say>
+  <Say voice="alice">Connecting Jeff.</Say>
   <Dial answerOnBridge="true" callerId="${xmlEscape(callerId)}" timeout="${getJeffFallbackTimeoutSeconds()}" action="/api/twilio/voicemail">
     <Number>${xmlEscape(jeffPhone)}</Number>
   </Dial>

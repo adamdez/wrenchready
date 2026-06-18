@@ -748,7 +748,7 @@ export function getJeffVapiPilotConfig(baseUrl = getAppBaseUrl()) {
   return {
     name: "WrenchReady Simon Tech Expert",
     firstMessage:
-      "Hey Simon, this is Jeff. What are we working on?",
+      "This is WrenchReady, my name is Jeff the robot, how can I help?",
     serverUrl: `${normalizedBaseUrl}/api/al/wrenchready/jeff/vapi/server`,
     serverAuthHeader: "X-Vapi-Secret",
     startSpeakingPlan: {
