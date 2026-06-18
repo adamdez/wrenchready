@@ -8,6 +8,7 @@ import {
   getCurrentFieldContext,
   getFieldBrief,
   getJeffCapabilities,
+  getJeffOperatingContext,
   getRecentJeffMessages,
   getJeffVapiToolSchemas,
   analyzeFieldPhoto,
@@ -102,6 +103,7 @@ const PILOT_REVIEW_STORE_FILE = getJeffLocalDataPath("pilot-reviews.json");
 
 const toolHandlers: Record<string, (payload: unknown) => Promise<unknown>> = {
   get_jeff_capabilities: getJeffCapabilities,
+  get_jeff_operating_context: getJeffOperatingContext,
   log_jeff_blocked_request: logJeffBlockedRequest,
   get_active_field_job: getActiveFieldJob,
   get_current_field_context: getCurrentFieldContext,

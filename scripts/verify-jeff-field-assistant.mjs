@@ -55,6 +55,27 @@ assert(
   catalog.assistant?.tools?.some((tool) => tool.name === "record_field_photo_upload"),
   "catalog should expose field photo upload",
 );
+assert(
+  catalog.assistant?.tools?.some((tool) => tool.name === "get_jeff_operating_context"),
+  "catalog should expose forced WrenchReady operating context",
+);
+
+const operatingContext = await request("/api/al/wrenchready/jeff/tools/get-jeff-operating-context", {
+  focus: "quote parts pricing",
+});
+assert(operatingContext.success, "operating context should load");
+assert(
+  operatingContext.data?.context?.requiredQuoteFields?.some((field) => /parts list/i.test(field)),
+  "operating context should preserve quote parts requirements",
+);
+assert(
+  operatingContext.data?.context?.sourceOfTruthPolicy?.some((line) => /Promise CRM\/Supabase/i.test(line)),
+  "operating context should force the active source-of-truth policy",
+);
+assert(
+  operatingContext.data?.context?.legacyAssistantPolicy?.some((line) => /legacy archive/i.test(line)),
+  "operating context should mark the old assistant folder as legacy archive",
+);
 
 const active = await request("/api/al/wrenchready/jeff/tools/get-active-field-job", {
   customerName: "Tammy",

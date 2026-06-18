@@ -13,6 +13,7 @@ import {
   ingestJeffInboundEmail,
 } from "@/lib/jeff-field-assistant/email-ingest";
 import { getJeffCapabilityReport } from "@/lib/jeff-field-assistant/capabilities";
+import { getJeffOperatingContextPacket } from "@/lib/jeff-field-assistant/operating-context";
 import { getPromiseRecords, updatePromiseRecord, upsertPromiseQuoteDraftForReview } from "@/lib/promise-crm/server";
 import type { PromiseFieldExecutionPacket, PromiseRecord } from "@/lib/promise-crm/types";
 import schedulingEngine from "@/lib/scheduling/engine";
@@ -2259,6 +2260,21 @@ export async function getJeffCapabilities(payload: unknown = {}) {
   );
 }
 
+export async function getJeffOperatingContext(payload: unknown = {}) {
+  const input = isObject(payload) ? payload : {};
+  const focus = optionalString(input.focus);
+  const context = getJeffOperatingContextPacket();
+  const focusNote = focus
+    ? ` Focus: ${focus}.`
+    : "";
+
+  return result(
+    "get_jeff_operating_context",
+    `WrenchReady operating context is loaded.${focusNote} Use it silently and answer like a practical field assistant.`,
+    { context, focus },
+  );
+}
+
 export async function logJeffBlockedRequest(payload: unknown) {
   const input = isObject(payload) ? payload : {};
   const capabilityId = optionalString(input.capabilityId);
@@ -4216,6 +4232,18 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
         type: "object",
         properties: {
           capabilityId: { type: "string" },
+        },
+      },
+    },
+    {
+      name: "get_jeff_operating_context",
+      description: "Read WrenchReady's forced Jeff SOP context for estimates, quote drafts, parts pricing, preferred parts vendor, worker/agent policy, and action-state rules.",
+      endpoint: `${BASE_ROUTE}/get-jeff-operating-context`,
+      method: "POST",
+      parameters: {
+        type: "object",
+        properties: {
+          focus: { type: "string" },
         },
       },
     },

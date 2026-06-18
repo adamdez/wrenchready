@@ -52,6 +52,7 @@ assert(unauthSync.status === 401, "Jeff sync route should reject unauthenticated
 const toolCatalog = await requestJson("/api/al/wrenchready/jeff/tools");
 const toolNames = toolCatalog.assistant?.tools?.map((tool) => tool.name) || [];
 assert(toolNames.includes("get_jeff_capabilities"), "Jeff tool catalog should expose live capability status.");
+assert(toolNames.includes("get_jeff_operating_context"), "Jeff tool catalog should expose forced SOP operating context.");
 assert(toolNames.includes("log_jeff_blocked_request"), "Jeff tool catalog should expose blocked-request logging.");
 assert(toolNames.includes("get_recent_jeff_messages"), "Jeff tool catalog should expose Message Jeff thread lookup.");
 assert(toolNames.includes("prepare_quote_draft_for_review"), "Jeff tool catalog should expose quote draft review workflow.");
@@ -251,6 +252,27 @@ assert(
 assert(
   /quietly|dashboard/i.test(capabilities.data?.voiceStyle || ""),
   "Capability status should preserve Jeff's normal voice style instead of making him over-explain.",
+);
+
+const operatingContext = await requestJson("/api/al/wrenchready/jeff/tools/get-jeff-operating-context", {
+  focus: "parts pricing and quote drafting",
+});
+assert(operatingContext.success === true, "Operating context tool should return a successful controlled response.");
+assert(
+  operatingContext.data?.context?.partsPricingWorkflow?.some((line) => /vendor cost/i.test(line)),
+  "Operating context should force vendor-cost parts pricing workflow.",
+);
+assert(
+  operatingContext.data?.context?.backgroundWorkerPolicy?.some((line) => /background workers/i.test(line)),
+  "Operating context should describe specialist background worker policy.",
+);
+assert(
+  operatingContext.data?.context?.legacyAssistantPolicy?.some((line) => /not an active write target/i.test(line)),
+  "Operating context should prevent the legacy WrenchReady Assistant folder from becoming a competing source of truth.",
+);
+assert(
+  operatingContext.data?.context?.importedLegacyRules?.some((line) => /\$145\.00/i.test(line)),
+  "Operating context should include imported legacy pricing rules.",
 );
 
 const loggedBlockedRequest = await requestJson("/api/al/wrenchready/jeff/tools/log-jeff-blocked-request", {

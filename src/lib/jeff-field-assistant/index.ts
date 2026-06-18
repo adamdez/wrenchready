@@ -7,6 +7,7 @@ export {
   getJeffAssistantConfig,
   getJeffBlockedRequestQueue,
   getJeffCapabilities,
+  getJeffOperatingContext,
   getJeffPhotoDropJobs,
   getJeffMemoryReviewQueue,
   getJeffWorkspaceReviewQueue,
