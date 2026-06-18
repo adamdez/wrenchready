@@ -283,6 +283,26 @@ assert(
   "No-job refusal should create a fix-before-field issue.",
 );
 
+const researchVoiceTranscript = await requestJson("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "end-of-call-report",
+    call: {
+      id: "red-team-research-voice",
+      assistantId: "assistant-test",
+      customer: { number: "+15095550102" },
+    },
+    artifact: {
+      transcript:
+        "Simon asks what to do next on a no-start. Jeff says according to my research, the sources say the starter circuit may involve several checks, then reads a long explanation before giving a test.",
+    },
+  },
+});
+assert(researchVoiceTranscript.review?.passed === false, "Research-reading voice should fail review.");
+assert(
+  researchVoiceTranscript.review?.issues?.some((issue) => /reading research/i.test(issue.summary)),
+  "Research-reading voice should create a fix-before-field issue.",
+);
+
 const closeout = await requestJson("/api/al/wrenchready/jeff/tools/start-closeout", {
   jobId: "jeff-fixture-tammy-chrysler",
   paymentStatus: "unpaid",

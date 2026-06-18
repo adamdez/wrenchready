@@ -1304,6 +1304,26 @@ export function reviewJeffTranscript(input: {
 
   if (
     hasAny(normalized, [
+      "according to my research",
+      "based on my research",
+      "my research says",
+      "the research says",
+      "from my research",
+      "according to the sources",
+      "the sources say",
+      "according to the information i found",
+      "based on the information i found",
+    ])
+  ) {
+    issues.push({
+      severity: "fix-before-field",
+      summary: "Jeff sounded like he was reading research instead of coaching.",
+      recommendedFix: "Digest research/tool output silently, then answer with a quick takeaway, one-sentence reason, and next physical action in normal field language.",
+    });
+  }
+
+  if (
+    hasAny(normalized, [
       "i bought",
       "i ordered",
       "i reserved",
