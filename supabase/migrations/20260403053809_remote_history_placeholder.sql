@@ -1,0 +1,6 @@
+-- Remote migration history placeholder.
+--
+-- This version exists in the linked Supabase project's migration history but
+-- the original SQL file is not present in this repo. Keep this file so the
+-- local migration directory reconciles with the remote history without
+-- marking a real remote migration as reverted.

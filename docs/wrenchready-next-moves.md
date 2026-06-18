@@ -170,19 +170,75 @@ It also needs:
 - handoff checklist
 - comeback-prevention steps
 - closeout readiness before the job cools off
+- a callable AI tech expert / WrenchReady knowledge expert Simon can talk to while he is in the field
+- a day-one Jeff Photo Drop path so Simon can send pictures while he is still on a job
+- field payment readiness so the customer can pay while the vehicle, invoice, and repair context are still fresh
+- near-instant final invoice generation from structured job files
 
 Why it matters:
 - fewer callbacks
 - cleaner customer handoff
 - less trust leakage after technically good visits
 - better operating repeatability
+- less unpaid completed work sitting in limbo
+- less admin reconstruction after the job
 
 Current status:
 - now built into the field packet and field-execution view
 - queue actions are now live directly inside the field worklist
 - still needs stronger daily use in real ops
+- field experience on 2026-06-16 showed the next practical gap: Simon needs a callable AI tech expert that can talk through vehicle problems with WrenchReady job context, customers need fast field payment, and invoices need to be close to instant
 
-### 5D. Proposal and trial discipline for recurring accounts
+### 5D. Simon AI tech expert line
+
+Simon needs more than a mobile packet. He needs a voice-based field expert he can call while standing at the vehicle.
+
+The expert should know:
+- the customer and vehicle context
+- what work is authorized
+- the diagnostic path and stop points
+- parts status and likely margin risk
+- invoice/payment status
+- WrenchReady communication and approval rules
+
+The expert should help Simon:
+- talk through symptoms and test results
+- decide the next safest diagnostic step
+- avoid unnecessary parts replacement
+- identify when exact service data must be verified
+- capture the right photos and evidence
+- know when to stop and ask Dez/customer approval
+- turn confirmed decisions into actions: source parts, prepare carts, place approved orders, log pickup details, and start closeout
+
+Current status:
+- captured as a durable field-ops requirement
+- preferred route is now Vapi + Twilio + OpenAI reasoning + WrenchReady backend tools
+- voice-to-action scope now includes parts sourcing and approval-gated purchasing
+- implementation plan lives in `docs/planning/SIMON_AI_TECH_EXPERT_LINE.md`
+- phased build/review plan lives in `docs/planning/JEFF_FIELD_ASSISTANT_BUILD_PLAN.md`
+- real-call pilot runbook lives in `docs/planning/JEFF_REAL_CALL_PILOT_RUNBOOK.md`
+
+### 5E. Parts margin and reseller setup
+
+WrenchReady needs a reseller permit / resale setup and vendor account discipline.
+
+The goal:
+- buy parts at mechanic/vendor pricing where available
+- charge the approved customer-facing parts price or MSRP when appropriate
+- protect margin without hiding sloppy math
+- stop letting retail parts cost quietly compress job profit
+
+Why it matters:
+- stronger gross margin
+- more competitive quote flexibility
+- cleaner accounting and tax treatment
+- fewer jobs where the labor looks good but parts economics leak profit
+
+Current status:
+- added as a durable field-ops lesson and pricing rule
+- still needs real permit/tax/accounting follow-up and vendor account setup
+
+### 5F. Proposal and trial discipline for recurring accounts
 
 Recurring-account work should not stop at `lead`, `pitched`, or `trial-active`.
 

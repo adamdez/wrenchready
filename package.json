@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "verify:jeff": "node scripts/verify-jeff-field-assistant.mjs",
+    "verify:jeff:vapi": "node scripts/verify-jeff-vapi-server.mjs",
+    "verify:jeff:scenarios": "node scripts/verify-jeff-scenarios.mjs",
+    "verify:jeff:red-team": "node scripts/verify-jeff-red-team.mjs",
+    "verify:jeff:production-workspace": "node scripts/verify-jeff-production-workspace.mjs",
+    "google:oauth:jeff": "node scripts/google-workspace-oauth.mjs",
+    "sync:jeff": "node scripts/sync-jeff-local-mirror.mjs",
+    "sync:jeff:vapi": "node scripts/sync-jeff-vapi-assistant.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

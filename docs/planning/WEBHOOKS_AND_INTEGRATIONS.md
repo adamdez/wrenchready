@@ -171,6 +171,66 @@ The rule:
 - webhook automation reacts to the truth
 - n8n should orchestrate, not become the source of truth
 
+### Jeff field assistant
+
+The Simon/Jeff field assistant must follow the same rule.
+
+- phone calls, texts, photos, uploads, diagnostic emails, vendor confirmations, approvals, part orders, invoice updates, and payment events are channels
+- all of them must write into the same WrenchReady job record and field event timeline
+- Jeff should read the current field context packet before replying to Simon
+- if channel facts conflict, Jeff should pause and ask for verification instead of guessing
+
+This prevents Jeff from being aware of the phone conversation but blind to the scan-tool email, or aware of an MMS photo but blind to the latest invoice/payment status.
+
+Phase 2 Jeff tool endpoints now live under:
+
+- `GET /api/al/wrenchready/jeff/vapi/config`
+- `POST /api/al/wrenchready/jeff/vapi/server`
+- `GET /api/al/wrenchready/jeff/pilot/reviews`
+- `GET /api/al/wrenchready/jeff/session`
+- `POST /api/al/wrenchready/jeff/session`
+- `GET /api/al/wrenchready/jeff/session/current`
+- `GET /api/al/wrenchready/jeff/tools`
+- `POST /api/al/wrenchready/jeff/tools/get-active-field-job`
+- `POST /api/al/wrenchready/jeff/tools/get-current-field-context`
+- `POST /api/al/wrenchready/jeff/tools/get-field-brief`
+- `POST /api/al/wrenchready/jeff/tools/record-field-note`
+- `POST /api/al/wrenchready/jeff/tools/record-field-event`
+- `POST /api/al/wrenchready/jeff/tools/propose-core-memory-update`
+- `POST /api/al/wrenchready/jeff/tools/record-field-photo-upload`
+- `POST /api/al/wrenchready/jeff/tools/get-field-photos`
+- `POST /api/al/wrenchready/jeff/tools/analyze-field-photo`
+- `POST /api/al/wrenchready/jeff/tools/get-schedule-context`
+- `POST /api/al/wrenchready/jeff/tools/evaluate-booking-request`
+- `POST /api/al/wrenchready/jeff/tools/request-approval-or-escalation`
+- `POST /api/al/wrenchready/jeff/tools/start-closeout`
+- `POST /api/al/wrenchready/jeff/tools/purchase-or-reserve-part`
+- `GET /api/al/wrenchready/jeff/sync`
+- `POST /api/al/wrenchready/jeff/sync`
+- `GET /api/al/wrenchready/jeff/files`
+- `GET /api/al/wrenchready/jeff/files/[jobId]`
+- `GET /ops/jeff`
+- `GET /jeff`
+- `GET /jeff/docs`
+- `GET /jeff/photo-drop`
+- `POST /api/al/wrenchready/jeff/photos/upload`
+
+`purchase-or-reserve-part` is intentionally blocked in the MVP. It exists so Jeff can safely refuse buying requests and explain the approval gates instead of improvising.
+
+The `/jeff` surface is Simon's installable phone hub. It links to Jeff's call number, session-aware Photo Drop, and quick internal field references. Vapi call callbacks create a short-lived live Jeff session; Photo Drop can attach uploads to that session first and the job second. If the job is unknown, the photo stays in a session inbox until Jeff or Simon confirms the job.
+
+The Photo Drop upload path is the day-one field media path. MMS can come later after 10DLC/messaging setup is approved; it should not block Simon from sending pictures during the first Jeff pilot.
+
+Photo Drop image bytes are stored locally at `.data/jeff/photos`, with metadata in `.data/jeff/photos/index.json`. Live Jeff sessions, Vapi call-review summaries, and local fallback field events are stored at `.data/jeff/sessions.json`, `.data/jeff/pilot-reviews.json`, and `.data/jeff/field-events.json`. This makes the local pilot survive process restarts better than runtime memory. The local root can be overridden with `JEFF_LOCAL_DATA_DIR`.
+
+Jeff field events are now local-first with a Supabase mirror when `SUPABASE_URL` and a write-capable Supabase key are configured. Every field-event write updates the local `.data/jeff/field-events.json` mirror when running locally. On Vercel serverless, the fallback mirror uses `/tmp/wrenchready-jeff` so routes do not fail on a read-only app filesystem; that Vercel fallback is not durable across deployments or instances. Reads pull Supabase events back into the local mirror, and `/api/al/wrenchready/jeff/sync` pushes local-only events back to Supabase. The Supabase migrations are `supabase/migrations/20260617143001_create_wrenchready_jeff_field_event.sql` and `supabase/migrations/20260617143023_create_wrenchready_jeff_durable_memory.sql`. A daily Vercel Cron repair run calls the sync route; set `CRON_SECRET` in production so Vercel Cron can authenticate. Local/Codex repair runs can call `npm run sync:jeff -- http://localhost:3001` while the local dev server is running.
+
+Production still needs real object storage for field photo bytes and database-backed session/call review storage before field photos, call transcripts, and session state should be treated as durable across deployments or serverless instances.
+
+The Jeff field file path is the day-one operator review path. Jeff writes a visible note back to the Promise CRM record and is now shaped to write structured events into `public.wrenchready_jeff_field_event`; apply `docs/planning/WRENCHREADY_JEFF_FIELD_EVENT_SUPABASE.sql` before treating the event timeline as durable in production.
+
+The real-call pilot setup and call scripts live in `docs/planning/JEFF_REAL_CALL_PILOT_RUNBOOK.md`.
+
 ## Bottom line
 
 Yes, there is enough set up now to move into live webhook-driven operations.

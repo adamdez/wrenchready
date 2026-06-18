@@ -12,6 +12,14 @@ Primary folder:
 - [WRENCHREADY_SERVICE_CLASSIFICATION_FRAMEWORK.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\WRENCHREADY_SERVICE_CLASSIFICATION_FRAMEWORK.md)
 - [WRENCHREADY_PROMISE_CRM_SUPABASE.sql](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\WRENCHREADY_PROMISE_CRM_SUPABASE.sql)
 - [WEBHOOKS_AND_INTEGRATIONS.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\WEBHOOKS_AND_INTEGRATIONS.md)
+- [SIMON_AI_TECH_EXPERT_LINE.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\SIMON_AI_TECH_EXPERT_LINE.md)
+- [JEFF_FIELD_REALITY_SPEC.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_FIELD_REALITY_SPEC.md)
+- [JEFF_FIELD_ASSISTANT_BUILD_PLAN.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_FIELD_ASSISTANT_BUILD_PLAN.md)
+- [JEFF_FIELD_ASSISTANT_PURSUIT_PROMPT.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_FIELD_ASSISTANT_PURSUIT_PROMPT.md)
+- [JEFF_REAL_CALL_PILOT_RUNBOOK.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_REAL_CALL_PILOT_RUNBOOK.md)
+- [JEFF_CORE_MEMORY.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_CORE_MEMORY.md)
+- [JEFF_QUALITY_SCHEDULER_KNOWLEDGE_PLAN.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_QUALITY_SCHEDULER_KNOWLEDGE_PLAN.md)
+- [WRENCHREADY_JEFF_FIELD_EVENT_SUPABASE.sql](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\WRENCHREADY_JEFF_FIELD_EVENT_SUPABASE.sql)
 - [wrenchready-n8n-ops-router.workflow.json](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\wrenchready-n8n-ops-router.workflow.json)
 - [OPERATING_DOCTRINE_Earn_Next_Visit_Wrench_Time.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\OPERATING_DOCTRINE_Earn_Next_Visit_Wrench_Time.md)
 - [BUSINESS_CONTEXT.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\BUSINESS_CONTEXT.md)
@@ -43,6 +51,8 @@ Primary folder:
 - Systems-readiness view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\systems\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\systems\page.tsx)
 - Field-execution view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\field\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\field\page.tsx)
 - Field-execution view now includes inline queue actions for handoff, comeback prevention, and closeout steps
+- Jeff Photo Drop for Simon is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\jeff\photo-drop\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\jeff\photo-drop\page.tsx), with upload handling at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\al\wrenchready\jeff\photos\upload\route.ts](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\al\wrenchready\jeff\photos\upload\route.ts)
+- Jeff Field Files for operator review are now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\jeff\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\jeff\page.tsx), with protected file APIs at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\al\wrenchready\jeff\files\route.ts](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\api\al\wrenchready\jeff\files\route.ts)
 - Collections view is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\collections\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\collections\page.tsx)
 - Warranty lane is now live at [C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\warranty\page.tsx](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\src\app\ops\warranty\page.tsx)
 - Warranty lane now includes inline queue actions for make-good, prevention, and resolution updates

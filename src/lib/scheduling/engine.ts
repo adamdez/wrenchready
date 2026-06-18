@@ -1,4 +1,5 @@
 import { BUSINESS_HOURS, BUSINESS_TIMEZONE, SERVICE_RULES } from "@/lib/scheduling/config";
+import { getGoogleWorkspaceIntegrationStatus } from "@/lib/google-workspace";
 import type {
   AvailabilityRequest,
   AvailabilityResponse,
@@ -115,16 +116,11 @@ function addressLooksSupported(request: AvailabilityRequest) {
 }
 
 function requiredIntegrationsReady() {
-  const required = {
-    googleCalendarId: process.env.GOOGLE_CALENDAR_ID,
-    googleClientEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    googlePrivateKey: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
-    mapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
-  };
-
-  const missing = Object.entries(required)
-    .filter(([, value]) => !value)
-    .map(([key]) => key);
+  const googleWorkspace = getGoogleWorkspaceIntegrationStatus();
+  const missing = [
+    ...(!googleWorkspace.calendar.ready ? googleWorkspace.calendar.missing : []),
+    !process.env.GOOGLE_MAPS_API_KEY ? "GOOGLE_MAPS_API_KEY" : undefined,
+  ].filter((entry): entry is string => Boolean(entry));
 
   return {
     ready: missing.length === 0,

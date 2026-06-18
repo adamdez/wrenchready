@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "@/data/site";
 
 export default function robots(): MetadataRoute.Robots {
-  const publicDisallow = ["/api/", "/ops/", "/ops-slate/", "/status/"];
+  const publicDisallow = ["/api/", "/ops/", "/ops-slate/", "/status/", "/jeff", "/jeff/"];
 
   return {
     rules: [

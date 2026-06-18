@@ -1,0 +1,6 @@
+-- Remote migration history placeholder.
+--
+-- This version exists in the linked Supabase project's migration history.
+-- Remote schema inspection on 2026-06-17 confirmed the Jeff workspace-action
+-- columns are already present, matching the intent of the nearby local
+-- idempotent migration 20260617173500.

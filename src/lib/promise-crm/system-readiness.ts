@@ -35,6 +35,19 @@ function bnplConfigured() {
   );
 }
 
+function jeffFieldAssistantConfigured() {
+  return Boolean(
+    readEnv("OPENAI_API_KEY") &&
+      readEnv("VAPI_JEFF_ASSISTANT_ID", "VAPI_ASSISTANT_ID") &&
+      readEnv("VAPI_JEFF_PHONE_NUMBER_ID", "VAPI_PHONE_NUMBER_ID") &&
+      readEnv("JEFF_FIELD_ASSISTANT_TOOL_SECRET"),
+  );
+}
+
+function jeffPhotoDropConfigured() {
+  return Boolean(readEnv("OPENAI_API_KEY"));
+}
+
 export async function getSystemsReadinessSnapshot(): Promise<SystemsReadinessSnapshot> {
   const integrations = await getIntegrationSnapshot();
   const reviewUrl = readEnv(
@@ -78,6 +91,34 @@ export async function getSystemsReadinessSnapshot(): Promise<SystemsReadinessSna
         ? "Keep routing calls into the same inbound queue."
         : "Finish caller ID and forward-to setup.",
       accessNeed: integrations.twilioVoice.configured ? "none" : "config",
+    },
+    {
+      name: "Jeff field assistant",
+      status: jeffFieldAssistantConfigured() ? "ready" : "configure-now",
+      priority: "now",
+      summary: jeffFieldAssistantConfigured()
+        ? "The Simon tech expert has OpenAI, Vapi identity, phone routing, and tool-secret configuration visible."
+        : "Jeff's field assistant tools are built, but OpenAI, Vapi assistant/phone ids, or the tool secret still need configuration.",
+      whyItMatters:
+        "Simon needs a callable tech expert that reads the same job context as texts, photos, approvals, invoices, and payment status.",
+      nextStep: jeffFieldAssistantConfigured()
+        ? "Place controlled test calls and review transcripts before enabling broader field use."
+        : "Set OPENAI_API_KEY, create the Jeff Vapi assistant, connect the field number, and set JEFF_FIELD_ASSISTANT_TOOL_SECRET for protected tool calls.",
+      accessNeed: jeffFieldAssistantConfigured() ? "none" : "config",
+    },
+    {
+      name: "Jeff Photo Drop",
+      status: jeffPhotoDropConfigured() ? "ready" : "configure-now",
+      priority: "now",
+      summary: jeffPhotoDropConfigured()
+        ? "The field photo upload path can attach images to Jeff's job context and run OpenAI photo analysis."
+        : "The field photo upload path is built, but OpenAI photo analysis still needs configuration.",
+      whyItMatters:
+        "Voice alone is not enough in the field; Simon needs Jeff to see terminals, labels, scan screens, leaks, and completed work proof.",
+      nextStep: jeffPhotoDropConfigured()
+        ? "Bookmark /jeff on Simon's phone and run a live session upload during a test call."
+        : "Set OPENAI_API_KEY, then bookmark /jeff on Simon's phone for the first field test.",
+      accessNeed: jeffPhotoDropConfigured() ? "none" : "config",
     },
     {
       name: "Text outbound",

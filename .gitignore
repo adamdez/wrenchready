@@ -53,6 +53,8 @@ next-env.d.ts
 .next-dev*.log
 codex-start-*.log
 output/
+.data/
+supabase/.temp/
 
 # intermediate video clips (only final stitched hero matters)
 public/wrenchready-clip-*.mp4

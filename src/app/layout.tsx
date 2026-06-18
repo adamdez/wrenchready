@@ -28,6 +28,12 @@ export const metadata: Metadata = {
   keywords: [...siteConfig.globalKeywords],
   applicationName: siteConfig.name,
   category: "Automotive",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Jeff",
+    statusBarStyle: "black-translucent",
+  },
   alternates: {
     canonical: siteConfig.domain,
   },
@@ -66,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn(displayFont.variable, bodyFont.variable, "dark")}>
+    <html lang="en" className={cn(displayFont.variable, bodyFont.variable, "dark")} data-scroll-behavior="smooth">
       <body className="noise-bg">
         <Analytics />
         <SiteShell>{children}</SiteShell>

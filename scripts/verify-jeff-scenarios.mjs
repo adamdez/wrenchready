@@ -1,0 +1,241 @@
+import "./load-local-env.mjs";
+
+const baseUrl = (process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
+const secret = process.env.JEFF_FIELD_ASSISTANT_TOOL_SECRET;
+
+function headers() {
+  return {
+    "Content-Type": "application/json",
+    ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
+  };
+}
+
+async function request(path, body) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: body ? "POST" : "GET",
+    headers: headers(),
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await response.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error(`${path} returned non-JSON: ${text.slice(0, 200)}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`${path} failed: ${response.status} ${JSON.stringify(json)}`);
+  }
+
+  return json;
+}
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+const catalog = await request("/api/al/wrenchready/jeff/tools");
+const toolNames = catalog.assistant?.tools?.map((tool) => tool.name) || [];
+assert(toolNames.includes("propose_core_memory_update"), "catalog should expose candidate memory tool");
+assert(toolNames.includes("get_schedule_context"), "catalog should expose schedule context tool");
+assert(toolNames.includes("evaluate_booking_request"), "catalog should expose booking evaluation tool");
+
+const booking = await request("/api/al/wrenchready/jeff/tools/evaluate-booking-request", {
+  service: "customer says maybe starter, maybe alternator, maybe wiring",
+  vehicle: "2016 Chrysler 200",
+  address: "Spokane, WA",
+  targetDate: "2026-06-20",
+  uncertaintyLevel: "high",
+  partsPickupRequired: true,
+  notes: "Unknown no-start scope with possible parts pickup.",
+});
+assert(booking.success, "booking evaluation should return a response");
+assert(
+  booking.data?.decision !== "safe-to-propose",
+  "uncertain booking should not be marked safe to propose",
+);
+assert(
+  booking.data?.reviewReasons?.length > 0,
+  "uncertain booking should include review reasons",
+);
+assert(
+  booking.data?.candidateSlots?.length === 0,
+  "unsafe booking should not return customer-ready slots",
+);
+
+const memory = await request("/api/al/wrenchready/jeff/tools/propose-core-memory-update", {
+  jobId: "jeff-fixture-tammy-chrysler",
+  category: "operator-preference",
+  memory: "Simon prefers one physical test at a time when he is under a vehicle.",
+  evidence: "Pilot call scenario verification.",
+});
+assert(memory.success, "candidate memory should save for review");
+assert(
+  memory.data?.candidate?.status === "candidate",
+  "candidate memory should stay pending review",
+);
+assert(
+  /not use it in calls until it is approved/i.test(memory.assistantSay || ""),
+  "candidate memory response should not claim immediate operational memory",
+);
+
+const scenarioNoteText = `Scenario note ${Date.now()}: Simon verified starter signal before requesting parts.`;
+const note = await request("/api/al/wrenchready/jeff/tools/record-field-note", {
+  jobId: "jeff-fixture-tammy-chrysler",
+  note: scenarioNoteText,
+  symptomsObserved: ["No crank"],
+  testsPerformed: ["Starter signal check"],
+  readings: ["Signal present"],
+  suspectedCause: "Starter may be failed, but part purchase is still blocked.",
+});
+assert(note.success, "scenario field note should save");
+
+const fieldFile = await request("/api/al/wrenchready/jeff/files/jeff-fixture-tammy-chrysler");
+const summaries = fieldFile.fieldFile?.fieldEvents?.map((event) => event.summary) || [];
+assert(
+  summaries.some((summary) => summary.includes(scenarioNoteText)),
+  "field file should include the scenario field note",
+);
+
+const purchase = await request("/api/al/wrenchready/jeff/tools/purchase-or-reserve-part", {
+  jobId: "jeff-fixture-tammy-chrysler",
+  requestedPart: "starter",
+  vendor: "O'Reilly",
+  spokenRequest: "Find a starter, buy it, and tell Simon when it is ready.",
+});
+assert(purchase.success === false, "purchase tool should remain blocked");
+assert(purchase.data?.purchaseStatus === "blocked", "purchase status should remain blocked");
+
+const vapiToolCalls = await request("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "tool-calls",
+    call: {
+      id: "call-test-scheduler",
+      customer: { number: "+15095550102" },
+    },
+    toolCallList: [
+      {
+        id: "tool-scheduler-1",
+        name: "evaluate_booking_request",
+        parameters: {
+          service: "unknown electrical diagnostic",
+          address: "Spokane Valley, WA",
+          uncertaintyLevel: "high",
+          partsPickupRequired: true,
+        },
+      },
+      {
+        id: "tool-memory-1",
+        name: "propose_core_memory_update",
+        parameters: {
+          jobId: "jeff-fixture-tammy-chrysler",
+          memory: "Simon wants Jeff to be concise during field calls.",
+          evidence: "Scenario tool-call verification.",
+        },
+      },
+    ],
+  },
+});
+assert(Array.isArray(vapiToolCalls.results), "Vapi scenario response should include tool results");
+assert(vapiToolCalls.results.length === 2, "Vapi scenario response should return both tool results");
+const vapiBooking = JSON.parse(vapiToolCalls.results[0].result);
+assert(
+  vapiBooking.data?.decision !== "safe-to-propose",
+  "Vapi booking tool should preserve scheduling guardrails",
+);
+const vapiMemory = JSON.parse(vapiToolCalls.results[1].result);
+assert(
+  vapiMemory.data?.candidate?.status === "candidate",
+  "Vapi memory tool should preserve review workflow",
+);
+
+const scenarioSessionId = `scenario-session-${Date.now()}`;
+const onePixelJpegDataUrl =
+  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAVEAEBAAAAAAAAAAAAAAAAAAAAAf/aAAwDAQACEAMQAAABrA//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAqf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/ASP/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/ASP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAY/Al//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/IV//2gAMAwEAAgADAAAAEP/EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQMBAT8QP//EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QP//EABQQAQAAAAAAAAAAAAAAAAAAABD/2gAIAQEAAT8QP//Z";
+const manualSession = await request("/api/al/wrenchready/jeff/session", {
+  sessionId: scenarioSessionId,
+  source: "mobile-hub",
+  eventSummary: "Scenario live session created.",
+});
+assert(manualSession.success, "manual session should be creatable for photo inbox tests");
+
+const staleSessionId = `closed-scenario-session-${Date.now()}`;
+const staleSession = await request("/api/al/wrenchready/jeff/session", {
+  sessionId: staleSessionId,
+  source: "mobile-hub",
+  status: "closed",
+  eventSummary: "Scenario closed session created.",
+});
+assert(staleSession.success, "closed session should be creatable for stale-session tests");
+
+const staleSessionPhoto = await request("/api/al/wrenchready/jeff/tools/record-field-photo-upload", {
+  sessionId: staleSessionId,
+  label: "Problem area",
+  uploadedBy: "Simon",
+  photos: [
+    {
+      fileName: "closed-session.jpg",
+      contentType: "image/jpeg",
+      sizeBytes: 128,
+      dataUrl: onePixelJpegDataUrl,
+    },
+  ],
+});
+assert(
+  staleSessionPhoto.success === false,
+  "closed explicit session id should not accept live session photo fallback",
+);
+
+const invalidSessionPhoto = await request("/api/al/wrenchready/jeff/tools/record-field-photo-upload", {
+  sessionId: "missing-session-should-not-fallback",
+  label: "Problem area",
+  uploadedBy: "Simon",
+  photos: [
+    {
+      fileName: "wrong-session.jpg",
+      contentType: "image/jpeg",
+      sizeBytes: 128,
+      dataUrl:
+        "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAVEAEBAAAAAAAAAAAAAAAAAAAAAf/aAAwDAQACEAMQAAABrA//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAqf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/ASP/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/ASP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAY/Al//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/IV//2gAMAwEAAgADAAAAEP/EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQMBAT8QP//EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QP//EABQQAQAAAAAAAAAAAAAAAAAAABD/2gAIAQEAAT8QP//Z",
+    },
+  ],
+});
+assert(
+  invalidSessionPhoto.success === false,
+  "invalid explicit session id should not fall back to another active session",
+);
+
+const sessionPhoto = await request("/api/al/wrenchready/jeff/tools/record-field-photo-upload", {
+  sessionId: scenarioSessionId,
+  label: "Problem area",
+  note: "Photo sent while Jeff is still confirming the job.",
+  uploadedBy: "Simon",
+  photos: [
+    {
+      fileName: "unknown-job.jpg",
+      contentType: "image/jpeg",
+      sizeBytes: 128,
+      dataUrl:
+        "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAVEAEBAAAAAAAAAAAAAAAAAAAAAf/aAAwDAQACEAMQAAABrA//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAqf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/ASP/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/ASP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAY/Al//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/IV//2gAMAwEAAgADAAAAEP/EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQMBAT8QP//EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QP//EABQQAQAAAAAAAAAAAAAAAAAAABD/2gAIAQEAAT8QP//Z",
+    },
+  ],
+});
+assert(sessionPhoto.success, "photo upload should succeed with only a live session");
+assert(
+  sessionPhoto.data?.session?.attachmentStatus === "session-inbox",
+  "unmatched session photo should land in session inbox",
+);
+assert(
+  ["google-drive", "local-file"].includes(sessionPhoto.data?.photos?.[0]?.storageStatus),
+  "unmatched session photo should use Google Drive or local durable pilot storage",
+);
+
+const sessionPhotos = await request("/api/al/wrenchready/jeff/tools/get-field-photos", {
+  sessionId: scenarioSessionId,
+});
+assert(sessionPhotos.success, "session photo list should load without a job id");
+assert(sessionPhotos.data?.photos?.length >= 1, "session photo list should include the inbox photo");
+
+console.log("Jeff scenario verification passed.");
