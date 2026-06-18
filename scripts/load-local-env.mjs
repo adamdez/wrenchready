@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const envFile = resolve(process.cwd(), ".env.local");
+function loadEnvFile(filePath) {
+  if (!existsSync(filePath)) return;
 
-if (existsSync(envFile)) {
-  for (const line of readFileSync(envFile, "utf8").split(/\r?\n/)) {
+  for (const line of readFileSync(filePath, "utf8").split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
 
@@ -27,3 +27,9 @@ if (existsSync(envFile)) {
       .replace(/\\n/g, "\n");
   }
 }
+
+if (process.env.JEFF_ENV_FILE) {
+  loadEnvFile(resolve(process.cwd(), process.env.JEFF_ENV_FILE));
+}
+
+loadEnvFile(resolve(process.cwd(), ".env.local"));
