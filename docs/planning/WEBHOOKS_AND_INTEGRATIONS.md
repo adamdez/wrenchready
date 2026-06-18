@@ -74,7 +74,9 @@ There is now enough structure to support real webhook-driven operations, but not
 
 - voice webhook
   - endpoint: `/api/twilio/voice`
-  - forwards call to operator phone
+  - forwards call to operator phone with private press-to-accept screening
+  - routes missed or unaccepted calls to customer-facing Jeff when `TWILIO_JEFF_FALLBACK_PHONE` is configured
+  - falls back to WrenchReady voicemail only if Jeff fallback is not configured or cannot answer
 
 - voicemail complete webhook
   - endpoint: `/api/twilio/voicemail/complete`

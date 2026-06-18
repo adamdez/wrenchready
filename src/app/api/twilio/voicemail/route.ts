@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const XML_HEADERS = {
-  "Content-Type": "text/xml; charset=utf-8",
-} as const;
+import {
+  buildEmptyTwiml,
+  buildVoicemailRecordingTwiml,
+  TWILIO_XML_HEADERS,
+} from "@/lib/twilio-voice";
 
 /**
  * Twilio hits this endpoint after the <Dial> completes (via the action URL).
@@ -13,28 +14,33 @@ function handleDialResult(dialStatus: string) {
   const answered = dialStatus === "completed";
 
   if (answered) {
-    return new NextResponse(
-      `<?xml version="1.0" encoding="UTF-8"?>\n<Response/>`,
-      { status: 200, headers: XML_HEADERS },
-    );
+    return new NextResponse(buildEmptyTwiml(), { status: 200, headers: TWILIO_XML_HEADERS });
   }
 
-  // Not answered — play greeting and record voicemail
-  return new NextResponse(
-    `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say voice="alice">Hey, you've reached WrenchReady Mobile Mechanic. We can't get to the phone right now. Leave your name, number, and a short message and we'll get back to you as soon as possible.</Say>
-  <Record maxLength="120" playBeep="true" action="/api/twilio/voicemail/complete" transcribe="false" />
-  <Say voice="alice">We didn't receive a message. Feel free to text this number instead. Goodbye.</Say>
-</Response>`,
-    { status: 200, headers: XML_HEADERS },
-  );
+  return new NextResponse(buildVoicemailRecordingTwiml(), {
+    status: 200,
+    headers: TWILIO_XML_HEADERS,
+  });
 }
 
 async function handler(req: NextRequest) {
-  const formData = await req.formData();
-  const dialStatus = (formData.get("DialCallStatus") as string) ?? "";
+  const dialStatus = await getDialStatus(req);
   return handleDialResult(dialStatus);
+}
+
+async function getDialStatus(req: NextRequest) {
+  if (req.method === "GET") {
+    return req.nextUrl.searchParams.get("DialCallStatus") ?? "";
+  }
+
+  const contentType = req.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("application/x-www-form-urlencoded") && !contentType.includes("multipart/form-data")) {
+    return req.nextUrl.searchParams.get("DialCallStatus") ?? "";
+  }
+
+  const formData = await req.formData();
+  return (formData.get("DialCallStatus") as string) ?? "";
 }
 
 export { handler as GET, handler as POST };

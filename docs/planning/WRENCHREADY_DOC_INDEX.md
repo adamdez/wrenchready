@@ -18,6 +18,7 @@ Primary folder:
 - [JEFF_FIELD_ASSISTANT_PURSUIT_PROMPT.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_FIELD_ASSISTANT_PURSUIT_PROMPT.md)
 - [JEFF_REAL_CALL_PILOT_RUNBOOK.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_REAL_CALL_PILOT_RUNBOOK.md)
 - [JEFF_CORE_MEMORY.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_CORE_MEMORY.md)
+- [JEFF_CUSTOMER_CALL_GUARDRAILS.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_CUSTOMER_CALL_GUARDRAILS.md)
 - [JEFF_QUALITY_SCHEDULER_KNOWLEDGE_PLAN.md](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\JEFF_QUALITY_SCHEDULER_KNOWLEDGE_PLAN.md)
 - [WRENCHREADY_JEFF_FIELD_EVENT_SUPABASE.sql](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\WRENCHREADY_JEFF_FIELD_EVENT_SUPABASE.sql)
 - [wrenchready-n8n-ops-router.workflow.json](C:\Users\adamd\Desktop\Simon\wrenchreadymobile.com\docs\planning\wrenchready-n8n-ops-router.workflow.json)
