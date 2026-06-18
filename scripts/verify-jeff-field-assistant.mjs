@@ -61,7 +61,20 @@ const active = await request("/api/al/wrenchready/jeff/tools/get-active-field-jo
   vehicle: "Chrysler",
 });
 assert(active.success, "active job lookup should succeed");
-assert(active.data?.job?.id === "jeff-fixture-tammy-chrysler", "Tammy fixture should be selected");
+if (active.data?.job?.id !== "jeff-fixture-tammy-chrysler") {
+  const selected = active.data?.job?.id || "none";
+  const candidates = (active.data?.candidates || [])
+    .map((candidate) => candidate.jobId || candidate.id || candidate.customerName || "unknown candidate")
+    .join(", ");
+  throw new Error(
+    [
+      "Tammy fixture should be selected.",
+      `Selected: ${selected}.`,
+      candidates ? `Candidates: ${candidates}.` : "No candidates returned.",
+      "Start the local server with fixture jobs enabled: npm run dev:jeff:fixtures -- --port 3001",
+    ].join(" "),
+  );
+}
 
 const note = await request("/api/al/wrenchready/jeff/tools/record-field-note", {
   jobId: "jeff-fixture-tammy-chrysler",

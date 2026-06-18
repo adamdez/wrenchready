@@ -50,6 +50,7 @@ import {
   updateJeffDurableMemoryStatus,
 } from "@/lib/jeff-field-assistant/persistence";
 import type {
+  JeffConversation,
   JeffConversationSummary,
   JeffFollowUpStatus,
   JeffDurableMemory,
@@ -1645,6 +1646,65 @@ export async function setJeffCoreMemoryStatus(input: {
     status: normalizeMemoryStatus(input.status),
     approvedBy: input.approvedBy || "Dez",
   });
+}
+
+export async function setJeffConversationReviewStatus(payload: unknown) {
+  const input = isObject(payload) ? payload : {};
+  const conversationId = optionalString(input.conversationId);
+  const reviewedBy = optionalString(input.reviewedBy) || "Dez";
+
+  if (!conversationId) {
+    return blocked(
+      "set_jeff_conversation_review_status",
+      "I need a Jeff conversation id before I can mark a call reviewed.",
+      { conversationId },
+    );
+  }
+
+  const workspace = await listPersistedJeffJobWorkspace();
+  const conversation = workspace.conversations.find((entry) => entry.id === conversationId);
+  const summary = workspace.summaries.find((entry) => entry.conversationId === conversationId);
+
+  if (!conversation || !summary) {
+    return blocked(
+      "set_jeff_conversation_review_status",
+      "I could not mark that call reviewed because the conversation or summary was not found.",
+      { conversationId },
+      workspace.warnings,
+    );
+  }
+
+  const updatedAt = nowIso();
+  const reviewedConversation: JeffConversation = {
+    ...conversation,
+    jobMatchStatus: conversation.jobId ? conversation.jobMatchStatus : "manual",
+    needsReview: false,
+    reviewReason: `Reviewed by ${reviewedBy}.`,
+    updatedAt,
+  };
+
+  const storage = await persistJeffConversationWorkspace({
+    conversation: reviewedConversation,
+    summary: {
+      ...summary,
+      metadata: {
+        ...summary.metadata,
+        reviewedAt: updatedAt,
+        reviewedBy,
+      },
+    },
+  });
+
+  return result(
+    "set_jeff_conversation_review_status",
+    "I marked that Jeff call reviewed.",
+    {
+      conversationId,
+      reviewedAt: updatedAt,
+      storageStatus: storage.status,
+    },
+    [...workspace.warnings, storage.warning].filter((warning): warning is string => Boolean(warning)),
+  );
 }
 
 async function saveBlockedCapabilityRequest(input: {

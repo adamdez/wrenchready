@@ -1260,6 +1260,40 @@ export function reviewJeffTranscript(input: {
     });
   }
 
+  const internalLookupNarrationCount = [
+    ...normalized.matchAll(/\b(checking|check)\s+(the\s+)?(wrenchready|ranch ready|job|field|current)?\s*context\b/g),
+  ].length;
+  if (internalLookupNarrationCount > 1) {
+    issues.push({
+      severity: "fix-before-field",
+      summary: "Jeff repeated internal context-check narration.",
+      recommendedFix: "Keep lookups silent. If a tool is slow, say the useful work being done once, then continue helping from Simon's current facts.",
+    });
+  }
+
+  if (
+    hasAny(normalized, ["different job", "not that job", "wrong job", "this is for a different", "this isn't that job"]) &&
+    hasAny(normalized, ["tammy", "ryan", "kendra", "stuart", "chrysler", "ram", "subaru", "e-450"]) &&
+    hasAny(normalized, ["keeps asking", "kept asking", "back to", "still talking about", "need the job", "job info"])
+  ) {
+    issues.push({
+      severity: "fix-before-field",
+      summary: "Jeff may have forced the wrong active job context after Simon switched contexts.",
+      recommendedFix: "When Simon says it is a different job, accept the context switch, help from the new facts, and ask only for the minimum job identifier before writing to a job record.",
+    });
+  }
+
+  if (
+    hasAny(normalized, ["general question", "personal", "my truck", "my car", "different job"]) &&
+    hasAny(normalized, ["can't help", "need the job", "need job info", "which customer", "before i can help"])
+  ) {
+    issues.push({
+      severity: "fix-before-field",
+      summary: "Jeff may have refused useful general help because no CRM job was selected.",
+      recommendedFix: "Help from Simon's spoken facts first. Require a job id only for job-file writes, approvals, payments, scheduling, or customer-facing claims.",
+    });
+  }
+
   if (hasAny(normalized, ["ranch ready"])) {
     issues.push({
       severity: "watch",

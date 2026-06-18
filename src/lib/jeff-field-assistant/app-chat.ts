@@ -533,7 +533,7 @@ function likelyWantsPhotoAnalysis(text: string, attachments: JeffAppAttachment[]
 
 function likelyWantsPartStore(text: string) {
   return /\b(part|parts|starter|alternator|battery|sensor|spark plugs?|coil|brake|caliper|rotor|filter|fuel pump|pump)\b/i.test(text) &&
-    /\b(find|near|close|store|oreilly|o'reilly|autozone|napa|buy|order|reserve|cart|pickup|pick up|get)\b/i.test(text);
+    /\b(find|near|close|closest|store|oreilly|o'reilly|autozone|napa|buy|order|reserve|cart|pickup|pick up|get|available|in stock|has one|have one)\b/i.test(text);
 }
 
 function likelyWantsPurchaseBlocked(text: string) {
@@ -601,6 +601,52 @@ function selectedJobAppearsDifferent(jobLabel: string | undefined, vehicle: stri
 
   if (year && !job.includes(year)) return true;
   return words.some((word) => !job.includes(word));
+}
+
+function likelyPartsFollowUp(text: string) {
+  return (
+    /\b(where|who|which|closest|near|close|buy|get|order|reserve|pickup|pick up|in stock|available|has one|have one)\b/i.test(text) &&
+    /\b(one|it|that|this|part|pump|starter|alternator|battery|sensor|plug|coil|filter)\b/i.test(text)
+  );
+}
+
+function inferRecentPartsContext(messages: JeffAppThreadMessage[]) {
+  for (const message of [...messages].reverse().slice(0, 8)) {
+    if (message.role !== "simon") continue;
+    const vehicle = extractVehicleFromText(message.text);
+    const partName = extractPartName(message.text);
+    if (vehicle || partName) return { vehicle, partName };
+  }
+
+  return {};
+}
+
+function applyRecentPartsFollowUpContext(
+  input: JeffAppMessageInput,
+  recentMessages: JeffAppThreadMessage[],
+): JeffAppMessageInput {
+  if (!input.text || !likelyPartsFollowUp(input.text)) return input;
+  if (input.inferredVehicle && input.inferredPartName) return input;
+
+  const inferred = inferRecentPartsContext(recentMessages);
+  const recentVehicleDiffers = selectedJobAppearsDifferent(input.jobLabel, inferred.vehicle);
+  const shouldDetachFromSelectedJob =
+    !input.jobId ||
+    input.contextMode === "different-job" ||
+    input.contextMode === "parts-only" ||
+    input.contextMode === "no-job" ||
+    recentVehicleDiffers;
+
+  if (!shouldDetachFromSelectedJob) return input;
+
+  return {
+    ...input,
+    jobId: undefined,
+    jobLabel: undefined,
+    contextMode: recentVehicleDiffers ? "different-job" : "parts-only",
+    inferredVehicle: input.inferredVehicle || inferred.vehicle,
+    inferredPartName: input.inferredPartName || inferred.partName,
+  };
 }
 
 function detectMessageContextMode(input: JeffAppMessageInput): JeffAppContextMode {
@@ -682,7 +728,11 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
     }), "sync_jeff_calendar"));
   }
 
-  if (likelyWantsPartStore(text)) {
+  const wantsPartsStore =
+    likelyWantsPartStore(text) ||
+    (likelyPartsFollowUp(text) && Boolean(input.inferredPartName || input.inferredVehicle));
+
+  if (wantsPartsStore) {
     const partName = input.inferredPartName || extractPartName(text);
     const vehicle = input.inferredVehicle || input.jobLabel;
     actions.push(messageActionFromResult(await findNearbyPartsStoresForSimon({
@@ -794,6 +844,7 @@ async function askJeffTextModel(
               "Keep answers concise, practical, and safe for a mobile mechanic in the field.",
               "Assume Simon is usually working alone. Give one-person-safe steps and one physical action at a time.",
               "If the message context says different-job, parts-only, personal, or no-job, do not drag the answer back to the selected CRM job.",
+              "If Simon asks a follow-up like where can I buy one, continue the most recent part/vehicle from the thread unless the tool context says otherwise.",
               "If Simon asks for a part, test, purchase, diagnosis, safety judgment, invoice, or customer message, say what you can do now and what must be verified.",
               "Do not pretend a purchase, email, SMS, upload, or job update happened unless a tool or system state proves it.",
               "When tool-backed actions are listed, treat those outcomes as ground truth and summarize them plainly.",
@@ -841,14 +892,23 @@ async function askJeffTextModel(
     ],
   };
 
-  const response = await fetch(OPENAI_RESPONSES_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
-  });
+  let response: Response;
+  try {
+    response = await fetch(OPENAI_RESPONSES_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+  } catch (error) {
+    return {
+      reply: "I saved your message, but I could not get a live answer from Jeff's text brain yet.",
+      model,
+      warning: error instanceof Error ? error.message : "OpenAI text response failed before Jeff could answer.",
+    };
+  }
   const responseBody = await response.json().catch(() => ({}));
 
   if (!response.ok) {
@@ -868,7 +928,7 @@ async function askJeffTextModel(
 }
 
 export async function sendJeffAppMessage(payload: unknown) {
-  const input = applyMessageContext(normalizeInput(payload));
+  let input = applyMessageContext(normalizeInput(payload));
   const text = input.text;
 
   if (!text && !input.attachments?.length) {
@@ -880,6 +940,7 @@ export async function sendJeffAppMessage(payload: unknown) {
 
   const conversationId = makeId("jeff-app-message");
   const recent = await listJeffAppThreadMessages(20);
+  input = applyRecentPartsFollowUpContext(input, recent.messages);
   const photoRegistration = await registerMessagePhotos(input);
   input.fieldPhotoStatus = photoRegistration.status;
   input.attachments = updateAttachmentsFromRegisteredPhotos(input.attachments, photoRegistration.photos);

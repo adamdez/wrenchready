@@ -83,6 +83,7 @@ Scope: Jeff mobile hub, Photo Drop, Vapi server callback, tool routes, local pil
 Run against local server:
 
 ```bash
+npm run dev:jeff:fixtures -- --port 3001
 npm run verify:jeff -- http://localhost:3001
 npm run verify:jeff:vapi -- http://localhost:3001
 npm run verify:jeff:scenarios -- http://localhost:3001

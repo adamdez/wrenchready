@@ -7,6 +7,7 @@ import {
   Archive,
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   Bot,
   CalendarDays,
   CheckCircle2,
@@ -30,11 +31,14 @@ import {
   isJeffEvaluationConversation,
   isJeffEvaluationSummary,
 } from "@/lib/jeff-field-assistant/conversation-filters";
+import { SectionJumpButton } from "./section-jump-button";
 import {
   getJeffFieldFiles,
   getJeffBlockedRequestQueue,
   getJeffMemoryReviewQueue,
   getJeffWorkspaceReviewQueue,
+  sendSimonRecapEmail,
+  setJeffConversationReviewStatus,
   setJeffCoreMemoryStatus,
   syncJeffCalendar,
   syncJeffGmailInbox,
@@ -106,6 +110,76 @@ function followUpLabel(status?: string) {
   return "none";
 }
 
+function timeLabel(value?: string) {
+  if (!value) return "No timestamp";
+  return new Date(value).toLocaleString();
+}
+
+function shortText(value?: string, fallback = "No summary captured yet.") {
+  const clean = value?.replace(/\s+/g, " ").trim();
+  if (!clean) return fallback;
+  return clean.length > 320 ? `${clean.slice(0, 317)}...` : clean;
+}
+
+function preferOperatorText(value?: string, fallback = "No summary captured yet.") {
+  const clean = value
+    ?.replace(/\s+/g, " ")
+    .replace(/\b(?:Jeff|Simon)\s+says[:,]?\s+/gi, "")
+    .replace(/\s+Simon asks,?\s+(?:can you\s+)?(?:compile|send|email|text)\b.*$/i, "")
+    .trim();
+  if (!clean) return fallback;
+
+  const summaryClauses = [...clean.matchAll(/(Likely suspects|Recommended next tests|Proof needed):\s*(.*?)(?=\s(?:Likely suspects|Recommended next tests|Proof needed):|$)/gi)];
+  if (summaryClauses.length <= 1) return shortText(clean, fallback);
+
+  const byBody = new Map<string, { label: string; body: string }>();
+  for (const clause of summaryClauses) {
+    const body = clause[2]
+      .replace(/\s+Simon asks,?\s+(?:can you\s+)?(?:compile|send|email|text)\b.*$/i, "")
+      .trim();
+    if (!body) continue;
+    const label = clause[1] === "Likely suspects" && /^(verify|check|test|confirm)\b/i.test(body)
+      ? "Recommended next tests"
+      : clause[1];
+    const key = body.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const existing = byBody.get(key);
+    if (!existing || label === "Recommended next tests") {
+      byBody.set(key, { label, body });
+    }
+  }
+
+  return shortText([...byBody.values()].map((clause) => `${clause.label}: ${clause.body}`).join(" "), fallback);
+}
+
+function blockedRequestLabel(type?: string) {
+  if (type === "purchase_blocked") return "Parts purchase blocked";
+  if (type === "booking_blocked") return "Booking blocked";
+  if (type === "payment_blocked") return "Payment blocked";
+  if (type === "email_blocked") return "Email blocked";
+  if (type === "calendar_blocked") return "Calendar blocked";
+  return type?.replace(/_/g, " ") || "Blocked request";
+}
+
+function blockedRequestSummary(request: { type?: string; summary?: string }) {
+  const ask = preferOperatorText(
+    request.summary?.replace(/^Blocked Jeff capability request\s*\([^)]+\):\s*/i, ""),
+    "No request text captured.",
+  );
+  if (request.type === "purchase_blocked") {
+    return `Jeff cannot buy or reserve parts yet. He should still find nearby inventory and give Simon store options. Simon asked: ${ask}`;
+  }
+  return ask;
+}
+
+function reviewPriorityLabel(conversation?: { needsReview?: boolean; callType?: string; jobMatchStatus?: string }) {
+  if (!conversation) return "No call";
+  if (conversation.needsReview) return "Human review";
+  if (conversation.callType === "personal") return "Personal follow-up";
+  if (conversation.callType === "admin") return "Admin follow-up";
+  if (conversation.jobMatchStatus === "unresolved") return "Needs job match";
+  return "Captured";
+}
+
 type JeffActionParams = Record<string, string | string[] | undefined>;
 
 function searchParamValue(params: JeffActionParams, key: string) {
@@ -174,6 +248,43 @@ async function syncCalendarAction() {
   redirect(actionRedirectUrl("calendar", response));
 }
 
+async function sendRecapAction(formData: FormData) {
+  "use server";
+
+  const conversationId = formData.get("conversationId");
+  const mode = formData.get("mode");
+
+  if (typeof conversationId !== "string" || !conversationId) {
+    throw new Error("Jeff recap action requires a conversation id.");
+  }
+
+  const response = await sendSimonRecapEmail({
+    conversationId,
+    sendNow: mode !== "draft",
+  });
+  revalidatePath("/ops/jeff");
+  revalidatePath("/ops/field-assistant");
+  redirect(actionRedirectUrl(mode === "draft" ? "draft-recap" : "send-recap", response));
+}
+
+async function markConversationReviewedAction(formData: FormData) {
+  "use server";
+
+  const conversationId = formData.get("conversationId");
+
+  if (typeof conversationId !== "string" || !conversationId) {
+    throw new Error("Jeff review action requires a conversation id.");
+  }
+
+  const response = await setJeffConversationReviewStatus({
+    conversationId,
+    reviewedBy: "Dez",
+  });
+  revalidatePath("/ops/jeff");
+  revalidatePath("/ops/field-assistant");
+  redirect(actionRedirectUrl("mark-reviewed", response));
+}
+
 export default async function JeffFieldFilesPage({
   searchParams,
 }: {
@@ -210,8 +321,6 @@ export default async function JeffFieldFilesPage({
   const googleMapsStatus = getGoogleMapsIntegrationStatus();
   const memoryCandidates = memoryQueue.memories.filter((memory) => memory.status === "candidate").length;
   const approvedMemories = memoryQueue.memories.filter((memory) => memory.status === "approved").length;
-  const conversationCount = fieldFiles.reduce((count, file) => count + file.conversations.length, 0);
-  const mediaCount = fieldFiles.reduce((count, file) => count + file.media.length, 0);
   const allSummaries = [
     ...fieldFiles.flatMap((file) => file.conversationSummaries),
     ...workspaceQueue.summaries,
@@ -230,11 +339,103 @@ export default async function JeffFieldFilesPage({
   const openFollowUps = followUpRequests.filter(
     (summary) => summary.emailStatus !== "sent" && summary.emailStatus !== "drafted",
   );
-  const capturedCallCount = conversationCount + realReviewConversations.length;
   const capabilityItems = [...capabilityReport.capabilities].sort((a, b) => {
     const weight = { blocked: 0, partial: 1, ready: 2 };
     return weight[a.state] - weight[b.state] || a.area.localeCompare(b.area) || a.label.localeCompare(b.label);
   });
+  const latestOpenFollowUp = openFollowUps[0];
+  const latestBlockedRequest = blockedRequestQueue.requests[0];
+  const latestCallSummaryText = latestReviewSummary
+    ? preferOperatorText(latestReviewSummary.recommendationSummary || latestReviewSummary.summary)
+    : "No recent Jeff call needs operator attention.";
+  const latestFollowUpNeedsAction = Boolean(
+    latestReviewConversation &&
+    latestReviewSummary &&
+    (latestReviewSummary.emailRequested || latestReviewSummary.requestedFollowUps.length > 0) &&
+    latestReviewSummary.emailStatus !== "sent",
+  );
+  const latestReviewNeedsAction = Boolean(
+    latestReviewConversation &&
+    (latestReviewConversation.needsReview || latestReviewConversation.jobMatchStatus === "unresolved"),
+  );
+  const primaryNextAction =
+    latestReviewSummary?.requestedFollowUps[0] ||
+    latestReviewSummary?.nextActions[0] ||
+    latestReviewConversation?.reviewReason ||
+    "No immediate operator action is attached to the latest Jeff call.";
+  const earlierReviewConversations = latestReviewConversation
+    ? realReviewConversations.filter((conversation) => conversation.id !== latestReviewConversation.id)
+    : realReviewConversations;
+  const triageItems = [
+    latestReviewConversation
+      ? {
+          id: `call-${latestReviewConversation.id}`,
+          label: reviewPriorityLabel(latestReviewConversation),
+          title: latestReviewConversation.subjectLabel || latestReviewConversation.jobLabel || callTypeLabel(latestReviewConversation.callType),
+          body: primaryNextAction,
+          meta: `${callTypeLabel(latestReviewConversation.callType)} / ${timeLabel(latestReviewConversation.endedAt)}`,
+          tone: latestReviewConversation.needsReview ? "amber" : "blue",
+          target: "jeff-call-workspace",
+        }
+      : undefined,
+    latestOpenFollowUp
+      ? {
+          id: `follow-up-${latestOpenFollowUp.id}`,
+          label: "Follow-up open",
+          title: latestOpenFollowUp.emailRequested ? "Email recap needs completion" : "Requested follow-up",
+          body: latestOpenFollowUp.requestedFollowUps[0] || "Simon asked Jeff for an email recap.",
+          meta: followUpLabel(latestOpenFollowUp.emailStatus),
+          tone: latestOpenFollowUp.emailStatus === "failed" || latestOpenFollowUp.emailStatus === "blocked" ? "red" : "amber",
+          target: "jeff-call-workspace",
+        }
+      : undefined,
+    latestBlockedRequest
+      ? {
+          id: `blocked-${latestBlockedRequest.id}`,
+          label: "Blocked ask",
+          title: blockedRequestLabel(latestBlockedRequest.type),
+          body: blockedRequestSummary(latestBlockedRequest),
+          meta: timeLabel(latestBlockedRequest.timestamp),
+          tone: "red",
+          target: "jeff-capabilities",
+        }
+      : undefined,
+    memoryCandidates > 0
+      ? {
+          id: "memory-review",
+          label: "Memory review",
+          title: `${memoryCandidates} candidate${memoryCandidates === 1 ? "" : "s"}`,
+          body: "Approve only memories that should affect Jeff's future behavior. Keep job notes out of personal memory.",
+          meta: `${approvedMemories} approved`,
+          tone: "blue",
+          target: "jeff-durable-memory",
+        }
+      : undefined,
+    simonLocation.location?.stale
+      ? {
+          id: "location-stale",
+          label: "Location stale",
+          title: "Ask Simon to share location again",
+          body: `Last location is ${simonLocation.location.ageMinutes} minutes old. Parts-store choices should refresh location first.`,
+          meta: simonLocation.location.jobLabel || "No job label",
+          tone: "amber",
+          target: "jeff-google-workspace",
+        }
+      : undefined,
+  ].filter((item): item is {
+    id: string;
+    label: string;
+    title: string;
+    body: string;
+    meta: string;
+    tone: string;
+    target: string;
+  } => Boolean(item));
+  const triageTone = (tone: string) => {
+    if (tone === "red") return "border-red-500/20 bg-red-500/10 text-red-100";
+    if (tone === "amber") return "border-amber-500/20 bg-amber-500/10 text-amber-100";
+    return "border-sky-500/20 bg-sky-500/10 text-sky-100";
+  };
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -243,49 +444,151 @@ export default async function JeffFieldFilesPage({
         Back to Ops
       </Link>
 
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
+      <section className="mt-6 overflow-hidden rounded-3xl border border-border bg-card/60 p-5 backdrop-blur-sm sm:p-6">
         <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
           <Bot className="h-3.5 w-3.5" />
-          Jeff Field Files
+          Jeff Ops Triage
         </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Jeff context, notes, and field evidence by job.
-        </h1>
-        <div className="mt-8 grid gap-4 md:grid-cols-4">
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Files</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">{fieldFiles.length}</p>
+        <div className="mt-4 grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Latest call, open actions, and proof.
+            </h1>
+            <div className={`mt-4 rounded-2xl border p-4 ${callTone(latestReviewConversation?.callType, latestReviewConversation?.needsReview)}`}>
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] opacity-75">
+                    Latest Jeff call
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">
+                    {latestReviewConversation?.subjectLabel || latestReviewConversation?.jobLabel || "No recent call needing attention"}
+                  </p>
+                  <p className="mt-1 text-sm opacity-90">{latestCallSummaryText}</p>
+                </div>
+                <span className="w-fit rounded-full border border-white/15 bg-black/20 px-2.5 py-1 text-[11px]">
+                  {reviewPriorityLabel(latestReviewConversation)}
+                </span>
+              </div>
+              <div className="mt-3 rounded-xl border border-white/10 bg-black/15 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] opacity-70">Next human move</p>
+                <p className="mt-1 text-sm opacity-95">{primaryNextAction}</p>
+              </div>
+              {latestReviewConversation ? (
+                <p className="mt-3 text-xs opacity-70">
+                  {callTypeLabel(latestReviewConversation.callType)} / {timeLabel(latestReviewConversation.endedAt)}
+                </p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <SectionJumpButton
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/20 px-3 text-sm font-medium text-foreground transition-colors hover:bg-black/30"
+                  targetId="jeff-call-workspace"
+                >
+                  <FileText className="h-4 w-4" />
+                  Open workspace
+                </SectionJumpButton>
+                {latestReviewConversation ? (
+                  <>
+                    <form action={sendRecapAction}>
+                      <input name="conversationId" type="hidden" value={latestReviewConversation.id} />
+                      <input name="mode" type="hidden" value="draft" />
+                      <button
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 text-sm font-medium text-sky-100 transition-colors hover:bg-sky-500/20"
+                        type="submit"
+                      >
+                        <FileText className="h-4 w-4" />
+                        Draft recap
+                      </button>
+                    </form>
+                    <form action={sendRecapAction}>
+                      <input name="conversationId" type="hidden" value={latestReviewConversation.id} />
+                      <input name="mode" type="hidden" value="send" />
+                      <button
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 text-sm font-medium text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                        type="submit"
+                      >
+                        <Mail className="h-4 w-4" />
+                        Send recap
+                      </button>
+                    </form>
+                  </>
+                ) : null}
+                {latestReviewConversation ? (
+                  <form action={markConversationReviewedAction}>
+                    <input name="conversationId" type="hidden" value={latestReviewConversation.id} />
+                    <button
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/20 px-3 text-sm font-medium text-foreground transition-colors hover:bg-black/30"
+                      type="submit"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Mark reviewed
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+              {latestReviewConversation ? (
+                <details className="mt-3 rounded-xl border border-white/10 bg-black/15 p-3">
+                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.14em] opacity-80">
+                    Show proof here
+                  </summary>
+                  {latestReviewConversation.recordingUrl ? (
+                    <a
+                      className="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/20 px-3 text-xs font-medium transition-colors hover:bg-black/30"
+                      href={latestReviewConversation.recordingUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      <Activity className="h-3.5 w-3.5" />
+                      Open recording
+                    </a>
+                  ) : null}
+                  {latestReviewConversation.transcript ? (
+                    <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-black/20 p-3 text-xs leading-relaxed opacity-90">
+                      {latestReviewConversation.transcript}
+                    </pre>
+                  ) : (
+                    <p className="mt-3 text-sm opacity-80">No transcript was captured for this call.</p>
+                  )}
+                </details>
+              ) : null}
+            </div>
           </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Durable timelines</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">
-              {fieldFiles.filter((file) => file.storage.fieldEvents === "supabase-field-event").length}
-            </p>
+
+          <div className="rounded-2xl border border-border bg-background/60 p-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <AlertTriangle className="h-4 w-4 text-amber-300" />
+              Human Action Queue
+            </div>
+            <div className="mt-3 space-y-2">
+              {triageItems.length > 0 ? triageItems.slice(0, 4).map((item) => (
+                <article key={item.id} className={`rounded-xl border p-2.5 ${triageTone(item.tone)}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-70">{item.label}</p>
+                      <p className="mt-1 text-sm font-semibold">{item.title}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-white/15 bg-black/15 px-2 py-0.5 text-[10px] opacity-80">
+                      {item.meta}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm opacity-90">{preferOperatorText(item.body, "Review this item.")}</p>
+                  <SectionJumpButton
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold opacity-85 transition-opacity hover:opacity-100"
+                    targetId={item.target}
+                  >
+                    Open
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </SectionJumpButton>
+                </article>
+              )) : (
+                <p className="rounded-xl border border-dashed border-border bg-card/40 p-3 text-sm text-muted-foreground">
+                  No open Jeff action is waiting on an operator.
+                </p>
+              )}
+            </div>
           </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Saved events</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">
-              {fieldFiles.reduce((count, file) => count + file.fieldEvents.length, 0)}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Photos</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">
-              {fieldFiles.reduce((count, file) => count + file.fieldPhotos.length, 0)}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Media</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">{mediaCount}</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Memory queue</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">{memoryCandidates}</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Calls captured</p>
-            <p className="mt-2 text-2xl font-bold text-foreground">{capturedCallCount}</p>
-          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-4">
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Needs review</p>
             <p className="mt-2 text-2xl font-bold text-foreground">{realReviewConversations.length}</p>
@@ -293,6 +596,16 @@ export default async function JeffFieldFilesPage({
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Open follow-ups</p>
             <p className="mt-2 text-2xl font-bold text-foreground">{openFollowUps.length}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Blocked asks</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{blockedRequestQueue.requests.length}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Photos</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">
+              {fieldFiles.reduce((count, file) => count + file.fieldPhotos.length, 0)}
+            </p>
           </div>
         </div>
         {uniqueWarnings.length > 0 ? (
@@ -314,29 +627,31 @@ export default async function JeffFieldFilesPage({
         </div>
       ) : null}
 
-      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Activity className="h-4 w-4 text-primary" />
-              Jeff Live Capabilities
+      <details id="jeff-capabilities" className="mt-6 scroll-mt-6 rounded-3xl border border-border bg-card/50 p-6">
+        <summary className="cursor-pointer list-none">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Activity className="h-4 w-4 text-primary" />
+                System readiness and blocked capability log
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Open this when Jeff could not do something, or when production wiring needs verification.
+              </p>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              What Jeff can truly do right now, what is partial, and what Simon should hear when a request is blocked.
-            </p>
+            <div className="flex flex-wrap gap-2 text-[11px]">
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-emerald-200">
+                ready: {capabilityReport.counts.ready}
+              </span>
+              <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-amber-200">
+                partial: {capabilityReport.counts.partial}
+              </span>
+              <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-red-200">
+                blocked: {capabilityReport.counts.blocked}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2 text-[11px]">
-            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-emerald-200">
-              ready: {capabilityReport.counts.ready}
-            </span>
-            <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-amber-200">
-              partial: {capabilityReport.counts.partial}
-            </span>
-            <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-red-200">
-              blocked: {capabilityReport.counts.blocked}
-            </span>
-          </div>
-        </div>
+        </summary>
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
           {capabilityItems.map((capability) => (
             <article key={capability.id} className={`rounded-2xl border p-4 ${capabilityTone(capability.state)}`}>
@@ -368,9 +683,9 @@ export default async function JeffFieldFilesPage({
             {blockedRequestQueue.requests.length > 0 ? blockedRequestQueue.requests.map((request) => (
               <article key={request.id} className="rounded-xl border border-border bg-card/50 p-3">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                  <p className="text-sm font-medium text-foreground">{request.summary}</p>
+                  <p className="text-sm font-medium text-foreground">{blockedRequestSummary(request)}</p>
                   <span className="shrink-0 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200">
-                    {request.type}
+                    {blockedRequestLabel(request.type)}
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -382,9 +697,9 @@ export default async function JeffFieldFilesPage({
             )}
           </div>
         </div>
-      </section>
+      </details>
 
-      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+      <section id="jeff-email" className="mt-6 scroll-mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -436,7 +751,7 @@ export default async function JeffFieldFilesPage({
         </div>
       </section>
 
-      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+      <section id="jeff-google-workspace" className="mt-6 scroll-mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -555,7 +870,7 @@ export default async function JeffFieldFilesPage({
         </div>
       </details>
 
-      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+      <section id="jeff-call-workspace" className="mt-6 scroll-mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -602,12 +917,12 @@ export default async function JeffFieldFilesPage({
             {latestReviewSummary ? (
               <div className="mt-4 space-y-3">
                 <p className="text-sm opacity-90">
-                  {latestReviewSummary.recommendationSummary || latestReviewSummary.summary}
+                  {preferOperatorText(latestReviewSummary.recommendationSummary || latestReviewSummary.summary)}
                 </p>
                 {latestReviewSummary.nextActions.length > 0 ? (
                   <div className="space-y-1 text-sm opacity-90">
                     {latestReviewSummary.nextActions.slice(0, 3).map((action) => (
-                      <p key={action}>Next: {action}</p>
+                      <p key={action}>Next: {preferOperatorText(action, "Review this action.")}</p>
                     ))}
                   </div>
                 ) : null}
@@ -626,11 +941,68 @@ export default async function JeffFieldFilesPage({
                 ) : null}
               </div>
             ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {latestReviewConversation.recordingUrl ? (
+                <a
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/20 px-3 text-xs font-medium transition-colors hover:bg-black/30"
+                  href={latestReviewConversation.recordingUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <Activity className="h-3.5 w-3.5" />
+                  Open recording
+                </a>
+              ) : null}
+              {latestFollowUpNeedsAction ? (
+                <form action={sendRecapAction}>
+                  <input name="conversationId" type="hidden" value={latestReviewConversation.id} />
+                  <input name="mode" type="hidden" value="send" />
+                  <button
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 text-xs font-medium text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                    type="submit"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    Send recap
+                  </button>
+                </form>
+              ) : null}
+              {latestReviewNeedsAction ? (
+                <form action={markConversationReviewedAction}>
+                  <input name="conversationId" type="hidden" value={latestReviewConversation.id} />
+                  <button
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/20 px-3 text-xs font-medium transition-colors hover:bg-black/30"
+                    type="submit"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Mark reviewed
+                  </button>
+                </form>
+              ) : null}
+            </div>
+            <details className="mt-4 rounded-xl border border-white/10 bg-black/15 p-3">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.14em] opacity-80">
+                Show transcript and source proof
+              </summary>
+              {latestReviewConversation.transcript ? (
+                <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-black/20 p-3 text-xs leading-relaxed opacity-90">
+                  {latestReviewConversation.transcript}
+                </pre>
+              ) : (
+                <p className="mt-3 text-sm opacity-80">No transcript was captured for this call.</p>
+              )}
+              {latestReviewConversation.rawSummary ? (
+                <p className="mt-3 text-xs opacity-80">Vapi summary: {preferOperatorText(latestReviewConversation.rawSummary)}</p>
+              ) : null}
+              <p className="mt-3 text-[11px] opacity-70">
+                Conversation id: {latestReviewConversation.id}
+                {latestReviewConversation.callId ? ` / Call id: ${latestReviewConversation.callId}` : ""}
+              </p>
+            </details>
           </article>
         ) : null}
 
         <div className="mt-5 space-y-3">
-          {realReviewConversations.length > 0 ? realReviewConversations.slice(0, 6).map((conversation) => {
+          {earlierReviewConversations.length > 0 ? earlierReviewConversations.slice(0, 5).map((conversation) => {
             const summary = summaryByConversation.get(conversation.id);
             const Icon = callTypeIcon(conversation.callType);
             return (
@@ -655,25 +1027,48 @@ export default async function JeffFieldFilesPage({
                 </div>
                 {summary ? (
                   <>
-                    <p className="mt-3 text-sm opacity-90">{summary.recommendationSummary || summary.summary}</p>
+                    <p className="mt-3 text-sm opacity-90">{preferOperatorText(summary.recommendationSummary || summary.summary)}</p>
                     {summary.requestedFollowUps.length > 0 || summary.emailRequested ? (
                       <p className="mt-2 text-xs opacity-80">
-                        Follow-up: {summary.requestedFollowUps[0] || "Email requested"} ({followUpLabel(summary.emailStatus)})
+                        Follow-up: {preferOperatorText(summary.requestedFollowUps[0], "Email requested")} ({followUpLabel(summary.emailStatus)})
                       </p>
                     ) : null}
                   </>
+                ) : null}
+                {conversation.transcript || conversation.recordingUrl ? (
+                  <details className="mt-3 rounded-xl border border-white/10 bg-black/15 p-3">
+                    <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.14em] opacity-80">
+                      Show proof
+                    </summary>
+                    {conversation.recordingUrl ? (
+                      <a
+                        className="mt-3 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-white/15 bg-black/20 px-2.5 text-xs font-medium transition-colors hover:bg-black/30"
+                        href={conversation.recordingUrl}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        <Activity className="h-3.5 w-3.5" />
+                        Open recording
+                      </a>
+                    ) : null}
+                    {conversation.transcript ? (
+                      <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-black/20 p-3 text-xs leading-relaxed opacity-90">
+                        {conversation.transcript}
+                      </pre>
+                    ) : null}
+                  </details>
                 ) : null}
               </article>
             );
           }) : (
             <div className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
-              No real Jeff calls need review.
+              No earlier Jeff calls need review.
             </div>
           )}
         </div>
       </section>
 
-      <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
+      <section id="jeff-durable-memory" className="mt-6 scroll-mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -788,10 +1183,10 @@ export default async function JeffFieldFilesPage({
                     <p className="mt-3 text-sm text-muted-foreground">{file.workspaceSnapshot.snapshotSummary}</p>
                     <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                       {file.workspaceSnapshot.nextActions.slice(0, 3).map((action) => (
-                        <p key={action}>Next: {action}</p>
+                        <p key={action}>Next: {preferOperatorText(action, "Review this action.")}</p>
                       ))}
                       {file.workspaceSnapshot.openBlockers.slice(0, 2).map((blocker) => (
-                        <p key={blocker} className="text-red-200">Blocker: {blocker}</p>
+                        <p key={blocker} className="text-red-200">Blocker: {preferOperatorText(blocker, "Review this blocker.")}</p>
                       ))}
                     </div>
                   </>
@@ -852,9 +1247,9 @@ export default async function JeffFieldFilesPage({
                 <div className="mt-3 space-y-3">
                   {file.conversationSummaries.slice(0, 3).map((summary) => (
                     <div key={summary.id} className="text-sm text-muted-foreground">
-                      <p>{summary.summary}</p>
+                      <p>{preferOperatorText(summary.summary)}</p>
                       {summary.nextActions[0] ? (
-                        <p className="mt-1 text-xs text-muted-foreground">Next: {summary.nextActions[0]}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Next: {preferOperatorText(summary.nextActions[0], "Review this action.")}</p>
                       ) : null}
                     </div>
                   ))}

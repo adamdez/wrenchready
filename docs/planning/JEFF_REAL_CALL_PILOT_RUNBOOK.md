@@ -73,9 +73,12 @@ Avoid:
 Run after app dependencies are installed and the app is running:
 
 ```bash
+WR_ENABLE_JEFF_FIELD_DEMO_FIXTURES=true npm run dev -- --port 3001
 npm run verify:jeff
 npm run verify:jeff:vapi
 ```
+
+Or use the shortcut: `npm run dev:jeff:fixtures -- --port 3001`.
 
 Both smoke tests should pass before a real phone call.
 

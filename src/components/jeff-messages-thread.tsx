@@ -100,6 +100,8 @@ type SpeechRecognitionWindow = Window & {
 };
 
 const MAX_ATTACHMENTS = 4;
+const MIN_COMPOSER_HEIGHT = 96;
+const MAX_COMPOSER_HEIGHT = 220;
 const MAX_ATTACHMENT_BYTES = 2_500_000;
 
 function formatTime(value: string) {
@@ -194,7 +196,10 @@ export function JeffMessagesThread({
     if (!element) return;
 
     element.style.height = "auto";
-    element.style.height = `${Math.min(Math.max(element.scrollHeight, 96), 160)}px`;
+    element.style.height = `${Math.min(
+      Math.max(element.scrollHeight, MIN_COMPOSER_HEIGHT),
+      MAX_COMPOSER_HEIGHT,
+    )}px`;
   }, []);
 
   const loadThread = useCallback(async (pin: string) => {
@@ -599,17 +604,19 @@ export function JeffMessagesThread({
               {listening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </button>
             <textarea
-              className="max-h-40 min-h-24 flex-1 resize-none overflow-y-auto rounded-[1.25rem] border border-black/10 bg-[#f7f7fa] px-4 py-3 text-sm leading-5 outline-none"
+              className="max-h-56 min-h-24 flex-1 resize-none overflow-y-auto rounded-[1.25rem] border border-black/10 bg-[#f7f7fa] px-4 py-3 text-sm leading-5 outline-none [field-sizing:content]"
               onChange={(event) => {
                 setText(event.target.value);
                 resizeComposer(event.target);
               }}
+              onInput={(event) => resizeComposer(event.currentTarget)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
                   sendMessage();
                 }
               }}
+              onKeyUp={(event) => resizeComposer(event.currentTarget)}
               placeholder={listening ? "Listening..." : "Message Jeff"}
               ref={textareaRef}
               rows={3}

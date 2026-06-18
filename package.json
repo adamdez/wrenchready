@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "dev:jeff:fixtures": "env WR_ENABLE_JEFF_FIELD_DEMO_FIXTURES=true next dev",
     "verify:jeff": "node scripts/verify-jeff-field-assistant.mjs",
     "verify:jeff:vapi": "node scripts/verify-jeff-vapi-server.mjs",
     "verify:jeff:scenarios": "node scripts/verify-jeff-scenarios.mjs",

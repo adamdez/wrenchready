@@ -1,12 +1,23 @@
 import "./load-local-env.mjs";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 const baseUrl = (process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
 const secret = process.env.JEFF_FIELD_ASSISTANT_TOOL_SECRET;
+const appPin = process.env.JEFF_FIELD_APP_PIN || process.env.JEFF_FIELD_PHOTO_UPLOAD_PIN;
+const workspaceFile = path.join(process.cwd(), ".data", "jeff", "workspace.json");
 
 function headers() {
   return {
     "Content-Type": "application/json",
     ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
+  };
+}
+
+function appHeaders() {
+  return {
+    "Content-Type": "application/json",
+    ...(appPin ? { "X-Jeff-App-Pin": appPin } : {}),
   };
 }
 
@@ -32,8 +43,34 @@ async function request(path, body) {
   return json;
 }
 
+async function appRequest(path, body) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: body ? "POST" : "GET",
+    headers: appHeaders(),
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await response.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error(`${path} returned non-JSON: ${text.slice(0, 200)}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`${path} failed: ${response.status} ${JSON.stringify(json)}`);
+  }
+
+  return json;
+}
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function readJson(filePath) {
+  return JSON.parse(readFileSync(filePath, "utf8"));
 }
 
 const catalog = await request("/api/al/wrenchready/jeff/tools");
@@ -237,5 +274,46 @@ const sessionPhotos = await request("/api/al/wrenchready/jeff/tools/get-field-ph
 });
 assert(sessionPhotos.success, "session photo list should load without a job id");
 assert(sessionPhotos.data?.photos?.length >= 1, "session photo list should include the inbox photo");
+
+const appContextToken = `Astro follow-up scenario ${Date.now()}`;
+const appPartsSeed = await appRequest("/api/al/wrenchready/jeff/messages", {
+  jobId: "jeff-fixture-tammy-chrysler",
+  jobLabel: "Tammy / 2010 Chrysler Town & Country",
+  text: `${appContextToken}: Jeff where is the closest fuel pump for a 2001 Chevy Astro?`,
+});
+assert(appPartsSeed.success, "Message Jeff should accept the initial different-vehicle parts question");
+
+const appPartsFollowUp = await appRequest("/api/al/wrenchready/jeff/messages", {
+  jobId: "jeff-fixture-tammy-chrysler",
+  jobLabel: "Tammy / 2010 Chrysler Town & Country",
+  text: "No, where can I buy one?",
+});
+assert(appPartsFollowUp.success, "Message Jeff should accept a short parts follow-up");
+
+const persistedWorkspace = readJson(workspaceFile);
+const followUpConversation = persistedWorkspace.conversations?.find(
+  (conversation) => conversation.id === appPartsFollowUp.conversationId,
+);
+assert(followUpConversation, "Message Jeff follow-up conversation should persist");
+assert(
+  !followUpConversation.jobId,
+  "short different-vehicle parts follow-up should not attach to the selected job",
+);
+assert(
+  followUpConversation.sourcePayload?.contextMode === "different-job",
+  "short parts follow-up should keep different-job context",
+);
+assert(
+  /Astro/i.test(followUpConversation.sourcePayload?.inferredVehicle || ""),
+  "short parts follow-up should infer the recent Astro vehicle",
+);
+assert(
+  /fuel pump/i.test(followUpConversation.sourcePayload?.inferredPartName || ""),
+  "short parts follow-up should infer the recent fuel pump",
+);
+assert(
+  followUpConversation.sourcePayload?.actions?.some((action) => action.tool === "find_nearby_parts_stores"),
+  "short parts follow-up should run the nearby parts-store tool",
+);
 
 console.log("Jeff scenario verification passed.");
