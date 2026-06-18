@@ -3830,7 +3830,7 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
     },
     {
       name: "find_nearby_parts_stores",
-      description: "Use Simon's fresh shared location and Google Maps to rank nearby auto parts stores by drive time. Does not confirm inventory or buy parts.",
+      description: "Use Simon's fresh shared location and Google Maps to rank nearby auto parts stores by drive time and prepare the inventory-confirmation next step. Does not prove inventory and does not buy, reserve, or order parts.",
       endpoint: `${BASE_ROUTE}/find-nearby-parts-stores`,
       method: "POST",
       parameters: {

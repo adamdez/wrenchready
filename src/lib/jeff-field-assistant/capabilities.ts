@@ -221,7 +221,7 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
           : googleMaps.ready
             ? "Google Maps is configured, but Simon has not shared a location yet."
             : "Google Maps is not configured.",
-      whatJeffCanDo: "Rank nearby parts stores by Simon's fresh location, while still requiring fitment and inventory verification.",
+      whatJeffCanDo: "Rank nearby parts stores by Simon's fresh location and prepare the fitment/inventory confirmation step.",
       whatJeffShouldSay: freshLocation
         ? "I can look for nearby stores from your current location."
         : "Tap Share Location first so I don’t send you across town from stale data.",
@@ -234,17 +234,31 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
       },
     }),
     capability({
+      id: "parts-inventory-check",
+      label: "Parts fitment and inventory checks",
+      area: "parts",
+      state: googleMaps.ready ? "partial" : "blocked",
+      reason: googleMaps.ready
+        ? "Jeff can rank stores, prepare exact fitment/inventory questions, and save vendor-confirmed results, but direct vendor web/API inventory lookup is not built yet."
+        : "Jeff needs Google Maps configured before the location-aware parts workflow is useful.",
+      whatJeffCanDo: "Help identify the likely part, ask for the vehicle/engine facts that matter, tell Simon what to ask the counter or vendor site, and save confirmed part number, availability, price, core charge, and pickup timing.",
+      whatJeffShouldSay: "I can find the closest stores and get the exact inventory questions ready. If you read me the vendor result, I'll save it with the job.",
+      operatorAction: googleMaps.ready
+        ? "Build a direct vendor inventory/browser workflow when WrenchReady wants Jeff to verify inventory without Simon reading it back."
+        : "Set GOOGLE_MAPS_API_KEY, then build direct vendor inventory/browser workflow when ready.",
+      missing: googleMaps.ready ? ["direct vendor inventory lookup"] : ["GOOGLE_MAPS_API_KEY", "direct vendor inventory lookup"],
+    }),
+    capability({
       id: "parts-purchase",
       label: "Buy or reserve parts",
       area: "parts",
       state: "blocked",
-      reason: "Part purchase/reservation is intentionally blocked until fitment, vendor inventory, approval, payment authority, and writeback are built.",
+      reason: "Part purchase/reservation is intentionally blocked until approval-gated purchase authority, payment authority, and job/vendor writeback are built.",
       whatJeffCanDo: "Prepare an escalation with part, fitment questions, vendor, price/core-charge questions, and pickup timing.",
       whatJeffShouldSay: "I can prep the part details, but I can’t buy or reserve it yet.",
       operatorAction: "Build approval-gated parts inventory/order workflow before enabling this.",
       missing: [
         "approved purchase authority",
-        "fitment verification source",
         "vendor inventory/checkout integration",
         "approval readback",
         "job writeback",

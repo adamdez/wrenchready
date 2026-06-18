@@ -265,13 +265,13 @@ export async function findNearbyPartsStoresForSimon(payload: unknown) {
     success: true,
     status: "ready",
     assistantSay: best
-      ? `${best.name} looks closest by drive time: about ${best.route?.durationMinutes ?? "unknown"} minutes and ${best.route?.distanceMiles ?? "unknown"} miles. Call or check inventory before promising the part.`
+      ? `${best.name} looks closest by drive time: about ${best.route?.durationMinutes ?? "unknown"} minutes and ${best.route?.distanceMiles ?? "unknown"} miles. Next step is inventory confirmation: exact fitment, part number, price, core charge, and pickup timing. I can save the vendor-confirmed result, but I cannot reserve, pay, or order yet.`
       : "I could not find nearby parts stores from Simon's current location.",
     location,
     partName: input.partName,
     vehicle: input.vehicle,
     stores,
-    policy: "Jeff may recommend a store to call/check. Jeff may not claim inventory or purchase a part until an inventory/order tool confirms it.",
+    policy: "Jeff may rank stores, prepare fitment/inventory questions, and save vendor-confirmed results. Jeff may not claim inventory from nearby-store results alone and may not reserve, pay, purchase, or order parts yet.",
     warnings: latest.warnings,
   };
 }
