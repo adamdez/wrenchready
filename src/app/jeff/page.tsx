@@ -3,16 +3,19 @@ import {
   BookOpenText,
   Camera,
   ChevronRight,
+  LocateFixed,
   MessageCircle,
   Phone,
   Radio,
   ShieldAlert,
 } from "lucide-react";
+import { JeffShareLocationButton } from "@/components/jeff-share-location-button";
 import {
   getActiveJeffLiveSession,
   getJeffFieldPhoneHref,
   getJeffFieldPhoneNumber,
 } from "@/lib/jeff-field-assistant";
+import { getJeffFieldAppAuthStatus } from "@/lib/jeff-field-assistant/app-auth";
 
 export const metadata: Metadata = {
   title: "Jeff",
@@ -31,6 +34,7 @@ function formatSessionTime(value?: string) {
 
 export default async function JeffMobileHubPage() {
   const liveSession = getActiveJeffLiveSession();
+  const appAuth = getJeffFieldAppAuthStatus();
   const photoHref = liveSession
     ? `/jeff/photo-drop?session=${encodeURIComponent(liveSession.id)}`
     : "/jeff/photo-drop";
@@ -105,6 +109,26 @@ export default async function JeffMobileHubPage() {
             </span>
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </a>
+
+          <section className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-300 text-cyan-950">
+                <LocateFixed className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block text-base font-semibold text-foreground">Share Location</span>
+                <span className="block text-sm text-muted-foreground">Fresh location for nearby parts stores</span>
+              </span>
+            </div>
+            <div className="mt-3">
+              <JeffShareLocationButton
+                allowPinEntry
+                buttonClassName="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-3 text-sm font-semibold text-cyan-950 disabled:bg-cyan-300/40 disabled:text-cyan-950/45"
+                pinRequired={appAuth.required}
+                source="jeff-mobile-hub"
+              />
+            </div>
+          </section>
 
           <a
             className="flex min-h-20 items-center justify-between rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 transition-colors hover:bg-amber-500/15"

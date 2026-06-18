@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   FileDown,
   KeyRound,
-  LocateFixed,
   Loader2,
   Mic,
   MicOff,
@@ -15,6 +14,10 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  JEFF_FIELD_APP_PIN_STORAGE_KEY,
+  JeffShareLocationButton,
+} from "@/components/jeff-share-location-button";
 import type { JeffAppThreadMessage } from "@/lib/jeff-field-assistant/app-chat";
 import { fieldSafeJeffNotice } from "@/lib/jeff-field-assistant/conversation-filters";
 
@@ -45,17 +48,6 @@ type SendResult = {
   warnings?: string[];
   error?: string;
   pinRequired?: boolean;
-};
-
-type LocationResult = {
-  success?: boolean;
-  error?: string;
-  location?: {
-    checkedInAt: string;
-    staleAfterMinutes: number;
-    accuracyMeters?: number;
-  };
-  warning?: string;
 };
 
 type JeffMessagesThreadProps = {
@@ -166,7 +158,6 @@ export function JeffMessagesThread({
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<JeffMessageAttachment[]>([]);
   const [sending, setSending] = useState(false);
-  const [sharingLocation, setSharingLocation] = useState(false);
   const [appPin, setAppPin] = useState("");
   const [pinInput, setPinInput] = useState("");
   const [pinUnlocked, setPinUnlocked] = useState(!pinRequired);
@@ -225,9 +216,9 @@ export function JeffMessagesThread({
       setPinInput("");
       setPinUnlocked(true);
       setNotice("");
-      window.localStorage.setItem("wrenchready.jeff.fieldAppPin", pin);
+      window.localStorage.setItem(JEFF_FIELD_APP_PIN_STORAGE_KEY, pin);
     } catch (error) {
-      window.localStorage.removeItem("wrenchready.jeff.fieldAppPin");
+      window.localStorage.removeItem(JEFF_FIELD_APP_PIN_STORAGE_KEY);
       setAppPin("");
       setPinUnlocked(false);
       setNotice(error instanceof Error ? error.message : "Jeff PIN failed.");
@@ -238,7 +229,7 @@ export function JeffMessagesThread({
 
   useEffect(() => {
     if (!pinRequired) return;
-    const storedPin = window.localStorage.getItem("wrenchready.jeff.fieldAppPin");
+    const storedPin = window.localStorage.getItem(JEFF_FIELD_APP_PIN_STORAGE_KEY);
     if (storedPin) void loadThread(storedPin);
   }, [loadThread, pinRequired]);
 
@@ -378,56 +369,6 @@ export function JeffMessagesThread({
     }
   }
 
-  async function shareLocation() {
-    if (!navigator.geolocation) {
-      setNotice("This phone/browser does not support location sharing.");
-      return;
-    }
-
-    setSharingLocation(true);
-    setNotice("");
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const response = await fetch("/api/al/wrenchready/jeff/location/check-in", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...appPinHeaders },
-            body: JSON.stringify({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracyMeters: position.coords.accuracy,
-              jobId: selectedJob?.jobId,
-              jobLabel: selectedJob ? `${selectedJob.customerName} / ${selectedJob.vehicle}` : undefined,
-              source: "jeff-mobile-thread",
-            }),
-          });
-          const data = (await response.json().catch(() => null)) as LocationResult | null;
-          if (!response.ok || !data?.success) {
-            throw new Error(data?.error || "Location check-in failed.");
-          }
-
-          setNotice(
-            `Location shared. Jeff will treat it as fresh for ${data.location?.staleAfterMinutes || 15} minutes.`,
-          );
-        } catch (error) {
-          setNotice(error instanceof Error ? error.message : "Location check-in failed.");
-        } finally {
-          setSharingLocation(false);
-        }
-      },
-      (error) => {
-        setNotice(error.message || "Location permission was not granted.");
-        setSharingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 60000,
-      },
-    );
-  }
-
   return (
     <main className="min-h-dvh bg-[#f4f4f6] text-[#101114]">
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-[#f7f7fa] shadow-2xl shadow-black/10">
@@ -474,16 +415,13 @@ export function JeffMessagesThread({
                 : "Choose a job when this belongs in a customer file."}
             </p>
             <p className="text-center text-[11px] text-black/45">{phoneNumber}</p>
-            <button
-              aria-label="Share Simon location"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-3 text-sm font-medium text-[#1677ff] disabled:text-black/35"
-              disabled={sharingLocation}
-              onClick={shareLocation}
-              type="button"
-            >
-              {sharingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-              {sharingLocation ? "Sharing location" : "Share Location"}
-            </button>
+            <JeffShareLocationButton
+              jobId={selectedJob?.jobId}
+              jobLabel={selectedJob ? `${selectedJob.customerName} / ${selectedJob.vehicle}` : undefined}
+              pin={appPin}
+              pinRequired={pinRequired}
+              source="jeff-mobile-thread"
+            />
           </div>
         </header>
 
