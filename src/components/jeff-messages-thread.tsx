@@ -501,8 +501,16 @@ export function JeffMessagesThread({
               </div>
               <div className="space-y-2 text-center">
                 <h1 className="text-xl font-semibold">Jeff PIN</h1>
-                <p className="text-sm text-black/50">Use Simon&apos;s field app PIN.</p>
+                <p className="text-sm text-black/50">Use the WrenchReady field app PIN.</p>
               </div>
+              {displayNotice ? (
+                <p
+                  aria-live="polite"
+                  className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700"
+                >
+                  {displayNotice}
+                </p>
+              ) : null}
               <input
                 autoComplete="current-password"
                 className="h-12 w-full rounded-2xl border border-black/10 bg-white px-4 text-center text-lg outline-none"
