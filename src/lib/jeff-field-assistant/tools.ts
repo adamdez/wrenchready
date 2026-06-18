@@ -1826,7 +1826,7 @@ export async function getActiveFieldJob(payload: unknown) {
   if (!selected || ambiguous || weakMatch) {
     return result(
       "get_active_field_job",
-      "I could not confidently find the active job. Ask Simon for the customer name, vehicle, or job id before giving job-specific advice.",
+      "I could not confidently find the active job. Keep helping Simon from the symptom/test facts he gives. Ask for customer, vehicle, or job id only before saving to a job file, checking approval/payment/schedule, pulling job history, or making customer-facing job-specific claims.",
       {
         job: null,
         candidates: (matches.length > 0 ? matches.map((match) => match.job) : jobs)
@@ -3546,7 +3546,7 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
     },
     {
       name: "get_current_field_context",
-      description: "Read the latest unified context packet before Jeff advises Simon.",
+      description: "Read the latest unified context packet for job-specific advice, saved notes, approvals, payments, scheduling, closeout, or job history. Do not require this for general diagnostic reasoning from Simon's spoken facts.",
       endpoint: `${BASE_ROUTE}/get-current-field-context`,
       method: "POST",
       parameters: {
