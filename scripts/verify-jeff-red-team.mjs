@@ -53,6 +53,7 @@ const toolCatalog = await requestJson("/api/al/wrenchready/jeff/tools");
 const toolNames = toolCatalog.assistant?.tools?.map((tool) => tool.name) || [];
 assert(toolNames.includes("get_jeff_capabilities"), "Jeff tool catalog should expose live capability status.");
 assert(toolNames.includes("log_jeff_blocked_request"), "Jeff tool catalog should expose blocked-request logging.");
+assert(toolNames.includes("get_recent_jeff_messages"), "Jeff tool catalog should expose Message Jeff thread lookup.");
 
 const hubHtml = await (await rawRequest("/jeff")).text();
 assert(!/Ryan|Tammy|Kendra/.test(hubHtml), "Public Jeff hub should not expose active job customer names.");

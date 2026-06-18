@@ -21,6 +21,7 @@ import { jeffFieldJobFixtures } from "@/lib/jeff-field-assistant/fixtures";
 import {
   isJeffEvaluationMemory,
   isJeffFieldSelectableJob,
+  isJeffFieldThreadConversation,
 } from "@/lib/jeff-field-assistant/conversation-filters";
 import {
   getJeffPhotoImageUrl,
@@ -1461,6 +1462,88 @@ async function analyzePhotoWithOpenAI(job: JeffFieldJob, photo: JeffFieldPhoto, 
   };
 }
 
+function buildSessionPhotoAnalysisPrompt(photo: JeffFieldPhoto, question?: string) {
+  return [
+    "You are Jeff, WrenchReady's field assistant for Simon.",
+    "This is a live tutorial or unattached session photo, not a confirmed job photo.",
+    "Inspect visible evidence only. Do not diagnose a vehicle, recommend a part, claim exact service data, or make a customer/job-specific call without vehicle and job context.",
+    "Return a concise field answer with: what is visibly in the image, whether the image is clear enough, and what Simon should send or say next if this were a real job.",
+    `Photo: ${photo.label || "unlabeled"} ${photo.fileName}. Note: ${photo.note || "none"}.`,
+    question ? `Simon's question: ${question}` : undefined,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function analyzeSessionPhotoWithOpenAI(photo: JeffFieldPhoto, question?: string) {
+  const apiKey = readEnv("OPENAI_API_KEY");
+  const model = readEnv("JEFF_FIELD_VISION_MODEL", "JEFF_FIELD_REASONING_MODEL") || "gpt-5.5";
+  const imageData = await getJeffPhotoImageUrl(photo);
+  const imageUrl = imageData.imageUrl;
+
+  if (!apiKey) {
+    return {
+      ok: false,
+      model,
+      analysis: "",
+      warning: "OPENAI_API_KEY is not configured, so Jeff cannot inspect field photos yet.",
+    };
+  }
+
+  if (!imageUrl) {
+    return {
+      ok: false,
+      model,
+      analysis: "",
+      warning: imageData.warning || "The selected photo has no image data or external URL available for analysis.",
+    };
+  }
+
+  const requestBody: Record<string, unknown> = {
+    model,
+    input: [
+      {
+        role: "user",
+        content: [
+          { type: "input_text", text: buildSessionPhotoAnalysisPrompt(photo, question) },
+          { type: "input_image", image_url: imageUrl },
+        ],
+      },
+    ],
+  };
+
+  if (modelSupportsReasoning(model)) {
+    requestBody.reasoning = { effort: getJeffReasoningEffort() };
+  }
+
+  const response = await fetch(OPENAI_RESPONSES_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  const responseBody = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = extractOpenAIErrorMessage(responseBody);
+    return {
+      ok: false,
+      model,
+      analysis: "",
+      warning: message || `OpenAI photo analysis failed with status ${response.status}.`,
+    };
+  }
+
+  return {
+    ok: true,
+    model,
+    analysis: extractOpenAIText(responseBody),
+    warning: undefined,
+  };
+}
+
 export function authorizeJeffToolRequest(request: Request): ToolAuthResult {
   const requiredSecret = readEnv("JEFF_FIELD_ASSISTANT_TOOL_SECRET");
   if (!requiredSecret) {
@@ -1821,6 +1904,68 @@ export async function getCurrentFieldContext(payload: unknown) {
     `Current context is ready for ${job.customer.name}. ${context.conflicts.length ? "There are conflicts to verify before advising." : context.safeNextActions[0]}`,
     { context },
     [...warnings, ...storedContext.warnings],
+  );
+}
+
+export async function getRecentJeffMessages(payload: unknown) {
+  const input = isObject(payload) ? payload : {};
+  const limit = Math.min(Math.max(Number(input.limit) || 8, 1), 20);
+  const workspace = await listPersistedJeffJobWorkspace();
+  const summaryByConversation = new Map(
+    workspace.summaries.map((summary) => [summary.conversationId, summary]),
+  );
+  const messages = workspace.conversations
+    .filter(isJeffFieldThreadConversation)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit)
+    .map((conversation) => {
+      const source = isObject(conversation.sourcePayload) ? conversation.sourcePayload : {};
+      const attachments = Array.isArray(source.attachments)
+        ? source.attachments.flatMap((attachment) => {
+            if (!isObject(attachment)) return [];
+            const fileName = optionalString(attachment.fileName);
+            if (!fileName) return [];
+
+            return [{
+              fileName,
+              contentType: optionalString(attachment.contentType),
+              sizeBytes: typeof attachment.sizeBytes === "number" ? attachment.sizeBytes : undefined,
+              mediaId: optionalString(attachment.mediaId),
+              driveFileId: optionalString(attachment.driveFileId),
+              hasUrl: Boolean(optionalString(attachment.url)),
+            }];
+          })
+        : [];
+      const summary = summaryByConversation.get(conversation.id);
+
+      return {
+        conversationId: conversation.id,
+        jobId: conversation.jobId,
+        jobLabel: conversation.jobLabel,
+        channel: conversation.channel,
+        createdAt: conversation.createdAt,
+        simonMessage: optionalString(source.userMessage),
+        jeffReply: optionalString(source.assistantMessage) || summary?.recommendationSummary,
+        fieldPhotoStatus: optionalString(source.fieldPhotoStatus),
+        attachmentCount: attachments.length,
+        attachments,
+        warnings: [
+          optionalString(source.warning),
+          ...(summary?.blockers || []),
+        ].filter((entry): entry is string => Boolean(entry)),
+      };
+    });
+
+  return result(
+    "get_recent_jeff_messages",
+    messages.length
+      ? `I found ${messages.length} recent Jeff app message${messages.length === 1 ? "" : "s"}.`
+      : "I do not see any Jeff app messages yet.",
+    {
+      messages,
+      storageStatus: workspace.storageStatus,
+    },
+    workspace.warnings,
   );
 }
 
@@ -2681,14 +2826,60 @@ export async function analyzeFieldPhoto(payload: unknown) {
         ? mergePhotos(getPhotosForSession(liveSession.id), persistedMedia.media.map(photoFromMedia))
             .find((photo) => photo.id === photoId || photo.mediaId === photoId)
         : mergePhotos(getPhotosForSession(liveSession.id), persistedMedia.media.map(photoFromMedia))[0];
-      return blocked(
+      if (!sessionPhoto) {
+        return blocked(
+          "analyze_field_photo",
+          "I do not have a usable photo in this live Jeff session yet.",
+          {
+            analysis: null,
+            photo: null,
+            session: {
+              sessionId: liveSession.id,
+              activeJobId: liveSession.activeJobId,
+              attachmentStatus: "session-inbox",
+            },
+          },
+          persistedMedia.warnings,
+        );
+      }
+
+      const analysisResult = await analyzeSessionPhotoWithOpenAI(sessionPhoto, question);
+      if (!analysisResult.ok) {
+        return blocked(
+          "analyze_field_photo",
+          analysisResult.warning || "I could not inspect that photo yet.",
+          {
+            analysis: null,
+            photo: summarizePhoto(sessionPhoto),
+            session: {
+              sessionId: liveSession.id,
+              activeJobId: liveSession.activeJobId,
+              attachmentStatus: "session-inbox",
+            },
+            model: analysisResult.model,
+          },
+          [...persistedMedia.warnings, analysisResult.warning].filter(
+            (warning): warning is string => Boolean(warning),
+          ),
+        );
+      }
+
+      return result(
         "analyze_field_photo",
-        sessionPhoto
-          ? "I have the photo in this live Jeff session, but I need the job or vehicle before I analyze it for job-specific advice."
-          : "I do not have a usable photo in this live Jeff session yet.",
+        analysisResult.analysis || "I inspected the photo, but the model did not return a usable summary.",
         {
-          analysis: null,
-          photo: sessionPhoto ? summarizePhoto(sessionPhoto) : null,
+          analysis: {
+            id: makeId("jeff-session-photo-analysis"),
+            sessionId: liveSession.id,
+            photoId: sessionPhoto.id,
+            createdAt: nowIso(),
+            model: analysisResult.model,
+            prompt: buildSessionPhotoAnalysisPrompt(sessionPhoto, question),
+            analysis: analysisResult.analysis,
+            warnings: persistedMedia.warnings,
+            attachmentStatus: "session-inbox",
+          },
+          photo: summarizePhoto(sessionPhoto),
           session: {
             sessionId: liveSession.id,
             activeJobId: liveSession.activeJobId,
@@ -3364,6 +3555,18 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
           jobId: { type: "string" },
           callerPhone: { type: "string" },
           activeChannel: { type: "string" },
+        },
+      },
+    },
+    {
+      name: "get_recent_jeff_messages",
+      description: "Read recent Message Jeff app thread activity so Jeff can confirm live texts, uploads, and tutorial demo messages while on a call.",
+      endpoint: `${BASE_ROUTE}/get-recent-jeff-messages`,
+      method: "POST",
+      parameters: {
+        type: "object",
+        properties: {
+          limit: { type: "number" },
         },
       },
     },

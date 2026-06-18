@@ -9,6 +9,7 @@ import {
   listPersistedJeffJobWorkspace,
   persistJeffConversationWorkspace,
 } from "@/lib/jeff-field-assistant/persistence";
+import { resolveJeffLiveSession } from "@/lib/jeff-field-assistant/session";
 import { persistJeffMediaItems } from "@/lib/jeff-field-assistant/media";
 import { findNearbyPartsStoresForSimon } from "@/lib/jeff-field-assistant/location";
 import {
@@ -316,6 +317,39 @@ async function registerMessagePhotos(input: JeffAppMessageInput) {
   }
 
   if (!input.jobId) {
+    const liveSession = resolveJeffLiveSession();
+    if (liveSession) {
+      const response = await recordFieldPhotoUpload({
+        sessionId: liveSession.id,
+        label: "Message Jeff live demo",
+        note: input.text,
+        uploadedBy: input.sender || "Simon",
+        sourceChannel: "mms",
+        photos,
+      });
+      const result: Record<string, unknown> = isObject(response) ? response : {};
+      const warnings = Array.isArray(result.warnings)
+        ? result.warnings.filter((warning): warning is string => typeof warning === "string")
+        : [];
+      const assistantSay = optionalString(result.assistantSay);
+      const data = isObject(result.data) ? result.data : {};
+      const registeredPhotos = Array.isArray(data.photos)
+        ? data.photos.filter((photo): photo is JeffFieldPhotoSummary => isObject(photo) && typeof photo.id === "string")
+        : [];
+      const media = Array.isArray(data.media)
+        ? data.media.filter((item): item is JeffMediaItem => isObject(item) && typeof item.id === "string")
+        : [];
+
+      return {
+        status: result.success === true
+          ? assistantSay || `Registered ${photos.length} image attachment${photos.length === 1 ? "" : "s"} in the live Jeff session.`
+          : assistantSay || "Image attachment stayed in the message thread but was not registered in the live Jeff session.",
+        photos: registeredPhotos,
+        media,
+        warnings,
+      };
+    }
+
     return {
       status: "Image attachment stayed in the message thread because no job was selected.",
       photos: [] as JeffFieldPhotoSummary[],
