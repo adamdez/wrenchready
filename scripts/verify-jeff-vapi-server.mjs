@@ -7,6 +7,11 @@ const secret = process.env.JEFF_FIELD_ASSISTANT_TOOL_SECRET;
 const isLocalBaseUrl = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/i.test(baseUrl);
 const sessionStoreFile = path.join(process.cwd(), ".data", "jeff", "sessions.json");
 const reviewStoreFile = path.join(process.cwd(), ".data", "jeff", "pilot-reviews.json");
+const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+function testCallId(name) {
+  return `call-test-${runId}-${name}`;
+}
 
 function headers() {
   return {
@@ -63,7 +68,7 @@ const assistantRequest = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
     type: "assistant-request",
     call: {
-      id: "call-test-assistant-request",
+      id: testCallId("assistant-request"),
       customer: { number: "+15095550102" },
     },
   },
@@ -72,17 +77,17 @@ assert(assistantRequest.assistantId || assistantRequest.assistant, "assistant re
 
 const sessionsAfterAnswer = await request("/api/al/wrenchready/jeff/session");
 const answerSession = sessionsAfterAnswer.sessions?.find(
-  (session) => session.callId === "call-test-assistant-request",
+  (session) => session.callId === testCallId("assistant-request"),
 );
 assert(sessionsAfterAnswer.success, "Jeff session list endpoint should load");
 assert(
-  answerSession?.callId === "call-test-assistant-request",
+  answerSession?.callId === testCallId("assistant-request"),
   "assistant request should create a live Jeff session",
 );
 if (isLocalBaseUrl) {
   const persistedSessionsAfterAnswer = readJson(sessionStoreFile);
   assert(
-    persistedSessionsAfterAnswer.sessions?.some((session) => session.callId === "call-test-assistant-request"),
+    persistedSessionsAfterAnswer.sessions?.some((session) => session.callId === testCallId("assistant-request")),
     "assistant request should persist the Jeff session locally",
   );
 }
@@ -91,7 +96,7 @@ const toolCalls = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
     type: "tool-calls",
     call: {
-      id: "call-test-tools",
+      id: testCallId("tools"),
       customer: { number: "+15095550102" },
     },
     toolCallList: [
@@ -125,7 +130,7 @@ assert(purchaseResult.success === false, "purchase tool should stay blocked");
 if (isLocalBaseUrl) {
   const sessionsAfterTools = await request("/api/al/wrenchready/jeff/session");
   const toolSession = sessionsAfterTools.sessions?.find(
-    (session) => session.callId === "call-test-tools",
+    (session) => session.callId === testCallId("tools"),
   );
   if (activeLookupResult.data?.job?.id) {
     assert(
@@ -144,7 +149,7 @@ const nestedToolCalls = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
     type: "tool-calls",
     call: {
-      id: "call-test-nested-tools",
+      id: testCallId("nested-tools"),
       customer: { number: "+15095550102" },
     },
     toolWithToolCallList: [
@@ -186,7 +191,7 @@ const review = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
     type: "end-of-call-report",
     call: {
-      id: "call-test-review",
+      id: testCallId("review"),
       assistantId: "assistant-test",
       customer: { number: "+15095550102" },
     },
@@ -200,7 +205,7 @@ assert(review.review?.passed, "safe transcript should pass review");
 if (isLocalBaseUrl) {
   const persistedReviews = readJson(reviewStoreFile);
   assert(
-    persistedReviews.reviews?.some((entry) => entry.callId === "call-test-review"),
+    persistedReviews.reviews?.some((entry) => entry.callId === testCallId("review")),
     "end-of-call transcript review should persist locally",
   );
 }
@@ -209,7 +214,7 @@ const orientationReview = await request("/api/al/wrenchready/jeff/vapi/server", 
   message: {
     type: "end-of-call-report",
     call: {
-      id: "call-test-orientation",
+      id: testCallId("orientation"),
       assistantId: "assistant-test",
       customer: { number: "+15095550102" },
     },
@@ -241,7 +246,7 @@ const shortCall = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
     type: "end-of-call-report",
     call: {
-      id: "call-test-short-call",
+      id: testCallId("short-call"),
       assistantId: "assistant-test",
       customer: { number: "+15095550102" },
     },
@@ -258,7 +263,7 @@ const contextNarrationReview = await request("/api/al/wrenchready/jeff/vapi/serv
   message: {
     type: "end-of-call-report",
     call: {
-      id: "call-test-context-narration",
+      id: testCallId("context-narration"),
       assistantId: "assistant-test",
       customer: { number: "+15095550102" },
     },
@@ -277,7 +282,7 @@ const personalCall = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
     type: "end-of-call-report",
     call: {
-      id: "personal-call-email-test",
+      id: `personal-call-email-${runId}`,
       assistantId: "assistant-test",
       customer: { number: "+15095550102" },
     },
