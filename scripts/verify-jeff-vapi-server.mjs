@@ -4,6 +4,7 @@ import path from "node:path";
 
 const baseUrl = (process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
 const secret = process.env.JEFF_FIELD_ASSISTANT_TOOL_SECRET;
+const isLocalBaseUrl = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/i.test(baseUrl);
 const sessionStoreFile = path.join(process.cwd(), ".data", "jeff", "sessions.json");
 const reviewStoreFile = path.join(process.cwd(), ".data", "jeff", "pilot-reviews.json");
 
@@ -77,11 +78,13 @@ assert(
   answerSession?.callId === "call-test-assistant-request",
   "assistant request should create a live Jeff session",
 );
-const persistedSessionsAfterAnswer = readJson(sessionStoreFile);
-assert(
-  persistedSessionsAfterAnswer.sessions?.some((session) => session.callId === "call-test-assistant-request"),
-  "assistant request should persist the Jeff session locally",
-);
+if (isLocalBaseUrl) {
+  const persistedSessionsAfterAnswer = readJson(sessionStoreFile);
+  assert(
+    persistedSessionsAfterAnswer.sessions?.some((session) => session.callId === "call-test-assistant-request"),
+    "assistant request should persist the Jeff session locally",
+  );
+}
 
 const toolCalls = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
@@ -117,14 +120,16 @@ assert(toolCalls.results.length === 2, "tool-calls response should include both 
 const purchaseResult = JSON.parse(toolCalls.results[1].result);
 assert(purchaseResult.success === false, "purchase tool should stay blocked");
 
-const sessionsAfterTools = await request("/api/al/wrenchready/jeff/session");
-const toolSession = sessionsAfterTools.sessions?.find(
-  (session) => session.callId === "call-test-tools",
-);
-assert(
-  toolSession?.activeJobId === "jeff-fixture-tammy-chrysler",
-  "active field job lookup should update the live Jeff session",
-);
+if (isLocalBaseUrl) {
+  const sessionsAfterTools = await request("/api/al/wrenchready/jeff/session");
+  const toolSession = sessionsAfterTools.sessions?.find(
+    (session) => session.callId === "call-test-tools",
+  );
+  assert(
+    toolSession?.activeJobId === "jeff-fixture-tammy-chrysler",
+    "active field job lookup should update the live Jeff session",
+  );
+}
 
 const nestedToolCalls = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
@@ -156,10 +161,17 @@ assert(Array.isArray(nestedToolCalls.results), "nested Vapi tool response should
 assert(nestedToolCalls.results.length === 1, "nested Vapi tool response should include one result");
 const nestedLookup = JSON.parse(nestedToolCalls.results[0].result);
 assert(nestedLookup.success, "nested Vapi tool parameters should be understood");
-assert(
-  nestedLookup.data?.job?.id === "jeff-fixture-tammy-chrysler",
-  "nested Vapi tool call should return Tammy fixture",
-);
+if (isLocalBaseUrl) {
+  assert(
+    nestedLookup.data?.job?.id === "jeff-fixture-tammy-chrysler",
+    "nested Vapi tool call should return Tammy fixture",
+  );
+} else {
+  assert(
+    nestedLookup.data?.job?.id || nestedLookup.data?.needsClarification === true,
+    "nested Vapi tool call should return a job or a safe clarification result in production",
+  );
+}
 
 const review = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
@@ -176,11 +188,13 @@ const review = await request("/api/al/wrenchready/jeff/vapi/server", {
   },
 });
 assert(review.review?.passed, "safe transcript should pass review");
-const persistedReviews = readJson(reviewStoreFile);
-assert(
-  persistedReviews.reviews?.some((entry) => entry.callId === "call-test-review"),
-  "end-of-call transcript review should persist locally",
-);
+if (isLocalBaseUrl) {
+  const persistedReviews = readJson(reviewStoreFile);
+  assert(
+    persistedReviews.reviews?.some((entry) => entry.callId === "call-test-review"),
+    "end-of-call transcript review should persist locally",
+  );
+}
 
 const personalCall = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
