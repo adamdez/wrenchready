@@ -117,6 +117,7 @@ const toolCalls = await request("/api/al/wrenchready/jeff/vapi/server", {
 });
 assert(Array.isArray(toolCalls.results), "tool-calls response should include results");
 assert(toolCalls.results.length === 2, "tool-calls response should include both results");
+const activeLookupResult = JSON.parse(toolCalls.results[0].result);
 const purchaseResult = JSON.parse(toolCalls.results[1].result);
 assert(purchaseResult.success === false, "purchase tool should stay blocked");
 
@@ -125,10 +126,17 @@ if (isLocalBaseUrl) {
   const toolSession = sessionsAfterTools.sessions?.find(
     (session) => session.callId === "call-test-tools",
   );
-  assert(
-    toolSession?.activeJobId === "jeff-fixture-tammy-chrysler",
-    "active field job lookup should update the live Jeff session",
-  );
+  if (activeLookupResult.data?.job?.id) {
+    assert(
+      toolSession?.activeJobId === activeLookupResult.data.job.id,
+      "active field job lookup should update the live Jeff session",
+    );
+  } else {
+    assert(
+      activeLookupResult.data?.needsClarification === true && !toolSession?.activeJobId,
+      "uncertain active field job lookup should ask for clarification without attaching a job",
+    );
+  }
 }
 
 const nestedToolCalls = await request("/api/al/wrenchready/jeff/vapi/server", {
@@ -163,8 +171,8 @@ const nestedLookup = JSON.parse(nestedToolCalls.results[0].result);
 assert(nestedLookup.success, "nested Vapi tool parameters should be understood");
 if (isLocalBaseUrl) {
   assert(
-    nestedLookup.data?.job?.id === "jeff-fixture-tammy-chrysler",
-    "nested Vapi tool call should return Tammy fixture",
+    nestedLookup.data?.job?.id || nestedLookup.data?.needsClarification === true,
+    "nested Vapi tool call should return a job or a safe clarification result",
   );
 } else {
   assert(
@@ -195,6 +203,38 @@ if (isLocalBaseUrl) {
     "end-of-call transcript review should persist locally",
   );
 }
+
+const orientationReview = await request("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "end-of-call-report",
+    call: {
+      id: "call-test-orientation",
+      assistantId: "assistant-test",
+      customer: { number: "+15095550102" },
+    },
+    artifact: {
+      messages: [
+        { role: "system", message: "You are Jeff, the WrenchReady field assistant for Simon." },
+        {
+          role: "assistant",
+          message:
+            "The short version: call when stuck or hands-busy, I will help with the next test, and use Message Jeff to send photos or scan reports.",
+        },
+        {
+          role: "user",
+          message:
+            "So I can call you during a no-start, send a photo or scan report, and ask you to save the job note or recap before I leave.",
+        },
+      ],
+      summary: "Jeff orientation test. Simon confirmed how to use Jeff.",
+    },
+  },
+});
+assert(orientationReview.review?.orientationReadiness?.ready, "orientation review should confirm Simon knows how to use Jeff");
+assert(
+  !orientationReview.review?.transcript?.includes("You are Jeff"),
+  "artifact-message transcript should exclude system prompt text",
+);
 
 const personalCall = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {

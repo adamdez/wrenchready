@@ -452,6 +452,22 @@ export type JeffPilotReviewIssue = {
   recommendedFix: string;
 };
 
+export type JeffOrientationReadinessCriterion = {
+  id: string;
+  label: string;
+  passed: boolean;
+  evidence?: string;
+};
+
+export type JeffOrientationReadiness = {
+  assessed: boolean;
+  ready: boolean;
+  summary: string;
+  criteria: JeffOrientationReadinessCriterion[];
+  missing: string[];
+  suggestedFollowUp: string[];
+};
+
 export type JeffPilotTranscriptReview = {
   id: string;
   createdAt: string;
@@ -463,5 +479,6 @@ export type JeffPilotTranscriptReview = {
   transcript?: string;
   passed: boolean;
   issues: JeffPilotReviewIssue[];
+  orientationReadiness?: JeffOrientationReadiness;
   nextRunFocus: string[];
 };

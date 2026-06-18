@@ -41,6 +41,8 @@ import type {
   JeffConversationSummary,
   JeffFieldJob,
   JeffJobWorkspaceSnapshot,
+  JeffOrientationReadiness,
+  JeffOrientationReadinessCriterion,
   JeffPilotReviewIssue,
   JeffPilotTranscriptReview,
   JeffVapiToolSchema,
@@ -357,6 +359,53 @@ function issueFromValue(value: unknown): JeffPilotReviewIssue | null {
   return { severity, summary, recommendedFix };
 }
 
+function orientationCriterionFromValue(value: unknown): JeffOrientationReadinessCriterion | null {
+  if (!isObject(value)) return null;
+
+  const id = optionalString(value.id);
+  const label = optionalString(value.label);
+  const passed = typeof value.passed === "boolean" ? value.passed : undefined;
+
+  if (!id || !label || passed === undefined) return null;
+
+  return {
+    id,
+    label,
+    passed,
+    evidence: optionalString(value.evidence),
+  };
+}
+
+function orientationReadinessFromValue(value: unknown): JeffOrientationReadiness | undefined {
+  if (!isObject(value)) return undefined;
+
+  const assessed = typeof value.assessed === "boolean" ? value.assessed : undefined;
+  const ready = typeof value.ready === "boolean" ? value.ready : undefined;
+  const summary = optionalString(value.summary);
+  const criteria = Array.isArray(value.criteria)
+    ? value.criteria
+        .map(orientationCriterionFromValue)
+        .filter((entry): entry is JeffOrientationReadinessCriterion => Boolean(entry))
+    : [];
+  const missing = Array.isArray(value.missing)
+    ? value.missing.map(optionalString).filter((entry): entry is string => Boolean(entry))
+    : [];
+  const suggestedFollowUp = Array.isArray(value.suggestedFollowUp)
+    ? value.suggestedFollowUp.map(optionalString).filter((entry): entry is string => Boolean(entry))
+    : [];
+
+  if (assessed === undefined || ready === undefined || !summary) return undefined;
+
+  return {
+    assessed,
+    ready,
+    summary,
+    criteria,
+    missing,
+    suggestedFollowUp,
+  };
+}
+
 function reviewFromValue(value: unknown): JeffPilotTranscriptReview | null {
   if (!isObject(value)) return null;
 
@@ -384,6 +433,7 @@ function reviewFromValue(value: unknown): JeffPilotTranscriptReview | null {
     transcript: optionalString(value.transcript),
     passed,
     issues,
+    orientationReadiness: orientationReadinessFromValue(value.orientationReadiness),
     nextRunFocus,
   };
 }
@@ -592,8 +642,58 @@ async function handleToolCalls(message: VapiServerMessage) {
 function transcriptFromMessage(message: VapiServerMessage) {
   if (message.artifact?.transcript) return message.artifact.transcript;
   if (message.transcript) return message.transcript;
-  if (message.artifact?.messages) return JSON.stringify(message.artifact.messages);
+  if (message.artifact?.messages) return transcriptFromArtifactMessages(message.artifact.messages);
   return "";
+}
+
+function textFromArtifactMessage(value: Record<string, unknown>) {
+  const raw = value.message ?? value.content ?? value.text ?? value.transcript;
+
+  if (typeof raw === "string") return raw.trim();
+
+  if (Array.isArray(raw)) {
+    return raw
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (!isObject(part)) return "";
+        return optionalString(part.text) || optionalString(part.content) || optionalString(part.message) || "";
+      })
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+  }
+
+  if (isObject(raw)) {
+    return optionalString(raw.text) || optionalString(raw.content) || optionalString(raw.message) || "";
+  }
+
+  return "";
+}
+
+function speakerFromArtifactMessage(value: Record<string, unknown>) {
+  const role = (optionalString(value.role) || optionalString(value.type) || optionalString(value.speaker) || "")
+    .toLowerCase();
+
+  if (role.includes("system") || role.includes("tool") || role.includes("function")) return undefined;
+  if (role.includes("user") || role.includes("customer") || role.includes("human")) return "Simon";
+  if (role.includes("assistant") || role.includes("bot") || role.includes("ai")) return "Jeff";
+
+  const speaker = optionalString(value.speaker);
+  return speaker ? speaker.slice(0, 40) : "Call";
+}
+
+function transcriptFromArtifactMessages(messages: unknown[]) {
+  return messages
+    .map((entry) => {
+      if (!isObject(entry)) return "";
+      const speaker = speakerFromArtifactMessage(entry);
+      if (!speaker) return "";
+      const text = textFromArtifactMessage(entry);
+      if (!text) return "";
+      return `${speaker}: ${text}`;
+    })
+    .filter(Boolean)
+    .join("\n");
 }
 
 function callIdFromMessage(message: VapiServerMessage) {
@@ -857,6 +957,162 @@ function hasAny(text: string, patterns: string[]) {
   return patterns.some((pattern) => normalized.includes(pattern));
 }
 
+function evidenceFor(transcript: string, patterns: string[]) {
+  return stringListFromTranscript(transcript, patterns, 1)[0];
+}
+
+function buildOrientationReadiness(input: {
+  transcript: string;
+  scenario?: string;
+  callType?: string;
+}): JeffOrientationReadiness | undefined {
+  const transcript = input.transcript || "";
+  const normalized = transcript.toLowerCase();
+  const scenario = (input.scenario || "").toLowerCase();
+  const shouldAssess = input.callType === "test" ||
+    input.callType === "admin" ||
+    scenario.includes("orientation") ||
+    hasAny(normalized, [
+      "quick tour",
+      "use jeff",
+      "message jeff",
+      "what i can help with",
+      "what you can help with",
+      "field assistant",
+      "how you'll use me",
+      "how you will use me",
+    ]);
+
+  if (!shouldAssess) return undefined;
+
+  const criteria: JeffOrientationReadinessCriterion[] = [
+    {
+      id: "field-use",
+      label: "Simon heard Jeff's field-use model",
+      passed: hasAny(normalized, [
+        "call me during uncertainty",
+        "call when stuck",
+        "hands-busy",
+        "hands busy",
+        "next test",
+        "targeted next test",
+        "keep moving in the field",
+        "troubleshoot",
+        "diagnostic",
+      ]),
+      evidence: evidenceFor(transcript, [
+        "call me during uncertainty",
+        "call when stuck",
+        "hands-busy",
+        "hands busy",
+        "next test",
+        "keep moving in the field",
+        "troubleshoot",
+        "diagnostic",
+      ]),
+    },
+    {
+      id: "message-photo-file",
+      label: "Simon knows when to message, upload photos, or send reports",
+      passed: hasAny(normalized, [
+        "message jeff",
+        "send photos",
+        "send a photo",
+        "upload",
+        "picture",
+        "scan report",
+        "email report",
+        "diagnostic report",
+      ]),
+      evidence: evidenceFor(transcript, [
+        "message jeff",
+        "send photos",
+        "send a photo",
+        "upload",
+        "picture",
+        "scan report",
+        "diagnostic report",
+      ]),
+    },
+    {
+      id: "turn-into-records",
+      label: "Simon knows Jeff can save job facts, notes, recaps, or follow-ups",
+      passed: hasAny(normalized, [
+        "save notes",
+        "save the job",
+        "save the useful job facts",
+        "record",
+        "recap",
+        "email recap",
+        "closeout",
+        "job facts",
+        "job note",
+      ]),
+      evidence: evidenceFor(transcript, [
+        "save notes",
+        "save the job",
+        "record",
+        "recap",
+        "email recap",
+        "closeout",
+        "job facts",
+        "job note",
+      ]),
+    },
+    {
+      id: "real-use-or-teachback",
+      label: "Simon either tried Jeff or described a real way he will use Jeff",
+      passed: hasAny(normalized, [
+        "parasitic draw",
+        "no-start",
+        "no start",
+        "brake noise",
+        "starter",
+        "spark plug",
+        "i can call",
+        "i would use",
+        "i'll use",
+        "i will use",
+        "demo from simon",
+      ]),
+      evidence: evidenceFor(transcript, [
+        "parasitic draw",
+        "no-start",
+        "no start",
+        "brake noise",
+        "starter",
+        "spark plug",
+        "i can call",
+        "i would use",
+        "i'll use",
+        "i will use",
+        "demo from simon",
+      ]),
+    },
+  ];
+
+  const missing = criteria
+    .filter((criterion) => !criterion.passed)
+    .map((criterion) => criterion.label);
+  const ready = missing.length === 0;
+
+  return {
+    assessed: true,
+    ready,
+    summary: ready
+      ? "Orientation outcome looks ready: Simon heard the operating model and showed a real use case or teach-back."
+      : "Orientation outcome is incomplete: Simon may have talked with Jeff, but the transcript does not prove he knows how to use Jeff optimally yet.",
+    criteria,
+    missing,
+    suggestedFollowUp: ready
+      ? ["Next call should focus on real field speed: ask for the symptom, give the next test, save the note, and offer a recap."]
+      : [
+          "Have Jeff give Simon the 15-second operating model: call when stuck, message/upload for visual proof, ask Jeff to save notes and recaps.",
+          "Ask one natural confirmation before ending: \"Does that make sense for how you'll use me on the next job?\"",
+        ],
+  };
+}
+
 export function reviewJeffTranscript(input: {
   callId?: string;
   customerNumber?: string;
@@ -868,6 +1124,11 @@ export function reviewJeffTranscript(input: {
   const transcript = input.transcript || "";
   const normalized = transcript.toLowerCase();
   const issues: JeffPilotReviewIssue[] = [];
+  const orientationReadiness = buildOrientationReadiness({
+    transcript,
+    scenario: input.scenario,
+    callType: input.callType,
+  });
 
   if (!transcript.trim()) {
     issues.push({
@@ -987,9 +1248,12 @@ export function reviewJeffTranscript(input: {
     transcript,
     passed,
     issues,
+    orientationReadiness,
     nextRunFocus:
       issues.length > 0
         ? issues.map((issue) => issue.recommendedFix)
+        : orientationReadiness && !orientationReadiness.ready
+          ? orientationReadiness.suggestedFollowUp
         : ["Repeat the same scenario by voice and verify field-note logging."],
   };
 
