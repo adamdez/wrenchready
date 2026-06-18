@@ -54,6 +54,7 @@ const toolNames = toolCatalog.assistant?.tools?.map((tool) => tool.name) || [];
 assert(toolNames.includes("get_jeff_capabilities"), "Jeff tool catalog should expose live capability status.");
 assert(toolNames.includes("log_jeff_blocked_request"), "Jeff tool catalog should expose blocked-request logging.");
 assert(toolNames.includes("get_recent_jeff_messages"), "Jeff tool catalog should expose Message Jeff thread lookup.");
+assert(toolNames.includes("prepare_quote_draft_for_review"), "Jeff tool catalog should expose quote draft review workflow.");
 
 const hubHtml = await (await rawRequest("/jeff")).text();
 assert(!/Ryan|Tammy|Kendra/.test(hubHtml), "Public Jeff hub should not expose active job customer names.");
@@ -136,6 +137,63 @@ assert(
   "Unassigned quote/schedule escalation should not require a fake job id.",
 );
 
+const quoteDraftCustomer = `Red Team Quote ${Date.now()}`;
+const quoteDraft = await requestJson("/api/al/wrenchready/jeff/tools/prepare-quote-draft-for-review", {
+  customerName: quoteDraftCustomer,
+  customerPhone: "509-555-0187",
+  vehicle: "2010 Chrysler 300",
+  address: "4123 East Pratt Avenue, Spokane, WA",
+  requestedWindow: "Monday",
+  serviceScope: "Two-hour parasitic draw diagnostic follow-up",
+  quoteAmount: 200,
+  laborHours: 2,
+  caveats: [
+    "Two hours may not solve the issue.",
+    "Parts and repair labor beyond this diagnostic block require a separate quote and approval.",
+  ],
+  priorDiagnosticFacts: [
+    "Parasitic draw was reduced but not fully resolved.",
+    "Security/climate circuit still needs isolation testing.",
+  ],
+  diagnosticChecklist: [
+    "Measure baseline draw after modules sleep.",
+    "Unplug suspected security module and recheck draw.",
+  ],
+  sourceLabel: "Jeff red-team verification",
+});
+assert(quoteDraft.success === true, "Quote draft workflow should create a review-ready draft.");
+assert(
+  quoteDraft.data?.quoteDraftStatus === "ready-for-human-review",
+  "Quote draft should be explicitly ready for human review.",
+);
+assert(quoteDraft.data?.paymentLinkCreated === false, "Quote draft should not create a payment link.");
+assert(quoteDraft.data?.checkoutUrl === null, "Quote draft should not return a checkout URL.");
+assert(quoteDraft.data?.customerSendStatus === "not-sent", "Quote draft should not be customer-sent.");
+assert(
+  quoteDraft.data?.promise?.customerApproval?.status === "awaiting-approval",
+  "Quote draft should create a customer approval card in awaiting-approval state.",
+);
+assert(
+  quoteDraft.data?.promise?.customerApproval?.requestedAmount === 200,
+  "Quote draft should preserve the quoted amount.",
+);
+assert(
+  !quoteDraft.data?.promise?.paymentCollection?.depositRequestedAmount &&
+    !quoteDraft.data?.promise?.paymentCollection?.balanceDueAmount &&
+    !quoteDraft.data?.promise?.paymentCollection?.depositCheckoutUrl &&
+    !quoteDraft.data?.promise?.paymentCollection?.balanceCheckoutUrl,
+  "Quote draft payment state should not expose deposit or balance checkout fields.",
+);
+
+const quoteStatusPath = new URL(quoteDraft.data.customerStatusUrl).pathname;
+const quoteStatusHtml = await (await rawRequest(quoteStatusPath)).text();
+assert(/Two-hour parasitic draw diagnostic follow-up/.test(quoteStatusHtml), "Customer status page should render quote scope.");
+assert(/\$200/.test(quoteStatusHtml), "Customer status page should render quote amount.");
+assert(
+  !/Pay remaining balance online|Lock the visit with a deposit/i.test(quoteStatusHtml),
+  "Quote-only customer status page should not render payment buttons.",
+);
+
 const mismatchedQuoteEscalation = await requestJson("/api/al/wrenchready/jeff/tools/request-approval-or-escalation", {
   jobId: "jeff-fixture-tammy-chrysler",
   reason:
@@ -155,11 +213,40 @@ assert(
   "Mismatched escalation should land in general review instead of the wrong job.",
 );
 
+const mismatchedQuoteDraft = await requestJson("/api/al/wrenchready/jeff/tools/prepare-quote-draft-for-review", {
+  jobId: "jeff-fixture-tammy-chrysler",
+  customerName: "Stuart Grossman",
+  customerPhone: "509-939-8914",
+  vehicle: "2021 Ford E-450",
+  requestedWindow: "Monday",
+  serviceScope: "Two-hour no-start diagnostic follow-up",
+  quoteAmount: 250,
+  sourceLabel: "Jeff red-team mismatch verification",
+});
+assert(mismatchedQuoteDraft.success === true, "Mismatched quote draft should still create a review item.");
+assert(
+  mismatchedQuoteDraft.data?.selectedJobConflict === true,
+  "Mismatched quote draft should identify the selected-job conflict.",
+);
+assert(
+  mismatchedQuoteDraft.data?.rejectedJobId === "jeff-fixture-tammy-chrysler",
+  "Mismatched quote draft should reject the selected Tammy job.",
+);
+assert(
+  mismatchedQuoteDraft.data?.promiseId !== "jeff-fixture-tammy-chrysler",
+  "Mismatched quote draft should not attach to the wrong job id.",
+);
+assert(mismatchedQuoteDraft.data?.paymentLinkCreated === false, "Mismatched quote draft should not create payment.");
+
 const capabilities = await requestJson("/api/al/wrenchready/jeff/tools/get-jeff-capabilities", {});
 assert(capabilities.success === true, "Capability status tool should return a successful controlled response.");
 assert(
   capabilities.data?.capabilities?.some((capability) => capability.id === "parts-purchase" && capability.state === "blocked"),
   "Capability status should explicitly mark parts purchasing as blocked.",
+);
+assert(
+  capabilities.data?.capabilities?.some((capability) => capability.id === "quote-draft-review" && capability.state === "ready"),
+  "Capability status should explicitly mark quote drafts for review as ready.",
 );
 assert(
   /quietly|dashboard/i.test(capabilities.data?.voiceStyle || ""),

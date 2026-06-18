@@ -210,6 +210,20 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
       details: { calendar: googleWorkspace.calendar },
     }),
     capability({
+      id: "quote-draft-review",
+      label: "Quote draft for human review",
+      area: "office",
+      state: "ready",
+      reason: "Jeff can create or update a WrenchReady CRM quote draft with customer approval pending and payment/customer-send disabled.",
+      whatJeffCanDo: "Turn field or office quote intake into a structured CRM quote draft, ops review link, customer status link, field packet, and no-payment audit state.",
+      whatJeffShouldSay: "I can prep the quote for Adam/Dez review. I won’t send it to the customer or make a payment link unless that approval step is wired and confirmed.",
+      operatorAction: "Review quote drafts before customer send; keep direct customer-send behind approval until the workflow is trusted.",
+      details: {
+        customerSend: "approval-gated",
+        paymentLinkCreation: "not-created-by-quote-draft",
+      },
+    }),
+    capability({
       id: "location-aware-parts-store",
       label: "Nearby parts stores",
       area: "parts",

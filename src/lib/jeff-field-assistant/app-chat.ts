@@ -14,6 +14,7 @@ import { persistJeffMediaItems } from "@/lib/jeff-field-assistant/media";
 import { findNearbyPartsStoresForSimon } from "@/lib/jeff-field-assistant/location";
 import {
   analyzeFieldPhoto,
+  prepareQuoteDraftForReview,
   proposeCoreMemoryUpdate,
   purchaseOrReservePartBlocked,
   recordFieldNote,
@@ -527,6 +528,13 @@ function likelyWantsCalendarSync(text: string) {
   return /\b(sync|mirror|update|push)\b.{0,35}\b(calendar|schedule)\b/i.test(text);
 }
 
+function likelyWantsQuoteDraft(text: string) {
+  return (
+    /\b(quote|estimate|bid)\b/i.test(text) &&
+    /\b(build|create|make|prep|prepare|draft|write|put together|send to dez|send to adam|for customer|for monday|schedule)\b/i.test(text)
+  ) || /\b(schedule)\b.{0,80}\b(quote|estimate|diagnostic block)\b/i.test(text);
+}
+
 function likelyWantsPhotoAnalysis(text: string, attachments: JeffAppAttachment[] = []) {
   return attachments.some(isImageAttachment) && /\b(photo|picture|image|look|see|analy[sz]e|what is this|what do you see)\b/i.test(text);
 }
@@ -587,6 +595,70 @@ function extractVehicleFromText(text: string) {
   if (astro) return "Chevy Astro";
 
   return undefined;
+}
+
+function extractMoneyFromText(text: string) {
+  const match = text.replace(/,/g, "").match(/\$\s*(\d+(?:\.\d{1,2})?)|\b(\d+(?:\.\d{1,2})?)\s*(?:dollars|bucks)\b/i);
+  if (!match) return undefined;
+  const value = Number(match[1] || match[2]);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function extractHoursFromText(text: string) {
+  const numeric = text.match(/\b(\d+(?:\.\d+)?)\s*(?:hour|hr)s?\b/i)?.[1];
+  if (numeric) {
+    const value = Number(numeric);
+    if (Number.isFinite(value)) return value;
+  }
+  if (/\btwo[-\s]?hour/i.test(text)) return 2;
+  if (/\bone[-\s]?hour/i.test(text)) return 1;
+  if (/\bthree[-\s]?hour/i.test(text)) return 3;
+  return undefined;
+}
+
+function extractRequestedWindowFromText(text: string) {
+  const normalized = text.replace(/\s+/g, " ");
+  const day = normalized.match(/\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i)?.[1];
+  const time = normalized.match(/\b(?:at|around|about)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i)?.[1];
+  if (day && time) return `${day} ${time}`;
+  return day;
+}
+
+function titleCaseName(value: string) {
+  return value
+    .split(/\s+/)
+    .map((part) => part ? `${part[0].toUpperCase()}${part.slice(1).toLowerCase()}` : "")
+    .join(" ")
+    .trim();
+}
+
+function extractQuoteCustomerName(text: string) {
+  const match = text.match(
+    /\b(?:customer|client|for)\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})(?=\s+(?:with|on|about|needs?|for|monday|tuesday|wednesday|thursday|friday|saturday|sunday|a|an|the|\d{4}|$))/i,
+  )?.[1];
+  if (!match) return undefined;
+  const cleaned = match.replace(/\b(a|an|the|quote|estimate|job|customer|client)\b/gi, "").replace(/\s+/g, " ").trim();
+  return cleaned ? titleCaseName(cleaned) : undefined;
+}
+
+function extractQuoteScope(text: string) {
+  const explicit = text.match(
+    /\b((?:(?:one|two|three|four|\d+(?:\.\d+)?)\s*[- ]?\s*hours?\s+)?[a-z0-9 -]{0,80}?(?:diagnostic|diag|diagnosis|repair|replacement|service|follow[- ]?up|inspection|test|block|labor|install|no-start|parasitic draw|battery|starter|brake|oil change)[a-z0-9 -]{0,120})\b/i,
+  )?.[1];
+  const block = explicit || text.match(/\b(?:quote|estimate|scope)\s+(?:for\s+)?(.{8,160})$/i)?.[1];
+  if (!block) return undefined;
+  const cleaned = block
+    .replace(/\b(?:for\s+)?(?:customer|client)\s+[a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2}\b/gi, "")
+    .replace(/\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 220);
+
+  if (!/\b(diagnostic|diag|diagnosis|repair|replacement|service|follow[- ]?up|inspection|test|block|labor|install|no-start|parasitic draw|battery|starter|brake|oil change)\b/i.test(cleaned)) {
+    return undefined;
+  }
+
+  return cleaned || undefined;
 }
 
 function selectedJobAppearsDifferent(jobLabel: string | undefined, vehicle: string | undefined) {
@@ -728,6 +800,21 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
     }), "sync_jeff_calendar"));
   }
 
+  if (likelyWantsQuoteDraft(text)) {
+    actions.push(messageActionFromResult(await prepareQuoteDraftForReview({
+      jobId: input.jobId,
+      customerName: extractQuoteCustomerName(text),
+      vehicle: extractVehicleFromText(text) || input.inferredVehicle || input.jobLabel,
+      serviceScope: extractQuoteScope(text),
+      requestedWindow: extractRequestedWindowFromText(text),
+      quoteAmount: extractMoneyFromText(text),
+      laborHours: extractHoursFromText(text),
+      customerMessage: text,
+      sourceLabel: "Message Jeff",
+      sourceReference: "message-jeff",
+    }), "prepare_quote_draft_for_review"));
+  }
+
   const wantsPartsStore =
     likelyWantsPartStore(text) ||
     (likelyPartsFollowUp(text) && Boolean(input.inferredPartName || input.inferredVehicle));
@@ -849,6 +936,7 @@ async function askJeffTextModel(
               "If Simon asks a follow-up like where can I buy one, continue the most recent part/vehicle from the thread unless the tool context says otherwise.",
               "If Simon asks for a part, test, purchase, diagnosis, safety judgment, invoice, or customer message, say what you can do now and what must be verified.",
               "Do not pretend a purchase, email, SMS, upload, or job update happened unless a tool or system state proves it.",
+              "For quote-draft actions, say whether the draft is ready for human review. Do not say it was sent to a customer or turned into a payment link unless a separate tool action proves that.",
               "When tool-backed actions are listed, treat those outcomes as ground truth and summarize them plainly.",
               "For nearby parts-store results, include store names plus phone/address/map when available and the exact inventory-confirmation question. Do not claim live inventory unless a vendor-confirmed source proves it.",
               "Use live capability status quietly. Do not recite system internals unless Simon asks what is connected or why something is blocked.",

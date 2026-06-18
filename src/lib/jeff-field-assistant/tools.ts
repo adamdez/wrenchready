@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { getAppBaseUrl } from "@/lib/app-url";
 import { getJeffEmailDeliveryStatus, getJeffEmailFrom, isJeffEmailSendingConfigured, sendJeffRecapEmail } from "@/lib/email";
 import { readEnv } from "@/lib/env";
 import {
@@ -12,8 +13,8 @@ import {
   ingestJeffInboundEmail,
 } from "@/lib/jeff-field-assistant/email-ingest";
 import { getJeffCapabilityReport } from "@/lib/jeff-field-assistant/capabilities";
-import { getPromiseRecords, updatePromiseRecord } from "@/lib/promise-crm/server";
-import type { PromiseRecord } from "@/lib/promise-crm/types";
+import { getPromiseRecords, updatePromiseRecord, upsertPromiseQuoteDraftForReview } from "@/lib/promise-crm/server";
+import type { PromiseFieldExecutionPacket, PromiseRecord } from "@/lib/promise-crm/types";
 import schedulingEngine from "@/lib/scheduling/engine";
 import type { AvailabilityRequest } from "@/lib/scheduling/types";
 import { normalizePhone } from "@/lib/twilio";
@@ -1217,6 +1218,376 @@ function jobReferenceConflict(input: {
   }
 
   return [...new Set(conflicts)];
+}
+
+function optionalMoneyAmount(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return undefined;
+  const normalized = value.replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+  if (!normalized) return undefined;
+  const amount = Number(normalized[0]);
+  return Number.isFinite(amount) ? amount : undefined;
+}
+
+function optionalHourAmount(value: unknown) {
+  const numeric = optionalMoneyAmount(value);
+  if (numeric !== undefined) return numeric;
+  if (typeof value !== "string") return undefined;
+  const normalized = value.toLowerCase();
+  if (/\btwo\b/.test(normalized)) return 2;
+  if (/\bone\b/.test(normalized)) return 1;
+  if (/\bthree\b/.test(normalized)) return 3;
+  if (/\bfour\b/.test(normalized)) return 4;
+  return undefined;
+}
+
+function normalizeQuoteDraftOwner(value: unknown): PromiseRecord["owner"] {
+  return value === "Simon" || value === "Unassigned" ? value : "Dez";
+}
+
+function normalizeQuoteDraftRisk(value: unknown): PromiseRecord["readinessRisk"] {
+  return value === "low" || value === "high" ? value : "medium";
+}
+
+function normalizeQuoteDraftContactPreference(value: unknown): PromiseRecord["customer"]["preferredContact"] {
+  return value === "text" || value === "email" || value === "call" ? value : "call";
+}
+
+function hasCustomerPaymentSurface(payment: JeffFieldJob["paymentCollection"]) {
+  if (!payment) return false;
+  return Boolean(
+    payment.depositRequestedAmount !== undefined ||
+      payment.depositCheckoutUrl ||
+      payment.balanceDueAmount !== undefined ||
+      payment.balanceCheckoutUrl ||
+      payment.amountCollected !== undefined ||
+      payment.status === "deposit-requested" ||
+      payment.status === "awaiting-payment" ||
+      payment.status === "partial" ||
+      payment.status === "paid",
+  );
+}
+
+function quoteDraftReviewUrls(promise: PromiseRecord) {
+  const baseUrl = getAppBaseUrl().replace(/\/+$/, "");
+  return {
+    opsReviewUrl: `${baseUrl}/ops/promises/${promise.id}`,
+    customerStatusUrl: promise.customerAccess.sharePath.startsWith("http")
+      ? promise.customerAccess.sharePath
+      : `${baseUrl}${promise.customerAccess.sharePath}`,
+  };
+}
+
+function buildQuoteDraftCustomerMessage(input: {
+  serviceScope: string;
+  quoteAmount?: number;
+  caveats: string[];
+}) {
+  const caveats = input.caveats.length
+    ? input.caveats
+    : [
+        "This does not include parts, module replacement, key/fob work, or repair labor beyond the quoted scope.",
+        "If additional parts or repair time are needed, WrenchReady will explain that and get approval before moving forward.",
+      ];
+
+  return [
+    `This quote is for ${input.serviceScope}.`,
+    input.quoteAmount !== undefined ? `Quoted amount: $${input.quoteAmount}.` : undefined,
+    ...caveats,
+  ].filter(Boolean).join(" ");
+}
+
+function buildQuoteDraftExecutionPacket(input: {
+  serviceScope: string;
+  priorDiagnosticFacts: string[];
+  diagnosticChecklist: string[];
+  partsChecklist: string[];
+  photosRequired: string[];
+  handoffChecklist: string[];
+  notesTemplate?: string;
+}): PromiseFieldExecutionPacket {
+  return {
+    serviceGoal: input.serviceScope,
+    partsChecklist: input.partsChecklist.length
+      ? input.partsChecklist
+      : ["No parts are approved by this quote draft; quote or approve parts separately after diagnosis."],
+    photosRequired: input.photosRequired.length
+      ? input.photosRequired
+      : ["Capture test evidence that supports the recommendation."],
+    inspectionChecklist: input.diagnosticChecklist.length
+      ? input.diagnosticChecklist
+      : input.priorDiagnosticFacts.length
+        ? input.priorDiagnosticFacts
+        : ["Confirm customer complaint.", "Record before/after readings for the quoted diagnostic block."],
+    handoffChecklist: input.handoffChecklist.length
+      ? input.handoffChecklist
+      : [
+          "Confirm quote scope, caveats, amount, and arrival window before customer send.",
+          "Confirm the customer understands parts or extra repair time require separate approval.",
+        ],
+    comebackPreventionSteps: ["State what is proven versus suspected before recommending parts."],
+    notesTemplate: input.notesTemplate,
+    upsellFocus: [],
+    closeoutSteps: ["Save final diagnostic evidence.", "Prepare a customer recap before payment collection."],
+  };
+}
+
+function summarizeQuoteDraftPromise(promise: PromiseRecord) {
+  return {
+    id: promise.id,
+    customerName: promise.customer.name,
+    customerPhone: promise.customer.phone,
+    vehicle: `${promise.vehicle.year || ""} ${promise.vehicle.make} ${promise.vehicle.model}`.trim(),
+    serviceScope: promise.serviceScope,
+    scheduledWindow: promise.scheduledWindow,
+    customerApproval: promise.customerApproval,
+    paymentCollection: promise.paymentCollection,
+    jobStage: promise.jobStage,
+    readinessRisk: promise.readinessRisk,
+    nextAction: promise.nextAction,
+  };
+}
+
+export async function prepareQuoteDraftForReview(payload: unknown) {
+  const input = isObject(payload) ? payload : {};
+  const jobId = optionalString(input.jobId);
+  const customerName = optionalString(input.customerName);
+  const customerPhone = optionalString(input.customerPhone) || optionalString(input.phone);
+  const customerEmail = optionalString(input.customerEmail) || optionalString(input.email);
+  const vehicle = optionalString(input.vehicle) || optionalString(input.vehicleLabel);
+  const address = optionalString(input.address);
+  const requestedWindow =
+    optionalString(input.requestedWindow) ||
+    optionalString(input.scheduledWindowLabel) ||
+    optionalString(input.targetWindow);
+  const serviceScope =
+    optionalString(input.serviceScope) ||
+    optionalString(input.quoteScope) ||
+    optionalString(input.requestedService) ||
+    optionalString(input.serviceGoal);
+  const quoteAmount =
+    optionalMoneyAmount(input.quoteAmount) ??
+    optionalMoneyAmount(input.requestedAmount) ??
+    optionalMoneyAmount(input.amount);
+  const laborHours =
+    optionalHourAmount(input.laborHours) ||
+    optionalHourAmount(input.quotedHours) ||
+    optionalHourAmount(input.diagnosticHours);
+  const partsCostAmount = optionalMoneyAmount(input.partsCostAmount);
+  const caveats = [
+    ...stringList(input.caveats),
+    optionalString(input.customerPromiseImpact),
+  ].filter((entry): entry is string => Boolean(entry));
+  const priorDiagnosticFacts = stringList(input.priorDiagnosticFacts);
+  const diagnosticChecklist = [
+    ...stringList(input.diagnosticChecklist),
+    ...stringList(input.nextTests),
+  ];
+  const partsChecklist = stringList(input.partsChecklist);
+  const photosRequired = stringList(input.photosRequired);
+  const handoffChecklist = stringList(input.handoffChecklist);
+  const quoteSummary =
+    optionalString(input.quoteSummary) ||
+    [
+      serviceScope,
+      quoteAmount !== undefined ? `$${quoteAmount}` : undefined,
+      requestedWindow,
+    ].filter(Boolean).join(" / ");
+
+  const missingFacts = [
+    !serviceScope ? "service scope" : undefined,
+    !customerName && !jobId ? "customer name or job id" : undefined,
+    !vehicle && !jobId ? "vehicle or job id" : undefined,
+  ].filter((fact): fact is string => Boolean(fact));
+
+  if (missingFacts.length > 0) {
+    return blocked(
+      "prepare_quote_draft_for_review",
+      `I need ${missingFacts.join(", ")} before I can create a real quote draft.`,
+      {
+        quoteDraftStatus: "blocked-missing-facts",
+        missingFacts,
+        paymentLinkCreated: false,
+        customerSendStatus: "not-sent",
+      },
+    );
+  }
+
+  const lookup = jobId ? await findJob(jobId) : await resolveFieldJob({ customerName, callerPhone: customerPhone, vehicle });
+  const warnings = [...lookup.warnings];
+  const selectedJob = "job" in lookup ? lookup.job : undefined;
+  const selectedJobConflicts = selectedJob
+    ? jobReferenceConflict({
+        job: selectedJob,
+        customerName,
+        customerPhone,
+        vehicle,
+        referenceText: [
+          serviceScope,
+          quoteSummary,
+          address,
+          requestedWindow,
+          ...caveats,
+          ...priorDiagnosticFacts,
+        ].filter(Boolean).join(" "),
+      })
+    : [];
+  const safeSelectedJob = selectedJob && selectedJobConflicts.length === 0 ? selectedJob : undefined;
+  const selectedJobHasPaymentSurface = safeSelectedJob
+    ? hasCustomerPaymentSurface(safeSelectedJob.paymentCollection)
+    : false;
+  const targetPromiseId =
+    safeSelectedJob &&
+    safeSelectedJob.source === "promise-crm" &&
+    !selectedJobHasPaymentSurface
+      ? safeSelectedJob.id
+      : undefined;
+
+  if (safeSelectedJob && safeSelectedJob.source !== "promise-crm") {
+    warnings.push("Selected job is a fixture; created a real CRM quote draft instead of editing fixture data.");
+  }
+  if (safeSelectedJob && selectedJobHasPaymentSurface) {
+    warnings.push("Selected job already has customer-facing payment state; created a separate quote draft to avoid mixing payment and quote review.");
+  }
+
+  const resolvedCustomerName = safeSelectedJob
+    ? safeSelectedJob.customer.name
+    : customerName;
+  const resolvedVehicle = safeSelectedJob
+    ? vehicleLabel(safeSelectedJob)
+    : vehicle;
+
+  if (!resolvedCustomerName || !resolvedVehicle || !serviceScope) {
+    return blocked(
+      "prepare_quote_draft_for_review",
+      "I could not safely identify enough customer, vehicle, and scope detail to create the quote draft.",
+      {
+        quoteDraftStatus: "blocked-unsafe-identification",
+        rejectedJobId: selectedJobConflicts.length > 0 ? selectedJob?.id : undefined,
+        conflicts: selectedJobConflicts,
+        paymentLinkCreated: false,
+        customerSendStatus: "not-sent",
+      },
+      warnings,
+    );
+  }
+
+  const fieldExecution = buildQuoteDraftExecutionPacket({
+    serviceScope,
+    priorDiagnosticFacts,
+    diagnosticChecklist,
+    partsChecklist,
+    photosRequired,
+    handoffChecklist,
+    notesTemplate: optionalString(input.notesTemplate),
+  });
+  const customerMessage =
+    optionalString(input.customerMessage) ||
+    buildQuoteDraftCustomerMessage({ serviceScope, quoteAmount, caveats });
+  const notes = [
+    ...priorDiagnosticFacts.map((fact) => `Prior diagnostic fact: ${fact}`),
+    optionalString(input.sourceReference) ? `Source reference: ${optionalString(input.sourceReference)}` : undefined,
+  ].filter((note): note is string => Boolean(note));
+
+  let promise: PromiseRecord;
+  try {
+    promise = await upsertPromiseQuoteDraftForReview({
+      promiseId: targetPromiseId,
+      customerName: resolvedCustomerName,
+      customerPhone: safeSelectedJob ? safeSelectedJob.customer.phone : customerPhone,
+      customerEmail: safeSelectedJob ? safeSelectedJob.customer.email : customerEmail,
+      preferredContact: normalizeQuoteDraftContactPreference(input.preferredContact),
+      vehicleLabel: resolvedVehicle,
+      address: safeSelectedJob ? safeSelectedJob.location.label : address,
+      city: safeSelectedJob ? safeSelectedJob.location.city : optionalString(input.city),
+      territory: safeSelectedJob ? safeSelectedJob.location.territory : optionalString(input.territory),
+      accessNotes: safeSelectedJob ? safeSelectedJob.location.accessNotes : optionalString(input.accessNotes),
+      serviceScope,
+      scheduledWindowLabel: requestedWindow,
+      scheduledWindowStartIso: optionalString(input.scheduledWindowStartIso),
+      scheduledWindowEndIso: optionalString(input.scheduledWindowEndIso),
+      quoteAmount,
+      laborHours,
+      partsCostAmount,
+      customerMessage,
+      quoteSummary,
+      readinessSummary: optionalString(input.readinessSummary),
+      nextAction: optionalString(input.nextAction),
+      topRisks: [
+        ...stringList(input.topRisks),
+        ...caveats.map((caveat) => `Customer caveat: ${caveat}`),
+      ],
+      notes,
+      fieldExecution,
+      owner: normalizeQuoteDraftOwner(input.owner),
+      readinessRisk: normalizeQuoteDraftRisk(input.readinessRisk),
+      sourceLabel: optionalString(input.sourceLabel) || "Jeff field assistant",
+    });
+  } catch (error) {
+    return blocked(
+      "prepare_quote_draft_for_review",
+      "I could not create the quote draft in the CRM. I did not send anything to the customer or create a payment link.",
+      {
+        quoteDraftStatus: "failed-crm-write",
+        error: error instanceof Error ? error.message : "Unknown quote draft write failure.",
+        paymentLinkCreated: false,
+        customerSendStatus: "not-sent",
+      },
+      warnings,
+    );
+  }
+
+  const draftJob = mapPromiseToFieldJob(promise);
+  const { event, noteStatus, fieldEventStorage } = await saveEvent(
+    {
+      jobId: promise.id,
+      channel: "approval",
+      eventType: "approval_requested",
+      sender: "Jeff",
+      summary: `Quote draft prepared for human review: ${quoteSummary || serviceScope}`,
+      extractedFacts: {
+        customerName: promise.customer.name,
+        vehicle: `${promise.vehicle.year || ""} ${promise.vehicle.make} ${promise.vehicle.model}`.trim(),
+        authorization: "quote draft prepared; customer send and payment link not authorized",
+        paymentStatus: "payment link not generated",
+      },
+      rawSourceReference: selectedJob?.id ? `selected-job:${selectedJob.id}` : optionalString(input.sourceReference),
+      confidence: selectedJobConflicts.length > 0 ? "medium" : "high",
+      needsReview: true,
+    },
+    draftJob,
+  );
+  const urls = quoteDraftReviewUrls(promise);
+  const createdNewPromise = !targetPromiseId;
+
+  return result(
+    "prepare_quote_draft_for_review",
+    createdNewPromise
+      ? "I created a quote draft for human review. I did not send it to the customer or create a payment link."
+      : "I updated the existing job with a quote draft for human review. I did not send it to the customer or create a payment link.",
+    {
+      quoteDraftStatus: "ready-for-human-review",
+      promise: summarizeQuoteDraftPromise(promise),
+      promiseId: promise.id,
+      updatedExistingPromise: !createdNewPromise,
+      createdNewPromise,
+      customerApprovalStatus: promise.customerApproval.status,
+      quoteAmount,
+      opsReviewUrl: urls.opsReviewUrl,
+      customerStatusUrl: urls.customerStatusUrl,
+      customerSendStatus: "not-sent",
+      paymentLinkCreated: false,
+      checkoutUrl: null,
+      selectedJobId: selectedJob?.id,
+      selectedJobConflict: selectedJobConflicts.length > 0,
+      conflicts: selectedJobConflicts,
+      rejectedJobId: selectedJobConflicts.length > 0 ? selectedJob?.id : undefined,
+      event,
+      jobRecordUpdateStatus: noteStatus,
+      fieldEventStorageStatus: fieldEventStorage.status,
+    },
+    [...warnings, fieldEventStorage.warning].filter((warning): warning is string => Boolean(warning)),
+  );
 }
 
 function getConflicts(job: JeffFieldJob, events: JeffFieldEvent[]) {
@@ -4083,6 +4454,54 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
           notes: { type: "string" },
         },
         required: ["service"],
+      },
+    },
+    {
+      name: "prepare_quote_draft_for_review",
+      description: "Create or update a CRM quote draft for Adam/Dez review. Use for quote, estimate, follow-up diagnostic block, schedule/quote intake, or previous-customer quote work. This never sends to the customer and never creates a payment link.",
+      endpoint: `${BASE_ROUTE}/prepare-quote-draft-for-review`,
+      method: "POST",
+      parameters: {
+        type: "object",
+        properties: {
+          jobId: { type: "string" },
+          customerName: { type: "string" },
+          customerPhone: { type: "string" },
+          customerEmail: { type: "string" },
+          preferredContact: { type: "string", enum: ["call", "text", "email"] },
+          vehicle: { type: "string" },
+          address: { type: "string" },
+          city: { type: "string" },
+          territory: { type: "string" },
+          accessNotes: { type: "string" },
+          serviceScope: { type: "string" },
+          quoteScope: { type: "string" },
+          requestedWindow: { type: "string" },
+          scheduledWindowStartIso: { type: "string" },
+          scheduledWindowEndIso: { type: "string" },
+          quoteAmount: { type: "number" },
+          requestedAmount: { type: "number" },
+          laborHours: { type: "number" },
+          partsCostAmount: { type: "number" },
+          customerMessage: { type: "string" },
+          quoteSummary: { type: "string" },
+          caveats: { type: "array", items: { type: "string" } },
+          priorDiagnosticFacts: { type: "array", items: { type: "string" } },
+          diagnosticChecklist: { type: "array", items: { type: "string" } },
+          nextTests: { type: "array", items: { type: "string" } },
+          partsChecklist: { type: "array", items: { type: "string" } },
+          photosRequired: { type: "array", items: { type: "string" } },
+          handoffChecklist: { type: "array", items: { type: "string" } },
+          topRisks: { type: "array", items: { type: "string" } },
+          readinessSummary: { type: "string" },
+          nextAction: { type: "string" },
+          notesTemplate: { type: "string" },
+          sourceReference: { type: "string" },
+          sourceLabel: { type: "string" },
+          owner: { type: "string", enum: ["Dez", "Simon", "Unassigned"] },
+          readinessRisk: { type: "string", enum: ["low", "medium", "high"] },
+        },
+        required: ["serviceScope"],
       },
     },
     {
