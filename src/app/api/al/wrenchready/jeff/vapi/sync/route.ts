@@ -9,6 +9,8 @@ type SyncRequest = {
   apply?: boolean;
   model?: string;
   voiceId?: string;
+  voiceProvider?: string;
+  voiceSpeed?: number;
   voiceVersion?: number;
 };
 
@@ -73,6 +75,14 @@ function safeAssistantSummary(assistant: VapiAssistant) {
   };
 }
 
+function numberValue(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
 async function fetchJson(url: string, options: RequestInit = {}) {
   const response = await fetch(url, options);
   const text = await response.text();
@@ -123,23 +133,23 @@ export async function POST(request: Request) {
     const liveModel = objectValue(live.model);
     const liveServer = objectValue(live.server);
     const liveVoice = objectValue(live.voice);
-    const voiceId =
-      typeof body.voiceId === "string" && body.voiceId.trim()
-        ? body.voiceId.trim()
-        : typeof liveVoice.voiceId === "string"
-          ? liveVoice.voiceId
-          : "Kai";
-    const voiceVersion =
-      typeof body.voiceVersion === "number" && Number.isFinite(body.voiceVersion)
-        ? body.voiceVersion
-        : typeof liveVoice.version === "number"
-          ? liveVoice.version
-          : 2;
-    const model =
-      typeof body.model === "string" && body.model.trim()
-        ? body.model.trim()
-        : readEnv("VAPI_JEFF_OPENAI_MODEL") || String(liveModel.model || config.model.model);
+    const voiceProvider = stringValue(body.voiceProvider) || stringValue(liveVoice.provider) || "11labs";
+    const voiceId = stringValue(body.voiceId) || stringValue(liveVoice.voiceId) || "cjVigY5qzO86Huf0OWal";
+    const voiceSpeed =
+      numberValue(body.voiceSpeed) ??
+      (voiceProvider === "11labs" && (numberValue(liveVoice.speed) ?? 1) < 1
+        ? 1
+        : numberValue(liveVoice.speed));
+    const voiceVersion = numberValue(body.voiceVersion) ?? numberValue(liveVoice.version);
+    const model = stringValue(body.model) || readEnv("VAPI_JEFF_OPENAI_MODEL") || String(liveModel.model || config.model.model);
     const beforeDiff = diffTools(liveModel.tools, config.model.tools);
+    const voicePatch = {
+      ...liveVoice,
+      provider: voiceProvider,
+      voiceId,
+      ...(voiceSpeed ? { speed: voiceSpeed } : {}),
+      ...(voiceProvider === "vapi" && voiceVersion ? { version: voiceVersion } : {}),
+    };
     const patch = {
       firstMessage: config.firstMessage,
       server: {
@@ -159,18 +169,14 @@ export async function POST(request: Request) {
         messages: config.model.messages,
         tools: config.model.tools,
       },
-      voice: {
-        provider: "vapi",
-        voiceId,
-        version: voiceVersion,
-      },
+      voice: voicePatch,
     };
 
     if (!body.apply) {
       return NextResponse.json({
         success: true,
         dryRun: true,
-        target: { assistantId, model, voiceId, voiceVersion },
+        target: { assistantId, model, voiceProvider, voiceId, voiceSpeed, voiceVersion },
         before: safeAssistantSummary(live),
         diff: beforeDiff,
         patchSummary: {
@@ -200,8 +206,14 @@ export async function POST(request: Request) {
     if (updatedModel.model !== model) {
       throw new Error(`Vapi assistant model mismatch after patch: expected ${model}, got ${updatedModel.model}`);
     }
-    if (updatedVoice.provider !== "vapi" || updatedVoice.voiceId !== voiceId || updatedVoice.version !== voiceVersion) {
+    if (updatedVoice.provider !== voiceProvider || updatedVoice.voiceId !== voiceId) {
       throw new Error("Vapi assistant voice mismatch after patch.");
+    }
+    if (voiceSpeed && numberValue(updatedVoice.speed) !== voiceSpeed) {
+      throw new Error(`Vapi assistant voice speed mismatch after patch: expected ${voiceSpeed}, got ${updatedVoice.speed}`);
+    }
+    if (voiceProvider === "vapi" && voiceVersion && numberValue(updatedVoice.version) !== voiceVersion) {
+      throw new Error(`Vapi assistant voice version mismatch after patch: expected ${voiceVersion}, got ${updatedVoice.version}`);
     }
     if (afterDiff.missing.length > 0 || afterDiff.extra.length > 0) {
       throw new Error(`Vapi assistant tool mismatch after patch: ${JSON.stringify(afterDiff)}`);
@@ -210,7 +222,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       dryRun: false,
-      target: { assistantId, model, voiceId, voiceVersion },
+      target: { assistantId, model, voiceProvider, voiceId, voiceSpeed, voiceVersion },
       before: {
         model: liveModel.model,
         voice: live.voice,
