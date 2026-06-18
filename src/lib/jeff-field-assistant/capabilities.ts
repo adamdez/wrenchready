@@ -292,7 +292,7 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
   return {
     generatedAt,
     voiceStyle:
-      "Use capability status quietly. Be useful first. Do not recite system checks unless Simon asks why something is unavailable.",
+      "Use capability status quietly. Be useful first. Do not recite system checks or narrate internal lookups unless Simon asks why something is unavailable.",
     summary: `${ready.length} ready, ${partial.length} partial, ${blocked.length} blocked.`,
     counts,
     capabilities,

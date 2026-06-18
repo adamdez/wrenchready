@@ -435,10 +435,6 @@ function toVapiTool(tool: JeffVapiToolSchema) {
     function: toVapiFunction(tool),
     messages: [
       {
-        type: "request-start",
-        content: "One second, I am checking the WrenchReady job context.",
-      },
-      {
         type: "request-failed",
         content: "I could not reach WrenchReady. Verify this manually before acting.",
       },
@@ -489,6 +485,18 @@ export function getJeffVapiPilotConfig(baseUrl = getAppBaseUrl()) {
       "Hey Simon, this is Jeff. Tell me the customer or vehicle you are on, and what you are seeing.",
     serverUrl: `${normalizedBaseUrl}/api/al/wrenchready/jeff/vapi/server`,
     serverAuthHeader: "X-Vapi-Secret",
+    startSpeakingPlan: {
+      waitSeconds: 0.25,
+      smartEndpointingPlan: {
+        provider: "livekit",
+        waitFunction: "2000 / (1 + exp(-10 * (x - 0.5)))",
+      },
+    },
+    stopSpeakingPlan: {
+      numWords: 1,
+      voiceSeconds: 0.2,
+      backoffSeconds: 0.6,
+    },
     brain: {
       voiceModel: readEnv("JEFF_FIELD_REALTIME_MODEL") || "gpt-realtime-2",
       reasoningModel: readEnv("JEFF_FIELD_REASONING_MODEL") || "gpt-5.5",

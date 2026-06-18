@@ -108,6 +108,8 @@ export async function POST(request: Request) {
         purpose: "jeff-orientation-call",
         recipientName: recipientName || null,
       },
+      startSpeakingPlan: config.startSpeakingPlan,
+      stopSpeakingPlan: config.stopSpeakingPlan,
       server: {
         url: config.serverUrl,
         headers: {
@@ -141,6 +143,8 @@ export async function POST(request: Request) {
         model: payload.assistantOverrides.model.model,
         toolCount: payload.assistantOverrides.model.tools.length,
         serverUrl: payload.assistantOverrides.server.url,
+        startSpeakingPlan: payload.assistantOverrides.startSpeakingPlan,
+        stopSpeakingPlan: payload.assistantOverrides.stopSpeakingPlan,
       },
     });
   }

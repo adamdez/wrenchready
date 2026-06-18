@@ -77,6 +77,8 @@ function safeAssistantSummary(assistant) {
     toolCount: tools.length,
     toolNames: sortedToolNames(tools),
     serverMessages: assistant?.serverMessages,
+    startSpeakingPlan: assistant?.startSpeakingPlan,
+    stopSpeakingPlan: assistant?.stopSpeakingPlan,
   };
 }
 
@@ -106,6 +108,8 @@ const patch = {
     },
   },
   serverMessages: live.serverMessages,
+  startSpeakingPlan: desired.startSpeakingPlan,
+  stopSpeakingPlan: desired.stopSpeakingPlan,
   model: {
     provider: "openai",
     model,
@@ -131,6 +135,8 @@ if (!apply) {
       toolCount: patch.model.tools.length,
       serverUrl: patch.server.url,
       serverHeaderKeys: Object.keys(patch.server.headers || {}),
+      startSpeakingPlan: patch.startSpeakingPlan,
+      stopSpeakingPlan: patch.stopSpeakingPlan,
     },
   }, null, 2));
   process.exit(0);
@@ -164,6 +170,8 @@ console.log(JSON.stringify({
     voice: live.voice,
     toolCount: Array.isArray(live.model?.tools) ? live.model.tools.length : 0,
     missingTools: beforeDiff.missing,
+    startSpeakingPlan: live.startSpeakingPlan,
+    stopSpeakingPlan: live.stopSpeakingPlan,
   },
   after: safeAssistantSummary(updated),
 }, null, 2));
