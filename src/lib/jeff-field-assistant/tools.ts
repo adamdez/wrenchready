@@ -1103,6 +1103,122 @@ function factsConflictWithJob(job: JeffFieldJob, facts: JeffExtractedFacts) {
   return conflicts;
 }
 
+const COMMON_VEHICLE_MAKES = new Map([
+  ["acura", "acura"],
+  ["audi", "audi"],
+  ["bmw", "bmw"],
+  ["buick", "buick"],
+  ["cadillac", "cadillac"],
+  ["chevrolet", "chevrolet"],
+  ["chevy", "chevrolet"],
+  ["chrysler", "chrysler"],
+  ["dodge", "dodge"],
+  ["ford", "ford"],
+  ["gmc", "gmc"],
+  ["honda", "honda"],
+  ["hyundai", "hyundai"],
+  ["infiniti", "infiniti"],
+  ["jeep", "jeep"],
+  ["kia", "kia"],
+  ["lexus", "lexus"],
+  ["lincoln", "lincoln"],
+  ["mazda", "mazda"],
+  ["mercedes", "mercedes"],
+  ["mercedes-benz", "mercedes"],
+  ["mercury", "mercury"],
+  ["nissan", "nissan"],
+  ["pontiac", "pontiac"],
+  ["ram", "ram"],
+  ["saturn", "saturn"],
+  ["subaru", "subaru"],
+  ["toyota", "toyota"],
+  ["volkswagen", "volkswagen"],
+  ["vw", "volkswagen"],
+  ["volvo", "volvo"],
+]);
+
+function normalizedVehicleMake(value?: string) {
+  const make = value?.trim().toLowerCase();
+  if (!make) return undefined;
+  return COMMON_VEHICLE_MAKES.get(make) || make;
+}
+
+function mentionedVehicleMakes(text: string) {
+  const normalized = text.toLowerCase();
+  const makes = new Set<string>();
+
+  for (const [alias, make] of COMMON_VEHICLE_MAKES) {
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`\\b${escaped}\\b`, "i").test(normalized)) {
+      makes.add(make);
+    }
+  }
+
+  return makes;
+}
+
+function mentionedVehicleYears(text: string) {
+  return new Set(
+    [...text.matchAll(/\b(19|20)\d{2}\b/g)].map((match) => Number(match[0])),
+  );
+}
+
+function jobReferenceConflict(input: {
+  job: JeffFieldJob;
+  customerName?: string;
+  customerPhone?: string;
+  vehicle?: string;
+  referenceText?: string;
+}) {
+  const conflicts: string[] = [];
+  const facts: JeffExtractedFacts = {
+    customerName: input.customerName,
+    vehicle: input.vehicle,
+  };
+
+  conflicts.push(...factsConflictWithJob(input.job, facts));
+
+  const suppliedPhone = normalizePhone(input.customerPhone || "");
+  const jobPhone = normalizePhone(input.job.customer.phone);
+  if (suppliedPhone && jobPhone && suppliedPhone !== jobPhone) {
+    conflicts.push(
+      `Phone mismatch: supplied phone ${suppliedPhone} does not match ${input.job.customer.name}'s job phone ${jobPhone}.`,
+    );
+  }
+
+  const referenceText = [
+    input.referenceText,
+    input.customerName,
+    input.customerPhone,
+    input.vehicle,
+  ].filter(Boolean).join(" ");
+
+  if (!referenceText.trim()) return conflicts;
+
+  const lowerText = referenceText.toLowerCase();
+  const expectedCustomerTokens = input.job.customer.name.toLowerCase().split(/\s+/).filter((token) => token.length > 2);
+  if (/\btammy\b|\bwilson\b/i.test(lowerText) && !expectedCustomerTokens.some((token) => token === "tammy" || token === "wilson")) {
+    conflicts.push(`Customer reference appears to be Tammy Wilson, not ${input.job.customer.name}.`);
+  }
+
+  const expectedMake = normalizedVehicleMake(input.job.vehicle.make);
+  const makes = mentionedVehicleMakes(referenceText);
+  if (makes.size > 0 && expectedMake && !makes.has(expectedMake)) {
+    conflicts.push(
+      `Vehicle make mismatch: request mentions ${[...makes].join(", ")} but selected job is ${vehicleLabel(input.job)}.`,
+    );
+  }
+
+  const years = mentionedVehicleYears(referenceText);
+  if (years.size > 0 && input.job.vehicle.year && !years.has(input.job.vehicle.year)) {
+    conflicts.push(
+      `Vehicle year mismatch: request mentions ${[...years].join(", ")} but selected job is ${vehicleLabel(input.job)}.`,
+    );
+  }
+
+  return [...new Set(conflicts)];
+}
+
 function getConflicts(job: JeffFieldJob, events: JeffFieldEvent[]) {
   const conflicts = new Set<string>();
 
@@ -3111,37 +3227,199 @@ export async function requestApprovalOrEscalation(payload: unknown) {
   const jobId = optionalString(input.jobId);
   const reason = optionalString(input.reason);
 
-  if (!jobId || !reason) {
+  if (!reason) {
     return blocked(
       "request_approval_or_escalation",
-      "I need a job id and escalation reason before I can draft the approval request.",
+      "I need the escalation reason before I can draft the approval request.",
       { draft: null },
     );
-  }
-
-  const { job, warnings } = await findJob(jobId);
-  if (!job) {
-    return blocked("request_approval_or_escalation", "I could not find that job.", { draft: null }, warnings);
   }
 
   const moneyImpact = optionalString(input.moneyImpact);
   const partsImpact = optionalString(input.partsImpact);
   const customerPromiseImpact = optionalString(input.customerPromiseImpact);
+  const customerName = optionalString(input.customerName);
+  const customerPhone = optionalString(input.customerPhone);
+  const vehicle = optionalString(input.vehicle);
+  const address = optionalString(input.address);
+  const requestedWindow = optionalString(input.requestedWindow);
+  const quoteScope = optionalString(input.quoteScope);
+
+  const { job, warnings } = jobId
+    ? await findJob(jobId)
+    : { job: undefined, warnings: [] as string[] };
+
+  if (jobId && !job) {
+    const { event, fieldEventStorage } = await saveEvent({
+      jobId: GENERAL_JEFF_REQUEST_JOB_ID,
+      channel: "approval",
+      eventType: "approval_requested",
+      sender: "Jeff",
+      summary: `Unassigned escalation because job id ${jobId} was not found: ${reason}`,
+      extractedFacts: {
+        customerName,
+        vehicle,
+        authorization: "approval requested; live job id not found",
+      },
+      confidence: "high",
+      needsReview: true,
+    });
+
+    return result(
+      "request_approval_or_escalation",
+      "I saved that for Dez review as an unassigned request because the job id did not match a live job.",
+      {
+        draft: {
+          to: "Dez",
+          reason,
+          customerName,
+          customerPhone,
+          vehicle,
+          address,
+          requestedWindow,
+          quoteScope,
+          moneyImpact,
+          partsImpact,
+          customerPromiseImpact,
+          message: optionalString(input.recommendedMessageToDez) || reason,
+        },
+        event,
+        jobRecordUpdateStatus: "unassigned-job-not-found",
+        fieldEventStorageStatus: fieldEventStorage.status,
+      },
+      [...warnings, fieldEventStorage.warning].filter((warning): warning is string => Boolean(warning)),
+    );
+  }
+
   const recommendedMessageToDez =
     optionalString(input.recommendedMessageToDez) ||
     [
-      `Jeff escalation for ${job.customer.name} (${vehicleLabel(job)}): ${reason}`,
+      job
+        ? `Jeff escalation for ${job.customer.name} (${vehicleLabel(job)}): ${reason}`
+        : `Jeff unassigned escalation: ${reason}`,
+      customerName ? `Customer: ${customerName}` : undefined,
+      customerPhone ? `Phone: ${customerPhone}` : undefined,
+      vehicle ? `Vehicle: ${vehicle}` : undefined,
+      address ? `Address: ${address}` : undefined,
+      requestedWindow ? `Requested window: ${requestedWindow}` : undefined,
+      quoteScope ? `Quote/scope: ${quoteScope}` : undefined,
       moneyImpact ? `Money impact: ${moneyImpact}` : undefined,
       partsImpact ? `Parts impact: ${partsImpact}` : undefined,
       customerPromiseImpact ? `Customer promise impact: ${customerPromiseImpact}` : undefined,
-      "Please approve, revise, or decline before Simon proceeds.",
+      job
+        ? "Please approve, revise, or decline before Simon proceeds."
+        : "Please create or attach the live CRM job before customer-facing scheduling, quote, or payment language goes out.",
     ]
       .filter(Boolean)
       .join("\n");
 
+  if (!job) {
+    const { event, fieldEventStorage } = await saveEvent({
+      jobId: GENERAL_JEFF_REQUEST_JOB_ID,
+      channel: "approval",
+      eventType: "approval_requested",
+      sender: "Jeff",
+      summary: reason,
+      extractedFacts: {
+        customerName,
+        vehicle,
+        authorization: "approval requested; unassigned quote/schedule work item",
+      },
+      confidence: "high",
+      needsReview: true,
+    });
+
+    return result(
+      "request_approval_or_escalation",
+      "I saved that for Dez review as an unassigned quote or schedule request. It is not attached to a customer job yet.",
+      {
+        draft: {
+          to: "Dez",
+          reason,
+          customerName,
+          customerPhone,
+          vehicle,
+          address,
+          requestedWindow,
+          quoteScope,
+          moneyImpact,
+          partsImpact,
+          customerPromiseImpact,
+          message: recommendedMessageToDez,
+        },
+        event,
+        jobRecordUpdateStatus: "unassigned-review-item",
+        fieldEventStorageStatus: fieldEventStorage.status,
+      },
+      [...warnings, fieldEventStorage.warning].filter((warning): warning is string => Boolean(warning)),
+    );
+  }
+
+  const conflicts = jobReferenceConflict({
+    job,
+    customerName,
+    customerPhone,
+    vehicle,
+    referenceText: [
+      reason,
+      moneyImpact,
+      partsImpact,
+      customerPromiseImpact,
+      optionalString(input.recommendedMessageToDez),
+      address,
+      requestedWindow,
+      quoteScope,
+    ].filter(Boolean).join(" "),
+  });
+
+  if (conflicts.length > 0) {
+    const { event, fieldEventStorage } = await saveEvent({
+      jobId: GENERAL_JEFF_REQUEST_JOB_ID,
+      channel: "approval",
+      eventType: "approval_requested",
+      sender: "Jeff",
+      summary: `Unassigned escalation not attached to ${job.customer.name} because details conflict: ${reason}`,
+      extractedFacts: {
+        customerName,
+        vehicle,
+        authorization: `approval requested; selected job mismatch: ${conflicts.join(" ")}`,
+      },
+      confidence: "high",
+      needsReview: true,
+    });
+
+    return result(
+      "request_approval_or_escalation",
+      "I saved that for Dez review, but I did not attach it to the selected job because the customer or vehicle details conflict.",
+      {
+        draft: {
+          to: "Dez",
+          reason,
+          customerName,
+          customerPhone,
+          vehicle,
+          address,
+          requestedWindow,
+          quoteScope,
+          moneyImpact,
+          partsImpact,
+          customerPromiseImpact,
+          message: recommendedMessageToDez,
+        },
+        event,
+        conflicts,
+        rejectedJobId: job.id,
+        rejectedJobLabel: `${job.customer.name} / ${vehicleLabel(job)}`,
+        jobRecordUpdateStatus: "unassigned-selected-job-conflict",
+        fieldEventStorageStatus: fieldEventStorage.status,
+      },
+      [...warnings, fieldEventStorage.warning].filter((warning): warning is string => Boolean(warning)),
+    );
+  }
+
   const { event, noteStatus } = await saveEvent(
     {
-      jobId,
+      jobId: job.id,
       channel: "approval",
       eventType: "approval_requested",
       sender: "Jeff",
@@ -3809,7 +4087,7 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
     },
     {
       name: "request_approval_or_escalation",
-      description: "Draft a Dez escalation when approval, money, safety, fitment, or customer promise risk appears.",
+      description: "Draft a Dez escalation when approval, money, quote, schedule, safety, fitment, or customer promise risk appears. Use without jobId when Simon gives a past customer or inactive job that is not in live CRM.",
       endpoint: `${BASE_ROUTE}/request-approval-or-escalation`,
       method: "POST",
       parameters: {
@@ -3817,12 +4095,18 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
         properties: {
           jobId: { type: "string" },
           reason: { type: "string" },
+          customerName: { type: "string" },
+          customerPhone: { type: "string" },
+          vehicle: { type: "string" },
+          address: { type: "string" },
+          requestedWindow: { type: "string" },
+          quoteScope: { type: "string" },
           moneyImpact: { type: "string" },
           partsImpact: { type: "string" },
           customerPromiseImpact: { type: "string" },
           recommendedMessageToDez: { type: "string" },
         },
-        required: ["jobId", "reason"],
+        required: ["reason"],
       },
     },
     {

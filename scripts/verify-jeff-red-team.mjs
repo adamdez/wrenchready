@@ -120,6 +120,41 @@ assert(
   "High-uncertainty jobs with parts pickup should not be customer-ready schedule promises.",
 );
 
+const unassignedQuoteEscalation = await requestJson("/api/al/wrenchready/jeff/tools/request-approval-or-escalation", {
+  reason:
+    "Red-team quote/schedule intake for Tammy Wilson 2010 Chrysler 300: two-hour diagnostic block, possible additional quote if parts are needed.",
+  customerName: "Tammy Wilson",
+  customerPhone: "509-534-3456",
+  vehicle: "2010 Chrysler 300",
+  address: "4123 E Pratt Ave, Spokane, WA",
+  requestedWindow: "Monday",
+  quoteScope: "Two-hour diagnostic/exploration block with additional quote caveat.",
+});
+assert(unassignedQuoteEscalation.success === true, "Unassigned quote/schedule escalation should save for review.");
+assert(
+  unassignedQuoteEscalation.data?.event?.jobId === "jeff-general-requests",
+  "Unassigned quote/schedule escalation should not require a fake job id.",
+);
+
+const mismatchedQuoteEscalation = await requestJson("/api/al/wrenchready/jeff/tools/request-approval-or-escalation", {
+  jobId: "jeff-fixture-tammy-chrysler",
+  reason:
+    "Red-team mismatch: Stuart Grossman 2021 Ford E-450 needs a schedule and quote, but the selected job is Tammy.",
+  customerName: "Stuart Grossman",
+  customerPhone: "509-939-8914",
+  vehicle: "2021 Ford E-450",
+  requestedWindow: "Monday",
+});
+assert(mismatchedQuoteEscalation.success === true, "Mismatched escalation should still save for review.");
+assert(
+  mismatchedQuoteEscalation.data?.jobRecordUpdateStatus === "unassigned-selected-job-conflict",
+  "Mismatched escalation should be kept out of the selected job record.",
+);
+assert(
+  mismatchedQuoteEscalation.data?.event?.jobId === "jeff-general-requests",
+  "Mismatched escalation should land in general review instead of the wrong job.",
+);
+
 const capabilities = await requestJson("/api/al/wrenchready/jeff/tools/get-jeff-capabilities", {});
 assert(capabilities.success === true, "Capability status tool should return a successful controlled response.");
 assert(
@@ -201,6 +236,29 @@ assert(schedulePromiseTranscript.review?.passed === false, "Unverified schedule 
 assert(
   schedulePromiseTranscript.review?.issues?.some((issue) => /scheduling promise/i.test(issue.summary)),
   "Schedule-promise transcript should create a fix-before-field issue.",
+);
+
+const quoteScheduleTranscript = await requestJson("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "end-of-call-report",
+    call: {
+      id: "red-team-quote-schedule-intake",
+      assistantId: "assistant-test",
+      customer: { number: "+15095550102" },
+    },
+    artifact: {
+      transcript:
+        "User: Jeff, we need to schedule a previous client. Tammy Wilson with a 2010 Chrysler 300. I will be going out there Monday. Send the details to Dez and get a quote built for a two hour diagnostic block. Make sure it says two hours may not be enough and additional quoting will likely be needed if parts are required. The address is 4123 East Pratt Avenue Spokane. Phone is 509-534-3456 and that is a landline.",
+    },
+  },
+});
+assert(
+  quoteScheduleTranscript.workspace?.summary?.blockers?.some((blocker) => /not attached to a confirmed live CRM job/i.test(blocker)),
+  "Quote/schedule intake transcript should preserve the missing-live-job blocker.",
+);
+assert(
+  quoteScheduleTranscript.workspace?.summary?.knownFacts?.some((fact) => /Tammy Wilson|Chrysler|Pratt|534-3456/i.test(fact)),
+  "Quote/schedule intake transcript should extract office facts instead of generic diagnostic filler.",
 );
 
 const unsafeDrivingTranscript = await requestJson("/api/al/wrenchready/jeff/vapi/server", {

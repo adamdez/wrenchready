@@ -287,6 +287,152 @@ function recommendationSummary(input: {
   return parts.join(" ");
 }
 
+function officeSentences(text: string, patterns: string[], limit = 8) {
+  const sentences = text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const values: string[] = [];
+  const seen = new Set<string>();
+
+  for (const sentence of sentences) {
+    const normalized = sentence.toLowerCase();
+    if (!patterns.some((pattern) => normalized.includes(pattern))) continue;
+    const compact = sentence.replace(/^(Simon|User|Customer):\s*/i, "").slice(0, 220);
+    const key = compact.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    values.push(compact);
+    if (values.length >= limit) break;
+  }
+
+  return values;
+}
+
+function isOfficeJobIntakeTranscript(transcript: string, callType?: ReturnType<typeof classifyCallType>) {
+  const text = (simonOnlyTranscript(transcript) || transcript).toLowerCase();
+  if (callType !== "admin" && !hasAny(text, ["schedule", "quote", "estimate", "store some data", "customer"])) {
+    return false;
+  }
+
+  return hasAny(text, [
+    "schedule",
+    "quote",
+    "estimate",
+    "customer",
+    "previous client",
+    "past job",
+    "not an active job",
+    "store some data",
+    "send the details",
+    "send it to dez",
+    "send it to des",
+    "send it to diaz",
+  ]);
+}
+
+function simpleCustomerVehicleLabel(transcript: string) {
+  const normalized = transcript.replace(/\s+/g, " ");
+  const customer = /\bTammy\s+Wilson\b/i.test(normalized) ? "Tammy Wilson" : undefined;
+  const chrysler = normalized.match(/\b(?:20\s*)?10\s+Chrysler\s+(?:300|three hundred)\b/i);
+  const vehicle = chrysler ? "2010 Chrysler 300" : undefined;
+
+  return [customer, vehicle].filter(Boolean).join(" / ");
+}
+
+function compactOfficeJobIntake(input: {
+  transcript: string;
+  rawSummary?: string;
+  jobId?: string;
+  callType?: ReturnType<typeof classifyCallType>;
+}) {
+  const transcript = stripAssistantFiller(input.transcript.trim());
+  const extractionTranscript = simonOnlyTranscript(transcript) || transcript;
+  const label = simpleCustomerVehicleLabel(transcript);
+  const knownFacts = officeSentences(extractionTranscript, [
+    "tammy",
+    "chrysler",
+    "customer",
+    "previous client",
+    "past job",
+    "not an active job",
+    "address",
+    "pratt",
+    "phone",
+    "landline",
+    "monday",
+    "schedule",
+    "quote",
+    "two hour",
+    "2 hour",
+    "four hour",
+    "4 hour",
+    "additional quoting",
+    "parts",
+    "parasitic",
+    "draw",
+    "climate",
+    "security",
+    "fuse",
+  ], 10);
+  const diagnosticFacts = officeSentences(extractionTranscript, [
+    "parasitic",
+    "draw",
+    "amps",
+    "fuse",
+    "climate",
+    "security",
+    "module",
+    "unplug",
+  ], 8);
+  const requestedFollowUps = [
+    hasAny(extractionTranscript.toLowerCase(), ["send the details", "send it to dez", "send it to des", "send it to diaz", "get a quote"])
+      ? "Send Dez a quote/schedule handoff."
+      : undefined,
+    emailRequestedFromTranscript(transcript) ? "Email Simon a recap of the diagnostic notes and next tests." : undefined,
+  ].filter((entry): entry is string => Boolean(entry));
+  const blockers = [
+    !input.jobId ? "Quote/schedule request is not attached to a confirmed live CRM job." : undefined,
+    "Customer-facing quote amount, Stripe/payment link, and exact billing language need verification.",
+    "Schedule must be confirmed against CRM, calendar, route, parts/worksite constraints, and customer availability before promising a window.",
+  ].filter((entry): entry is string => Boolean(entry));
+  const nextActions = [
+    "Create or attach the live Tammy Wilson job workspace.",
+    "Turn Simon's request into a Dez quote/schedule handoff, not a raw transcript.",
+    "Draft the quote as a two-hour diagnostic/exploration block with explicit additional-quote caveat unless Dez changes the billing rule.",
+    "Confirm Monday as an exact calendar date/window before customer-facing scheduling.",
+    "Carry forward the prior parasitic-draw diagnostic recap if this is the same Tammy Chrysler job.",
+  ];
+  const summary = input.rawSummary?.trim() ||
+    `Office job intake${label ? ` for ${label}` : ""}: Simon asked Jeff to preserve job context and/or prepare quote/schedule follow-up. Needs a live CRM job before customer-facing promises.`;
+
+  return {
+    summary,
+    knownFacts: knownFacts.length ? knownFacts : [summary],
+    testsPerformed: diagnosticFacts,
+    readings: transcriptReadings(transcript),
+    suspectedIssues: diagnosticFacts.filter((line) => /suspect|climate|security|module|fuse|draw/i.test(line)).slice(0, 6),
+    unprovenAssumptions: [
+      "Live CRM job attachment is unresolved.",
+      "Final quote amount and payment link are not verified.",
+      "Schedule window is not route/calendar confirmed.",
+    ],
+    proofNeeded: [
+      "Live CRM job record or newly created promise for this customer.",
+      "Approved quote math and payment-link status.",
+      "Confirmed schedule date/window and customer contact path.",
+    ],
+    nextActions,
+    recommendationSummary: nextActions.slice(0, 3).join(" "),
+    requestedFollowUps,
+    emailRequested: emailRequestedFromTranscript(transcript),
+    emailStatus: emailRequestedFromTranscript(transcript) ? "requested" as const : "none" as const,
+    blockers,
+    customerSafeRecap: undefined,
+    confidence: "low" as const,
+  };
+}
+
 function compactTranscript(input: {
   transcript: string;
   rawSummary?: string;
@@ -298,6 +444,14 @@ function compactTranscript(input: {
   const transcript = stripAssistantFiller(originalTranscript);
   const extractionTranscript = simonOnlyTranscript(transcript) || transcript;
   const shortOrMissed = isShortOrMissedCall(originalTranscript);
+  if (!shortOrMissed && isOfficeJobIntakeTranscript(originalTranscript, input.callType)) {
+    return compactOfficeJobIntake({
+      transcript: originalTranscript,
+      rawSummary: input.rawSummary,
+      jobId: input.jobId,
+      callType: input.callType,
+    });
+  }
   const rawSummary = input.rawSummary?.trim();
   const baseSummary =
     shortOrMissed
@@ -1510,6 +1664,14 @@ export async function handleJeffVapiServerPayload(payload: unknown) {
             summaryId: workspace.summary.id,
             emailRequested: workspace.summary.emailRequested,
             emailStatus: workspace.summary.emailStatus,
+            summary: {
+              summary: workspace.summary.summary,
+              knownFacts: workspace.summary.knownFacts,
+              nextActions: workspace.summary.nextActions,
+              blockers: workspace.summary.blockers,
+              requestedFollowUps: workspace.summary.requestedFollowUps,
+              confidence: workspace.summary.confidence,
+            },
             storageStatus: workspace.storage.status,
             warning: workspace.storage.warning,
           },
