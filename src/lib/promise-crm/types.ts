@@ -210,6 +210,31 @@ export type PromisePartsRunPlan = {
   consolidateBy?: string;
 };
 
+export type PromiseDiagnosticSourceStatus =
+  | "generic-sop"
+  | "wrenchready-verified"
+  | "public-source"
+  | "licensed-source-required"
+  | "do-not-advise";
+
+export type PromiseDiagnosticTreeStep = {
+  id: string;
+  title: string;
+  instruction: string;
+  sourceStatus: PromiseDiagnosticSourceStatus;
+  sourceLabel?: string;
+  sourceUrl?: string;
+  requiredTools?: string[];
+  expectedReading?: string;
+  recordAs?: string;
+  stopPoint?: string;
+  ifPass?: string;
+  ifFail?: string;
+  photoRequired?: string;
+  safetyNote?: string;
+  customerApprovalRequired?: boolean;
+};
+
 export type PromiseFieldExecutionPacket = {
   serviceGoal?: string;
   partsChecklist: string[];
@@ -221,6 +246,7 @@ export type PromiseFieldExecutionPacket = {
   fitmentCautions: string[];
   photosRequired: string[];
   inspectionChecklist: string[];
+  diagnosticTree?: PromiseDiagnosticTreeStep[];
   handoffChecklist: string[];
   comebackPreventionSteps: string[];
   notesTemplate?: string;
