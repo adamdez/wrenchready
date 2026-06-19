@@ -15,6 +15,7 @@ import {
 import { getJeffCapabilityReport } from "@/lib/jeff-field-assistant/capabilities";
 import { searchWrenchReadyKnowledgeFiles } from "@/lib/jeff-field-assistant/knowledge";
 import { getJeffOperatingContextPacket } from "@/lib/jeff-field-assistant/operating-context";
+import { buildDiagnosticTreeSummary } from "@/lib/promise-crm/diagnostic-tree";
 import { getPromiseRecords, updatePromiseRecord, upsertPromiseQuoteDraftForReview } from "@/lib/promise-crm/server";
 import { buildPromiseQuotePacket } from "@/lib/promise-crm/quote-packet";
 import type { PromiseFieldExecutionPacket, PromisePartItem, PromisePaymentCollection, PromiseRecord } from "@/lib/promise-crm/types";
@@ -1534,6 +1535,7 @@ function buildQuoteDraftExecutionPacket(input: {
       : input.priorDiagnosticFacts.length
         ? input.priorDiagnosticFacts
         : ["Confirm customer complaint.", "Record before/after readings for the quoted diagnostic block."],
+    diagnosticTree: [],
     handoffChecklist: input.handoffChecklist.length
       ? input.handoffChecklist
       : [
@@ -2854,25 +2856,78 @@ export async function getFieldBrief(payload: unknown) {
 
   const storedContext = await buildStoredContextPacket(job);
   const context = storedContext.context;
-  const brief = {
-    customer: job.customer,
-    vehicle: vehicleLabel(job),
-    serviceScope: job.serviceScope,
-    authorizedScope: context.authorizedScope,
-    approval: customerApprovalLabel(job),
-    stopPoints: context.stopPoints,
-    diagnosticPath: job.fieldExecution?.inspectionChecklist || [],
-    partsStatus: context.partsStatus,
-    invoicePaymentStatus: context.invoicePaymentStatus,
-    evidenceChecklist: job.fieldExecution?.photosRequired || [],
-    nextAction: context.safeNextActions[0],
-  };
+    const brief = {
+      customer: job.customer,
+      vehicle: vehicleLabel(job),
+      serviceScope: job.serviceScope,
+      authorizedScope: context.authorizedScope,
+      approval: customerApprovalLabel(job),
+      stopPoints: context.stopPoints,
+      diagnosticPath: job.fieldExecution?.inspectionChecklist || [],
+      diagnosticTree: buildDiagnosticTreeSummary({
+        serviceScope: job.serviceScope,
+        customerApproval: job.customerApproval,
+        topRisks: job.topRisks,
+        fieldExecution: job.fieldExecution,
+      }),
+      fieldPageUrl: `${getAppBaseUrl()}/ops/promises/${job.id}#diagnostic-tree`,
+      partsStatus: context.partsStatus,
+      invoicePaymentStatus: context.invoicePaymentStatus,
+      evidenceChecklist: job.fieldExecution?.photosRequired || [],
+      nextAction: context.safeNextActions[0],
+    };
 
   return result(
     "get_field_brief",
     `${job.customer.name}, ${vehicleLabel(job)}. ${job.serviceScope}. ${context.safeNextActions[0]}`,
     { brief },
     [...warnings, ...storedContext.warnings],
+  );
+}
+
+export async function getDiagnosticTreeForField(payload: unknown) {
+  const input = isObject(payload) ? payload : {};
+  const jobId = optionalString(input.jobId);
+
+  if (!jobId) {
+    return blocked(
+      "get_diagnostic_tree",
+      "I need the job id before I can read the diagnostic tree.",
+      { diagnosticTree: null },
+    );
+  }
+
+  const { job, warnings } = await findJob(jobId);
+  if (!job) {
+    return blocked("get_diagnostic_tree", "I could not find that job id.", { diagnosticTree: null }, warnings);
+  }
+
+  const diagnosticTree = buildDiagnosticTreeSummary({
+    serviceScope: job.serviceScope,
+    customerApproval: job.customerApproval,
+    topRisks: job.topRisks,
+    fieldExecution: job.fieldExecution,
+  });
+
+  const firstStep = diagnosticTree.steps[0];
+  const firstInstruction = firstStep?.instruction.replace(/[.?!]\s*$/, "");
+  const sourceGateSummary = diagnosticTree.sourceGates[0]
+    ? ` Source gate: ${diagnosticTree.sourceGates[0]}`
+    : "";
+
+  return result(
+    "get_diagnostic_tree",
+    firstStep
+      ? `${firstStep.title}. ${firstInstruction}.${sourceGateSummary}`
+      : "No diagnostic tree is attached yet. Start by confirming the complaint and approved scope.",
+    {
+      customer: job.customer,
+      vehicle: vehicleLabel(job),
+      serviceScope: job.serviceScope,
+      fieldPageUrl: `${getAppBaseUrl()}/ops/promises/${job.id}#diagnostic-tree`,
+      diagnosticTree,
+    },
+    warnings,
   );
 }
 
@@ -5080,6 +5135,7 @@ export async function preparePartsCartForSimon(payload: unknown) {
           fitmentCautions: job.fieldExecution?.fitmentCautions || [],
           photosRequired: job.fieldExecution?.photosRequired || [],
           inspectionChecklist: job.fieldExecution?.inspectionChecklist || [],
+          diagnosticTree: job.fieldExecution?.diagnosticTree || [],
           handoffChecklist: job.fieldExecution?.handoffChecklist || [],
           comebackPreventionSteps: job.fieldExecution?.comebackPreventionSteps || [],
           notesTemplate: job.fieldExecution?.notesTemplate,
@@ -5283,6 +5339,19 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
       name: "get_field_brief",
       description: "Read a short field brief with scope, stop points, evidence, parts, and payment status.",
       endpoint: `${BASE_ROUTE}/get-field-brief`,
+      method: "POST",
+      parameters: {
+        type: "object",
+        properties: {
+          jobId: { type: "string" },
+        },
+        required: ["jobId"],
+      },
+    },
+    {
+      name: "get_diagnostic_tree",
+      description: "Read the live source-gated diagnostic tree for a field job, including source status, stop points, and the mobile field-page link.",
+      endpoint: `${BASE_ROUTE}/get-diagnostic-tree`,
       method: "POST",
       parameters: {
         type: "object",

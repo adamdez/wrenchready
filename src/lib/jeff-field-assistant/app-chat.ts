@@ -1092,6 +1092,8 @@ function buildFieldBriefContextText(brief: unknown) {
     fieldBriefLine("Approval", brief.approval),
     fieldBriefLine("Stop points", brief.stopPoints),
     fieldBriefLine("Known diagnostic path", brief.diagnosticPath),
+    fieldBriefLine("Diagnostic tree", isObject(brief.diagnosticTree) ? brief.diagnosticTree.sourceGates : undefined),
+    fieldBriefLine("Diagnostic tree link", brief.fieldPageUrl),
     fieldBriefLine("Parts status", brief.partsStatus),
     fieldBriefLine("Invoice/payment", brief.invoicePaymentStatus),
     fieldBriefLine("Evidence needed", brief.evidenceChecklist),

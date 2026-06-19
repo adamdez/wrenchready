@@ -25,8 +25,13 @@ import {
 } from "lucide-react";
 import { OpsPaymentLinkForm } from "@/components/ops-payment-link-form";
 import { OutboundResultForm } from "@/components/outbound-result-form";
+import { PromiseLiveStatus } from "@/components/promise-live-status";
 import { PromiseStatusForm } from "@/components/promise-status-form";
 import { QuickCloseoutForm } from "@/components/quick-closeout-form";
+import {
+  DIAGNOSTIC_SOURCE_STATUS_META,
+  buildDiagnosticTreeSummary,
+} from "@/lib/promise-crm/diagnostic-tree";
 import { getNextProbableVisit } from "@/lib/promise-crm/closeout-recapture";
 import { isQuoteScheduleReview, promiseBoardStatusLabel } from "@/lib/promise-crm/display-state";
 import { computePromiseEconomics } from "@/lib/promise-crm/economics";
@@ -38,6 +43,8 @@ import type {
   CommercialOutcomeStatus,
   FollowThroughResolutionAction,
   OperatorTask,
+  PromiseDiagnosticSourceStatus,
+  PromiseDiagnosticTreeStep,
   PromiseFieldExecutionPacket,
   PromisePartItem,
   PromiseRecord,
@@ -67,6 +74,7 @@ const navItems = [
   ["#promise-file", "File"],
   ["#open-tasks", "Tasks"],
   ["#workflow", "Workflow"],
+  ["#diagnostic-tree", "Diag"],
   ["#timeline", "Timeline"],
   ["#quote", "Quote"],
   ["#schedule", "Schedule"],
@@ -268,6 +276,18 @@ function qaStatusClasses(value?: string) {
   if (value === "pass") return "border-[--wr-teal]/25 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
   if (value === "blocked") return "border-red-500/25 bg-red-500/10 text-red-200";
   return "border-[--wr-gold]/25 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+}
+
+function diagnosticSourceClasses(value: PromiseDiagnosticSourceStatus) {
+  if (value === "do-not-advise") return "border-red-500/30 bg-red-500/10 text-red-100";
+  if (value === "licensed-source-required") {
+    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  }
+  if (value === "wrenchready-verified") {
+    return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  }
+  if (value === "public-source") return "border-primary/25 bg-primary/10 text-primary";
+  return "border-border bg-background/70 text-muted-foreground";
 }
 
 function timelineToneClasses(tone: TimelineItem["tone"] = "default") {
@@ -599,6 +619,102 @@ function PartItemCard({ part }: { part: PromisePartItem }) {
   );
 }
 
+function DiagnosticStepCard({
+  step,
+  index,
+}: {
+  step: PromiseDiagnosticTreeStep;
+  index: number;
+}) {
+  const sourceMeta = DIAGNOSTIC_SOURCE_STATUS_META[step.sourceStatus];
+  const detailItems = [
+    step.expectedReading ? ["Expected", step.expectedReading] : null,
+    step.recordAs ? ["Record", step.recordAs] : null,
+    step.ifPass ? ["If pass", step.ifPass] : null,
+    step.ifFail ? ["If fail", step.ifFail] : null,
+    step.photoRequired ? ["Photo", step.photoRequired] : null,
+    step.safetyNote ? ["Safety", step.safetyNote] : null,
+  ].filter((entry): entry is [string, string] => Boolean(entry));
+
+  return (
+    <article className="rounded-xl border border-border bg-background/55 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill>{index + 1}</StatusPill>
+            <StatusPill className={diagnosticSourceClasses(step.sourceStatus)}>
+              {sourceMeta.shortLabel}
+            </StatusPill>
+            {step.customerApprovalRequired ? (
+              <StatusPill className="border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]">
+                Approval gate
+              </StatusPill>
+            ) : null}
+          </div>
+          <h3 className="mt-3 text-base font-semibold leading-snug text-foreground">
+            {step.title}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {step.instruction}
+          </p>
+        </div>
+        {step.sourceUrl ? (
+          <a
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-secondary/50 px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary"
+            href={step.sourceUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Source
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        ) : null}
+      </div>
+
+      {step.requiredTools?.length ? (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {step.requiredTools.map((tool) => (
+            <span
+              className="rounded-full border border-border bg-card/60 px-2 py-1 text-xs text-muted-foreground"
+              key={`${step.id}-${tool}`}
+            >
+              {tool}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {detailItems.length ? (
+        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          {detailItems.map(([label, value]) => (
+            <p
+              className="rounded-lg border border-border bg-card/50 p-2 text-muted-foreground"
+              key={`${step.id}-${label}`}
+            >
+              <span className="font-semibold text-foreground">{label}:</span> {value}
+            </p>
+          ))}
+        </div>
+      ) : null}
+
+      {step.stopPoint ? (
+        <p className="mt-3 rounded-lg border border-[--wr-gold]/25 bg-[--wr-gold]/10 p-2 text-sm text-[--wr-gold-soft]">
+          Stop: {step.stopPoint}
+        </p>
+      ) : null}
+      {step.sourceLabel ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Source status: {sourceMeta.label} / {step.sourceLabel}
+        </p>
+      ) : (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Source status: {sourceMeta.label}
+        </p>
+      )}
+    </article>
+  );
+}
+
 function QuoteDocument({
   title,
   audience,
@@ -667,7 +783,7 @@ function getCloseoutGapLabels(
 }
 
 function fieldPacketCoverage(fieldExecution?: PromiseFieldExecutionPacket) {
-  if (!fieldExecution) return { complete: 0, total: 9 };
+  if (!fieldExecution) return { complete: 0, total: 10 };
   const sections = [
     fieldExecution.serviceGoal,
     fieldExecution.partsChecklist.length,
@@ -677,6 +793,7 @@ function fieldPacketCoverage(fieldExecution?: PromiseFieldExecutionPacket) {
     fieldExecution.fitmentCautions.length,
     fieldExecution.photosRequired.length,
     fieldExecution.inspectionChecklist.length,
+    fieldExecution.diagnosticTree?.length,
     fieldExecution.closeoutSteps.length,
   ];
   return {
@@ -977,6 +1094,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
   const openMapHref = mapHref(promise.location.label || promise.location.city);
   const quoteTotal = quoteAmount(promise);
   const fieldCoverage = fieldPacketCoverage(promise.fieldExecution);
+  const diagnosticTree = buildDiagnosticTreeSummary(promise);
   const qaChecks = promise.quotePacket?.qaChecks || [];
   const qaPassCount = qaChecks.filter((check) => check.status === "pass").length;
   const qaBlockedCount = qaChecks.filter((check) => check.status === "blocked").length;
@@ -1065,6 +1183,9 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               <CommandLink href="#schedule-summary" icon={<CalendarClock className="h-4 w-4" />}>
                 Schedule
               </CommandLink>
+              <CommandLink href="#diagnostic-tree" icon={<ClipboardCheck className="h-4 w-4" />}>
+                Diag
+              </CommandLink>
               <CommandLink href="#payment" icon={<ReceiptText className="h-4 w-4" />}>
                 Invoice
               </CommandLink>
@@ -1088,6 +1209,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               </a>
             ))}
           </nav>
+          <PromiseLiveStatus promiseId={promise.id} loadedUpdatedAt={promise.updatedAt} />
         </div>
       </header>
 
@@ -1284,6 +1406,107 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section id="diagnostic-tree" className="mt-6 rounded-2xl border border-border bg-card/65 p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                Field diagnostics
+              </p>
+              <h2 className="mt-1 text-2xl font-bold text-foreground">Diagnostic tree</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {promise.fieldExecution?.serviceGoal || promise.serviceScope}
+              </p>
+            </div>
+            <div className="flex min-w-0 gap-2 overflow-x-auto pb-1 lg:flex-wrap lg:justify-end lg:overflow-visible lg:pb-0">
+              <StatusPill>{diagnosticTree.steps.length} steps</StatusPill>
+              <StatusPill
+                className={
+                  diagnosticTree.missingFactoryData
+                    ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
+                    : "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+                }
+              >
+                {diagnosticTree.missingFactoryData ? "source gates open" : "source gates clear"}
+              </StatusPill>
+              <StatusPill>{diagnosticTree.generatedFrom === "explicit-tree" ? "tree saved" : "derived tree"}</StatusPill>
+              <StatusPill>field packet {fieldCoverage.complete}/{fieldCoverage.total}</StatusPill>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="min-w-0 space-y-3">
+              {diagnosticTree.steps.map((step, index) => (
+                <DiagnosticStepCard step={step} index={index} key={step.id} />
+              ))}
+            </div>
+
+            <aside className="space-y-4">
+              <div className="rounded-xl border border-border bg-background/55 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Source status
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {Object.entries(diagnosticTree.sourceCounts)
+                    .filter(([, count]) => count > 0)
+                    .map(([status, count]) => {
+                      const typedStatus = status as PromiseDiagnosticSourceStatus;
+                      const meta = DIAGNOSTIC_SOURCE_STATUS_META[typedStatus];
+
+                      return (
+                        <div
+                          className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card/50 p-2"
+                          key={status}
+                        >
+                          <StatusPill className={diagnosticSourceClasses(typedStatus)}>
+                            {meta.shortLabel}
+                          </StatusPill>
+                          <span className="text-sm font-semibold text-foreground">{count}</span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-background/55 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Field actions
+                </p>
+                <div className="mt-3 grid gap-2">
+                  <CommandLink href={`/jeff/messages?jobId=${promise.id}`} icon={<Sparkles className="h-4 w-4" />} primary>
+                    Ask Jeff
+                  </CommandLink>
+                  <CommandLink href={`/jeff/photo-drop?jobId=${promise.id}`} icon={<ImagePlus className="h-4 w-4" />}>
+                    Upload Proof
+                  </CommandLink>
+                  <CommandLink href="https://www.oem1stop.com/" icon={<ExternalLink className="h-4 w-4" />} external>
+                    OEM1Stop
+                  </CommandLink>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-background/55 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Source gates
+                </p>
+                {diagnosticTree.sourceGates.length ? (
+                  <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    {diagnosticTree.sourceGates.slice(0, 6).map((gate) => (
+                      <li className="flex min-w-0 gap-2" key={gate}>
+                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[--wr-gold-soft]" />
+                        <span className="break-words">{gate}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    No open source gates on this tree.
+                  </p>
+                )}
+              </div>
+            </aside>
           </div>
         </section>
 

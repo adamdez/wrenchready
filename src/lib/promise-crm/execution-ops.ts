@@ -1,4 +1,5 @@
 import type {
+  PromiseDiagnosticTreeStep,
   PromiseFieldExecutionPacket,
   PromiseJobStage,
   PromisePartItem,
@@ -16,6 +17,7 @@ import type {
   PromiseWarrantySeverity,
   PromiseWarrantyCase,
 } from "@/lib/promise-crm/types";
+import { normalizeDiagnosticTree } from "@/lib/promise-crm/diagnostic-tree";
 
 const JOB_STAGE_PREFIX = "__job-stage::";
 const FIELD_PACKET_PREFIX = "__field-packet::";
@@ -118,6 +120,10 @@ function normalizePartsRunPlan(value: unknown): PromisePartsRunPlan | undefined 
     : undefined;
 }
 
+function normalizeDiagnosticTreePlan(value: unknown): PromiseDiagnosticTreeStep[] {
+  return normalizeDiagnosticTree(value);
+}
+
 function normalizeRecurringActivityList(value: unknown) {
   if (!Array.isArray(value)) return [];
 
@@ -210,6 +216,7 @@ export function normalizeFieldExecutionPacket(
     fitmentCautions: normalizeStringList(value.fitmentCautions),
     photosRequired: normalizeStringList(value.photosRequired),
     inspectionChecklist: normalizeStringList(value.inspectionChecklist),
+    diagnosticTree: normalizeDiagnosticTreePlan(value.diagnosticTree),
     handoffChecklist: normalizeStringList(value.handoffChecklist),
     comebackPreventionSteps: normalizeStringList(value.comebackPreventionSteps),
     notesTemplate: toOptionalString(value.notesTemplate),
@@ -228,6 +235,7 @@ export function normalizeFieldExecutionPacket(
     normalized.fitmentCautions.length > 0 ||
     normalized.photosRequired.length > 0 ||
     normalized.inspectionChecklist.length > 0 ||
+    (normalized.diagnosticTree?.length || 0) > 0 ||
     normalized.handoffChecklist.length > 0 ||
     normalized.comebackPreventionSteps.length > 0 ||
     normalized.notesTemplate ||
@@ -255,6 +263,7 @@ export function mergeFieldExecutionPacket(
     fitmentCautions: updates.fitmentCautions ?? current?.fitmentCautions ?? [],
     photosRequired: updates.photosRequired ?? current?.photosRequired ?? [],
     inspectionChecklist: updates.inspectionChecklist ?? current?.inspectionChecklist ?? [],
+    diagnosticTree: updates.diagnosticTree ?? current?.diagnosticTree ?? [],
     handoffChecklist: updates.handoffChecklist ?? current?.handoffChecklist ?? [],
     comebackPreventionSteps:
       updates.comebackPreventionSteps ?? current?.comebackPreventionSteps ?? [],

@@ -63,6 +63,10 @@ assert(
   catalog.assistant?.tools?.some((tool) => tool.name === "check_stripe_payment_status"),
   "catalog should expose Stripe payment status checks",
 );
+assert(
+  catalog.assistant?.tools?.some((tool) => tool.name === "get_diagnostic_tree"),
+  "catalog should expose source-gated diagnostic tree walkthroughs",
+);
 
 const operatingContext = await request("/api/al/wrenchready/jeff/tools/get-jeff-operating-context", {
   focus: "quote parts pricing",
@@ -100,6 +104,31 @@ if (active.data?.job?.id !== "jeff-fixture-tammy-chrysler") {
     ].join(" "),
   );
 }
+
+const diagnosticTree = await request("/api/al/wrenchready/jeff/tools/get-diagnostic-tree", {
+  jobId: "jeff-fixture-tammy-chrysler",
+});
+assert(diagnosticTree.success, "diagnostic tree should load for a field job");
+assert(
+  diagnosticTree.data?.fieldPageUrl?.includes("/ops/promises/jeff-fixture-tammy-chrysler#diagnostic-tree"),
+  "diagnostic tree should include the mobile field page anchor",
+);
+assert(
+  diagnosticTree.data?.diagnosticTree?.steps?.length >= 3,
+  "diagnostic tree should return multiple field steps",
+);
+assert(
+  diagnosticTree.data?.diagnosticTree?.sourceGates?.some((gate) => /approval|licensed|service data|stop/i.test(gate)),
+  "diagnostic tree should expose source and stop gates",
+);
+assert(
+  diagnosticTree.data?.diagnosticTree?.sourceCounts?.["licensed-source-required"] >= 1,
+  "diagnostic tree should flag licensed/OEM source requirements",
+);
+assert(
+  diagnosticTree.assistantSay && !diagnosticTree.assistantSay.includes(".."),
+  "diagnostic tree spoken summary should avoid malformed punctuation",
+);
 
 const note = await request("/api/al/wrenchready/jeff/tools/record-field-note", {
   jobId: "jeff-fixture-tammy-chrysler",

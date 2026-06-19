@@ -1918,6 +1918,7 @@ function buildQuoteDraftFieldExecution(
       input.fieldExecution?.inspectionChecklist && input.fieldExecution.inspectionChecklist.length > 0
         ? input.fieldExecution.inspectionChecklist
         : ["Confirm the customer complaint.", "Record before/after readings for the quoted diagnostic block."],
+    diagnosticTree: input.fieldExecution?.diagnosticTree || [],
     handoffChecklist:
       input.fieldExecution?.handoffChecklist && input.fieldExecution.handoffChecklist.length > 0
         ? input.fieldExecution.handoffChecklist

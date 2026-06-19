@@ -157,6 +157,23 @@ type UpdatePromisePayload = {
     fitmentCautions?: string[];
     photosRequired?: string[];
     inspectionChecklist?: string[];
+    diagnosticTree?: Array<{
+      id?: string;
+      title: string;
+      instruction: string;
+      sourceStatus?: string;
+      sourceLabel?: string;
+      sourceUrl?: string;
+      requiredTools?: string[];
+      expectedReading?: string;
+      recordAs?: string;
+      stopPoint?: string;
+      ifPass?: string;
+      ifFail?: string;
+      photoRequired?: string;
+      safetyNote?: string;
+      customerApprovalRequired?: boolean;
+    }>;
     handoffChecklist?: string[];
     comebackPreventionSteps?: string[];
     notesTemplate?: string;
@@ -460,6 +477,30 @@ function isPartsRunPlanPayload(value: unknown) {
   );
 }
 
+function isDiagnosticTreeStepPayload(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    (candidate.id === undefined || typeof candidate.id === "string") &&
+    typeof candidate.title === "string" &&
+    typeof candidate.instruction === "string" &&
+    (candidate.sourceStatus === undefined || typeof candidate.sourceStatus === "string") &&
+    (candidate.sourceLabel === undefined || typeof candidate.sourceLabel === "string") &&
+    (candidate.sourceUrl === undefined || typeof candidate.sourceUrl === "string") &&
+    (candidate.requiredTools === undefined || isStringArray(candidate.requiredTools)) &&
+    (candidate.expectedReading === undefined || typeof candidate.expectedReading === "string") &&
+    (candidate.recordAs === undefined || typeof candidate.recordAs === "string") &&
+    (candidate.stopPoint === undefined || typeof candidate.stopPoint === "string") &&
+    (candidate.ifPass === undefined || typeof candidate.ifPass === "string") &&
+    (candidate.ifFail === undefined || typeof candidate.ifFail === "string") &&
+    (candidate.photoRequired === undefined || typeof candidate.photoRequired === "string") &&
+    (candidate.safetyNote === undefined || typeof candidate.safetyNote === "string") &&
+    (candidate.customerApprovalRequired === undefined ||
+      typeof candidate.customerApprovalRequired === "boolean")
+  );
+}
+
 function isFieldExecutionPayload(value: unknown) {
   if (value === null || value === undefined) return true;
   if (!value || typeof value !== "object") return false;
@@ -479,6 +520,9 @@ function isFieldExecutionPayload(value: unknown) {
     (candidate.photosRequired === undefined || isStringArray(candidate.photosRequired)) &&
     (candidate.inspectionChecklist === undefined ||
       isStringArray(candidate.inspectionChecklist)) &&
+    (candidate.diagnosticTree === undefined ||
+      (Array.isArray(candidate.diagnosticTree) &&
+        candidate.diagnosticTree.every(isDiagnosticTreeStepPayload))) &&
     (candidate.handoffChecklist === undefined || isStringArray(candidate.handoffChecklist)) &&
     (candidate.comebackPreventionSteps === undefined ||
       isStringArray(candidate.comebackPreventionSteps)) &&

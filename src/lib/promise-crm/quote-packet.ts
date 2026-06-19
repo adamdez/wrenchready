@@ -7,6 +7,10 @@ import type {
   PromiseQuotePacketStatus,
   PromiseRecord,
 } from "@/lib/promise-crm/types";
+import {
+  DIAGNOSTIC_SOURCE_STATUS_META,
+  buildDiagnosticTreeSummary,
+} from "@/lib/promise-crm/diagnostic-tree";
 
 const QUOTE_PACKET_PREFIX = "__quote-packet::";
 
@@ -194,6 +198,26 @@ function bulletList(items: string[], fallback: string) {
 function numberedList(items: string[], fallback: string) {
   const values = items.length ? items : [fallback];
   return values.map((item, index) => `${index + 1}. ${item}`).join("\n");
+}
+
+function diagnosticTreeList(promise: PromiseRecord) {
+  const tree = buildDiagnosticTreeSummary(promise);
+
+  if (!tree.steps.length) {
+    return "1. Confirm customer complaint, record evidence, and define the next approval point.";
+  }
+
+  return tree.steps.map((step, index) => {
+    const source = DIAGNOSTIC_SOURCE_STATUS_META[step.sourceStatus];
+    const extras = [
+      `source: ${source.label}`,
+      step.expectedReading ? `expected: ${step.expectedReading}` : undefined,
+      step.recordAs ? `record: ${step.recordAs}` : undefined,
+      step.stopPoint ? `stop: ${step.stopPoint}` : undefined,
+    ].filter(Boolean).join("; ");
+
+    return `${index + 1}. ${step.title}: ${step.instruction} (${extras})`;
+  }).join("\n");
 }
 
 function paymentLinkFromCollection(payment?: PromisePaymentCollection) {
@@ -405,10 +429,7 @@ function buildInternalMarkdown(promise: PromiseRecord, qaChecks: PromiseQuotePac
     "",
     "## Diagnostic / Repair Flow",
     "",
-    numberedList(
-      fieldExecution?.inspectionChecklist || [],
-      "Confirm customer complaint, record evidence, and define the next approval point.",
-    ),
+    diagnosticTreeList(promise),
     "",
     "## Buttons + Links",
     "",

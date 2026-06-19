@@ -2,6 +2,7 @@ export {
   getActiveFieldJob,
   analyzeFieldPhoto,
   checkStripePaymentStatus,
+  getDiagnosticTreeForField,
   getCurrentFieldContext,
   getFieldBrief,
   getFieldPhotos,

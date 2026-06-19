@@ -6,6 +6,7 @@ import { getJeffLocalDataPath } from "@/lib/jeff-field-assistant/local-data";
 import {
   getActiveFieldJob,
   getCurrentFieldContext,
+  getDiagnosticTreeForField,
   getFieldBrief,
   getJeffCapabilities,
   getJeffOperatingContext,
@@ -118,6 +119,7 @@ const toolHandlers: Record<string, (payload: unknown) => Promise<unknown>> = {
   get_current_field_context: getCurrentFieldContext,
   get_recent_jeff_messages: getRecentJeffMessages,
   get_field_brief: getFieldBrief,
+  get_diagnostic_tree: getDiagnosticTreeForField,
   record_field_note: recordFieldNote,
   record_field_event: recordFieldEvent,
   record_field_photo_upload: recordFieldPhotoUpload,

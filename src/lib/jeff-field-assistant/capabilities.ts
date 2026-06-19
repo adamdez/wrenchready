@@ -166,6 +166,25 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
       missing: unique([missingIf(openAiReady, "OPENAI_API_KEY")]),
     }),
     capability({
+      id: "diagnostic-tree",
+      label: "Diagnostic tree walkthrough",
+      area: "diagnostics",
+      state: "ready",
+      reason: "Jeff can read the live Promise CRM field packet, derive or use the saved diagnostic tree, preserve source-status gates, and send Simon to the mobile field page.",
+      whatJeffCanDo: "Walk Simon through the current diagnostic tree by phone or app while keeping exact specs, wiring, programming, and OEM procedure steps gated behind source status.",
+      whatJeffShouldSay: "Open the job page for the live tree. I can walk you through the next step, but exact factory specs need the source label cleared first.",
+      operatorAction: "Populate mfg specs and service-data checks on every field packet; use licensed/OEM service data for exact values and procedures.",
+      details: {
+        sourceStatuses: [
+          "Generic SOP",
+          "WrenchReady verified",
+          "Public source",
+          "Licensed/OEM source required",
+          "Do not advise",
+        ],
+      },
+    }),
+    capability({
       id: "email-send",
       label: "Send recap email",
       area: "communication",
