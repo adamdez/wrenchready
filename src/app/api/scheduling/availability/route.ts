@@ -24,11 +24,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const evaluation = schedulingEngine.evaluateAvailability(body);
+    const evaluation = await schedulingEngine.evaluateAvailability(body);
 
     return NextResponse.json({
       success: true,
-      stage: evaluation.requiredIntegrationsReady ? "integration-ready" : "scaffolded",
+      stage: evaluation.calendarTruth.status === "verified" ? "calendar-verified" : "manual-review",
       ...evaluation,
     });
   } catch (error) {

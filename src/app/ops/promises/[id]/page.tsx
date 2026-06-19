@@ -1,19 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import {
   ArrowLeft,
   CalendarClock,
+  CheckCircle2,
+  ChevronRight,
   CircleAlert,
-  DollarSign,
-  History,
+  ClipboardCheck,
+  ExternalLink,
+  FileText,
+  ImagePlus,
+  Mail,
   MapPin,
   MessageSquareShare,
   Phone,
-  Quote,
+  ReceiptText,
+  ShieldCheck,
+  Sparkles,
   UserRound,
   Wrench,
 } from "lucide-react";
+import { OpsPaymentLinkForm } from "@/components/ops-payment-link-form";
 import { OutboundResultForm } from "@/components/outbound-result-form";
 import { PromiseStatusForm } from "@/components/promise-status-form";
 import { QuickCloseoutForm } from "@/components/quick-closeout-form";
@@ -26,18 +35,68 @@ import { getPromiseRecord } from "@/lib/promise-crm/server";
 import type {
   CommercialOutcomeStatus,
   FollowThroughResolutionAction,
-  MaintenanceReminderStatus,
-  ReviewRequestStatus,
+  PromiseFieldExecutionPacket,
+  PromisePartItem,
+  PromiseRecord,
 } from "@/lib/promise-crm/types";
 
 type PromiseDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-type PromiseDetailRecord = Awaited<ReturnType<typeof getPromiseRecord>>;
+type PromiseDetailRecord = NonNullable<Awaited<ReturnType<typeof getPromiseRecord>>>;
 
-function formatVehicle(record: NonNullable<PromiseDetailRecord>) {
-  return `${record.vehicle.year} ${record.vehicle.make} ${record.vehicle.model}`;
+type TimelineItem = {
+  title: string;
+  detail: string;
+  time?: string;
+  label: string;
+  tone?: "default" | "success" | "warning" | "danger";
+};
+
+const commandButtonClass =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-background/70 px-3.5 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-secondary";
+
+const primaryCommandButtonClass =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110";
+
+const navItems = [
+  ["#overview", "Overview"],
+  ["#timeline", "Timeline"],
+  ["#quote", "Quote"],
+  ["#schedule", "Schedule"],
+  ["#parts", "Parts"],
+  ["#field-plan", "Field Plan"],
+  ["#messages", "Messages"],
+  ["#files", "Files"],
+  ["#payment", "Payment"],
+  ["#jeff", "Jeff"],
+];
+
+const customerCertaintyChecks: Array<[
+  keyof PromiseRecord["customerCertainty"],
+  string,
+]> = [
+  ["contactConfirmed", "Contact confirmed"],
+  ["arrivalWindowShared", "Arrival window shared"],
+  ["pricingExpectationShared", "Pricing expectation shared"],
+  ["updatesPlanShared", "Update plan shared"],
+  ["followUpExplained", "Follow-up explained"],
+];
+
+const dayReadinessChecks: Array<[keyof PromiseRecord["dayReadiness"], string]> = [
+  ["customerConfirmed", "Customer confirmed"],
+  ["locationConfirmed", "Location confirmed"],
+  ["partsConfirmed", "Parts confirmed"],
+  ["toolsConfirmed", "Tools confirmed"],
+  ["routeLocked", "Route locked"],
+  ["paymentMethodReady", "Payment method ready"],
+];
+
+function formatVehicle(record: PromiseDetailRecord) {
+  return [record.vehicle.year || undefined, record.vehicle.make, record.vehicle.model]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function formatCurrency(value?: number) {
@@ -47,6 +106,18 @@ function formatCurrency(value?: number) {
     currency: "USD",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "Not captured";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function outcomeLabel(value?: CommercialOutcomeStatus) {
@@ -64,19 +135,6 @@ function followThroughResolutionLabel(value?: FollowThroughResolutionAction) {
   if (value === "parked") return "Parked";
   if (value === "resolved-other") return "Resolved";
   return "Not resolved";
-}
-
-function reviewRequestLabel(value?: ReviewRequestStatus) {
-  if (value === "ready") return "Ready to send";
-  if (value === "sent") return "Sent";
-  if (value === "completed") return "Completed";
-  return "Not ready";
-}
-
-function maintenanceReminderLabel(value?: MaintenanceReminderStatus) {
-  if (value === "seeded") return "Seeded";
-  if (value === "scheduled") return "Scheduled";
-  return "Not seeded";
 }
 
 function jobStageLabel(value?: string) {
@@ -100,6 +158,18 @@ function paymentStatusLabel(value?: string) {
   if (value === "paid") return "Paid";
   if (value === "written-off") return "Written off";
   return "Not requested";
+}
+
+function quotePacketStatusLabel(value?: string) {
+  if (value === "send-ready") return "Send-ready";
+  if (value === "blocked") return "Blocked";
+  return "Draft for review";
+}
+
+function qaStatusLabel(value?: string) {
+  if (value === "pass") return "Pass";
+  if (value === "blocked") return "Blocked";
+  return "Needs review";
 }
 
 function warrantyStatusLabel(value?: string) {
@@ -129,7 +199,7 @@ function followThroughReasonLabel(value?: string) {
 }
 
 function customerApprovalLabel(
-  value: NonNullable<PromiseDetailRecord>["customerApproval"]["status"],
+  value: PromiseDetailRecord["customerApproval"]["status"],
 ) {
   if (value === "awaiting-approval") return "Awaiting approval";
   if (value === "approved") return "Approved";
@@ -137,8 +207,467 @@ function customerApprovalLabel(
   return "Not needed";
 }
 
+function phoneHref(phone?: string) {
+  const digits = phone?.replace(/\D/g, "") || "";
+  if (!digits) return undefined;
+  const normalized = digits.length === 10 ? `1${digits}` : digits;
+  return `tel:+${normalized}`;
+}
+
+function smsHref(phone?: string) {
+  const digits = phone?.replace(/\D/g, "") || "";
+  if (!digits) return undefined;
+  const normalized = digits.length === 10 ? `1${digits}` : digits;
+  return `sms:+${normalized}`;
+}
+
+function emailHref(email: string | undefined, promise: PromiseDetailRecord) {
+  if (!email) return undefined;
+  const subject = `WrenchReady update: ${promise.serviceScope}`;
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}`;
+}
+
+function mapHref(address?: string) {
+  const query = address?.trim() || "Spokane WA";
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function quoteAmount(promise: PromiseDetailRecord) {
+  return (
+    promise.customerApproval.requestedAmount ??
+    promise.economics?.quotedAmount ??
+    promise.economics?.finalInvoiceAmount
+  );
+}
+
+function riskClasses(risk: PromiseDetailRecord["readinessRisk"]) {
+  if (risk === "high") return "border-red-500/30 bg-red-500/10 text-red-200";
+  if (risk === "medium") {
+    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  }
+  return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+}
+
+function qaStatusClasses(value?: string) {
+  if (value === "pass") return "border-[--wr-teal]/25 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  if (value === "blocked") return "border-red-500/25 bg-red-500/10 text-red-200";
+  return "border-[--wr-gold]/25 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+}
+
+function timelineToneClasses(tone: TimelineItem["tone"] = "default") {
+  if (tone === "success") return "border-[--wr-teal]/40 bg-[--wr-teal]/15 text-[--wr-teal-soft]";
+  if (tone === "warning") return "border-[--wr-gold]/40 bg-[--wr-gold]/15 text-[--wr-gold-soft]";
+  if (tone === "danger") return "border-red-500/40 bg-red-500/15 text-red-200";
+  return "border-primary/30 bg-primary/10 text-primary";
+}
+
+function buildTimeline(promise: PromiseDetailRecord): TimelineItem[] {
+  const items: TimelineItem[] = [
+    {
+      title: "Promise record created",
+      detail: `${promise.customer.name} entered the CRM for ${promise.serviceScope}.`,
+      time: promise.createdAt,
+      label: "CRM",
+    },
+    {
+      title: "Record updated",
+      detail: promise.nextAction,
+      time: promise.updatedAt,
+      label: "CRM",
+    },
+    {
+      title: "Current appointment window",
+      detail: promise.scheduledWindow.label,
+      time: promise.scheduledWindow.startIso,
+      label: "Schedule",
+      tone: promise.scheduledWindow.startIso ? "success" : "warning",
+    },
+  ];
+
+  if (promise.customerApproval.requestedAt) {
+    items.push({
+      title: "Customer approval requested",
+      detail: `${promise.customerApproval.requestedService || promise.serviceScope} / ${formatCurrency(promise.customerApproval.requestedAmount)}`,
+      time: promise.customerApproval.requestedAt,
+      label: "Quote",
+      tone: promise.customerApproval.status === "approved" ? "success" : "warning",
+    });
+  }
+
+  if (promise.customerApproval.respondedAt) {
+    items.push({
+      title: `Customer ${customerApprovalLabel(promise.customerApproval.status).toLowerCase()}`,
+      detail: promise.customerApproval.summary || "Customer approval status updated.",
+      time: promise.customerApproval.respondedAt,
+      label: "Customer",
+      tone: promise.customerApproval.status === "approved" ? "success" : "danger",
+    });
+  }
+
+  if (promise.quotePacket) {
+    items.push({
+      title: "Quote packet generated",
+      detail: `${quotePacketStatusLabel(promise.quotePacket.status)} / ${promise.quotePacket.nextAction}`,
+      time: promise.quotePacket.generatedAt,
+      label: "Quote",
+      tone: promise.quotePacket.status === "blocked" ? "danger" : "warning",
+    });
+  }
+
+  if (promise.paymentCollection?.depositRequestedAt) {
+    items.push({
+      title: "Deposit requested",
+      detail: `${formatCurrency(promise.paymentCollection.depositRequestedAmount)} / ${paymentStatusLabel(promise.paymentCollection.status)}`,
+      time: promise.paymentCollection.depositRequestedAt,
+      label: "Payment",
+      tone: "warning",
+    });
+  }
+
+  if (promise.paymentCollection?.balanceRequestedAt) {
+    items.push({
+      title: "Balance requested",
+      detail: `${formatCurrency(promise.paymentCollection.balanceDueAmount)} / ${paymentStatusLabel(promise.paymentCollection.status)}`,
+      time: promise.paymentCollection.balanceRequestedAt,
+      label: "Payment",
+      tone: "warning",
+    });
+  }
+
+  if (promise.paymentCollection?.collectedAt || promise.paymentCollection?.depositPaidAt || promise.paymentCollection?.balancePaidAt) {
+    items.push({
+      title: "Payment collected",
+      detail: promise.paymentCollection.paymentSummary || `${formatCurrency(promise.paymentCollection.amountCollected)} collected.`,
+      time:
+        promise.paymentCollection.collectedAt ||
+        promise.paymentCollection.balancePaidAt ||
+        promise.paymentCollection.depositPaidAt,
+      label: "Payment",
+      tone: "success",
+    });
+  }
+
+  if (promise.closeout?.completedAt) {
+    items.push({
+      title: "Job closeout recorded",
+      detail: promise.closeout.workPerformedSummary || "Structured closeout captured.",
+      time: promise.closeout.completedAt,
+      label: "Closeout",
+      tone: "success",
+    });
+  }
+
+  for (const event of promise.outboundHistory || []) {
+    items.push({
+      title: event.headline,
+      detail: event.summary || `${event.channelType} via ${event.channel}`,
+      time: event.recordedAt,
+      label: event.status,
+      tone: event.status === "failed" ? "danger" : "success",
+    });
+  }
+
+  for (const entry of promise.followThroughHistory || []) {
+    items.push({
+      title: followThroughResolutionLabel(entry.action),
+      detail: `${followThroughReasonLabel(entry.reason)} / ${entry.summary || "No summary recorded"}`,
+      time: entry.resolvedAt,
+      label: "Follow-through",
+      tone: "success",
+    });
+  }
+
+  for (const activity of promise.recurringAccount?.activityHistory || []) {
+    items.push({
+      title: activity.summary,
+      detail: `${activity.kind} / ${activity.actor}`,
+      time: activity.recordedAt,
+      label: "Account",
+    });
+  }
+
+  return items.sort((a, b) => {
+    const aTime = a.time ? new Date(a.time).getTime() : 0;
+    const bTime = b.time ? new Date(b.time).getTime() : 0;
+    return bTime - aTime;
+  });
+}
+
+function Section({
+  id,
+  title,
+  eyebrow,
+  action,
+  children,
+}: {
+  id: string;
+  title: string;
+  eyebrow: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section id={id} className="scroll-mt-28 border-t border-border pt-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            {eyebrow}
+          </p>
+          <h2 className="mt-1 text-2xl font-bold text-foreground">{title}</h2>
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function StatusPill({
+  children,
+  className = "border-border bg-background/70 text-muted-foreground",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}>
+      {children}
+    </span>
+  );
+}
+
+function MetricTile({
+  label,
+  value,
+  detail,
+  icon,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="min-w-0 rounded-xl border border-border bg-background/55 p-4">
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+        {icon}
+        {label}
+      </div>
+      <p className="mt-2 break-words text-base font-semibold text-foreground">{value}</p>
+      {detail ? <p className="mt-1 break-words text-sm text-muted-foreground">{detail}</p> : null}
+    </div>
+  );
+}
+
+function CommandLink({
+  href,
+  icon,
+  children,
+  primary = false,
+  external = false,
+}: {
+  href?: string;
+  icon: ReactNode;
+  children: ReactNode;
+  primary?: boolean;
+  external?: boolean;
+}) {
+  if (!href) {
+    return (
+      <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-background/30 px-3.5 py-2 text-sm font-semibold text-muted-foreground opacity-70">
+        {icon}
+        {children}
+      </span>
+    );
+  }
+
+  return (
+    <a
+      className={primary ? primaryCommandButtonClass : commandButtonClass}
+      href={href}
+      rel={external ? "noreferrer" : undefined}
+      target={external ? "_blank" : undefined}
+    >
+      {icon}
+      {children}
+    </a>
+  );
+}
+
+function ListBlock({
+  title,
+  items,
+  empty,
+}: {
+  title: string;
+  items?: string[];
+  empty: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-background/55 p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+        {title}
+      </p>
+      {items && items.length > 0 ? (
+        <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+          {items.map((item) => (
+            <li className="flex min-w-0 gap-2" key={`${title}-${item}`}>
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+              <span className="break-words">{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-sm text-muted-foreground">{empty}</p>
+      )}
+    </div>
+  );
+}
+
+function BooleanChecklist({
+  title,
+  items,
+}: {
+  title: string;
+  items: Array<[string, boolean]>;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-background/55 p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+        {title}
+      </p>
+      <div className="mt-3 grid gap-2">
+        {items.map(([label, checked]) => (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground" key={label}>
+            <span
+              className={`inline-flex h-5 w-5 items-center justify-center rounded-full border ${
+                checked
+                  ? "border-[--wr-teal]/40 bg-[--wr-teal]/15 text-[--wr-teal-soft]"
+                  : "border-border bg-card text-muted-foreground"
+              }`}
+            >
+              {checked ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+            </span>
+            {label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PartItemCard({ part }: { part: PromisePartItem }) {
+  return (
+    <div className="rounded-xl border border-border bg-background/55 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="font-semibold text-foreground">
+            {part.quantity || 1}x {part.label}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {part.partNumber || "No part number"} / {part.vendor || "Vendor not set"}
+          </p>
+        </div>
+        <StatusPill>{part.status.replace(/-/g, " ")}</StatusPill>
+      </div>
+      <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+        <p>Location: {part.vendorLocation || "Not captured"}</p>
+        <p>Cost: {formatCurrency(part.estimatedCost)}</p>
+        <p className="sm:col-span-2">Fitment: {part.fitmentNotes || "Verify VIN/options before ordering."}</p>
+        {part.notes ? <p className="sm:col-span-2">Notes: {part.notes}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+function QuoteDocument({
+  title,
+  audience,
+  summary,
+  markdown,
+  defaultOpen = false,
+}: {
+  title: string;
+  audience: string;
+  summary: string;
+  markdown: string;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details
+      className="rounded-xl border border-border bg-background/55"
+      open={defaultOpen}
+    >
+      <summary className="cursor-pointer list-none p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+              {audience}
+            </p>
+            <p className="mt-1 font-semibold text-foreground">{title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
+          </div>
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+            Expand
+            <ChevronRight className="h-3.5 w-3.5" />
+          </span>
+        </div>
+      </summary>
+      <pre className="mx-4 mb-4 max-h-[460px] overflow-auto whitespace-pre-wrap break-words rounded-xl border border-border bg-card/70 p-4 text-xs leading-relaxed text-muted-foreground">
+        {markdown}
+      </pre>
+    </details>
+  );
+}
+
+function QuickActionUnavailable({ label, reason }: { label: string; reason: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-background/55 p-4">
+      <p className="text-sm font-semibold text-foreground">{label}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{reason}</p>
+    </div>
+  );
+}
+
+function getCloseoutGapLabels(
+  promise: PromiseDetailRecord,
+  nextProbableVisit: ReturnType<typeof getNextProbableVisit>,
+  proofScore: number,
+  approvedAssets: number,
+) {
+  return [
+    !promise.closeout?.workPerformedSummary ? "work summary" : null,
+    !promise.closeout?.customerConditionSummary ? "customer condition" : null,
+    !promise.closeout?.customerRecap?.summary ? "customer recap summary" : null,
+    !promise.closeout?.reviewRequest?.summary ? "review ask summary" : null,
+    !promise.closeout?.maintenanceReminder?.summary ? "reminder summary" : null,
+    !nextProbableVisit?.reason ? "next visit reason" : null,
+    proofScore < 70 ? "proof depth" : null,
+    approvedAssets === 0 ? "permission-safe proof" : null,
+  ].filter((entry): entry is string => Boolean(entry));
+}
+
+function fieldPacketCoverage(fieldExecution?: PromiseFieldExecutionPacket) {
+  if (!fieldExecution) return { complete: 0, total: 9 };
+  const sections = [
+    fieldExecution.serviceGoal,
+    fieldExecution.partsChecklist.length,
+    fieldExecution.requiredTools.length,
+    fieldExecution.mfgSpecs.length,
+    fieldExecution.serviceDataChecks.length,
+    fieldExecution.fitmentCautions.length,
+    fieldExecution.photosRequired.length,
+    fieldExecution.inspectionChecklist.length,
+    fieldExecution.closeoutSteps.length,
+  ];
+  return {
+    complete: sections.filter(Boolean).length,
+    total: sections.length,
+  };
+}
+
 export const metadata: Metadata = {
-  title: "Promise Detail",
+  title: "Promise CRM Record",
   robots: {
     index: false,
     follow: false,
@@ -162,899 +691,810 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
   const playbook = getPlaybookRecommendation(
     `${promise.serviceScope} ${promise.commercialOutcome?.convertedService || ""} ${promise.nextAction}`,
   );
-  const closeoutGapLabels = [
-    !promise.closeout?.workPerformedSummary ? "work summary" : null,
-    !promise.closeout?.customerConditionSummary ? "customer condition" : null,
-    !promise.closeout?.customerRecap?.summary ? "customer recap summary" : null,
-    !promise.closeout?.reviewRequest?.summary ? "review ask summary" : null,
-    !promise.closeout?.maintenanceReminder?.summary ? "reminder summary" : null,
-    !nextProbableVisit?.reason ? "next visit reason" : null,
-    proof.proofScore < 70 ? "proof depth" : null,
-    proof.approvedAssets === 0 ? "permission-safe proof" : null,
-  ].filter((entry): entry is string => Boolean(entry));
+  const timeline = buildTimeline(promise);
+  const closeoutGapLabels = getCloseoutGapLabels(
+    promise,
+    nextProbableVisit,
+    proof.proofScore,
+    proof.approvedAssets,
+  );
+  const callCustomerHref = phoneHref(promise.customer.phone);
+  const textCustomerHref = smsHref(promise.customer.phone);
+  const emailCustomerHref = emailHref(promise.customer.email, promise);
+  const openMapHref = mapHref(promise.location.label || promise.location.city);
+  const quoteTotal = quoteAmount(promise);
+  const fieldCoverage = fieldPacketCoverage(promise.fieldExecution);
+  const qaChecks = promise.quotePacket?.qaChecks || [];
+  const qaPassCount = qaChecks.filter((check) => check.status === "pass").length;
+  const qaBlockedCount = qaChecks.filter((check) => check.status === "blocked").length;
+  const canRequestDeposit = promise.paymentCollection?.status === "deposit-requested";
+  const canRequestBalance = Boolean(
+    promise.paymentCollection?.balanceDueAmount &&
+      promise.paymentCollection.balanceDueAmount > 0 &&
+      promise.paymentCollection.status !== "paid",
+  );
 
   return (
-    <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              <Wrench className="h-3.5 w-3.5" />
-              Promise Detail
-            </span>
-            <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground">
-              {promise.customer.name}
-            </h1>
-            <p className="mt-3 text-lg text-muted-foreground">{promise.serviceScope}</p>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
-            {promise.scheduledWindow.label}
-          </div>
-        </div>
-
-        <div className="mt-8 grid gap-4 lg:grid-cols-4">
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <UserRound className="h-4 w-4 text-primary" />
-              Customer
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">{promise.customer.name}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{promise.customer.phone}</p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Wrench className="h-4 w-4 text-primary" />
-              Vehicle
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">{formatVehicle(promise)}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {promise.vehicle.mileage?.toLocaleString()} miles
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <MapPin className="h-4 w-4 text-primary" />
-              Location
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">{promise.location.label}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {promise.location.accessNotes || promise.location.territory}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-background/60 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <CalendarClock className="h-4 w-4 text-primary" />
-              Owner
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">{promise.owner}</p>
-            <p className="mt-1 text-sm text-muted-foreground">Risk: {promise.readinessRisk}</p>
-            <p className="mt-1 text-sm text-muted-foreground">Stage: {jobStageLabel(promise.jobStage)}</p>
-          </div>
-        </div>
-      </section>
-
-      <div className="mt-6">
-        <QuickCloseoutForm promise={promise} />
+    <div className="bg-background pb-12">
+      <div className="shell pt-6 sm:pt-8">
+        <Link
+          href="/ops/promises"
+          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Promise Board
+        </Link>
       </div>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.9fr]">
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">What was promised</h2>
-            <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-              {promise.readinessSummary}
-            </p>
-
-            <div className="mt-6 rounded-2xl border border-border bg-background/60 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                Immediate next action
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {promise.nextAction}
-              </p>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                Customer status page
-              </p>
-              <div className="mt-2 flex flex-col gap-2 text-sm text-muted-foreground">
-                <Link
-                  href={promise.customerAccess.sharePath}
-                  target="_blank"
-                  className="font-medium text-primary transition-colors hover:text-primary/80"
-                >
-                  Open customer view
-                </Link>
-                <span>{promise.customerAccess.sharePath}</span>
-                <span>Approval state: {customerApprovalLabel(promise.customerApproval.status)}</span>
+      <header className="sticky top-0 z-30 mt-4 border-y border-border bg-background/95 backdrop-blur">
+        <div className="shell py-3">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusPill className="border-primary/25 bg-primary/10 text-primary">
+                  CRM Record
+                </StatusPill>
+                <StatusPill>{jobStageLabel(promise.jobStage)}</StatusPill>
+                <StatusPill className={riskClasses(promise.readinessRisk)}>
+                  {promise.readinessRisk} risk
+                </StatusPill>
+                <StatusPill>
+                  Owner: {promise.owner}
+                </StatusPill>
               </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Operator notes</h2>
-            <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-              {promise.notes.map((note) => (
-                <li key={note} className="flex gap-2">
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                  {note}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Customer approval</h2>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Approval status
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {customerApprovalLabel(promise.customerApproval.status)}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.customerApproval.requestedService || "No approval item recorded"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Requested amount
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {formatCurrency(promise.customerApproval.requestedAmount)}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.customerApproval.summary || "No customer-facing summary recorded"}
+              <div className="mt-2 flex min-w-0 flex-col gap-1 lg:flex-row lg:items-baseline lg:gap-3">
+                <h1 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                  {promise.customer.name}
+                </h1>
+                <p className="truncate text-sm text-muted-foreground sm:text-base">
+                  {formatVehicle(promise)} / {promise.serviceScope}
                 </p>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap xl:justify-end">
+              <CommandLink href={callCustomerHref} icon={<Phone className="h-4 w-4" />} primary>
+                Call
+              </CommandLink>
+              <CommandLink href={textCustomerHref} icon={<MessageSquareShare className="h-4 w-4" />}>
+                Text
+              </CommandLink>
+              <CommandLink href={emailCustomerHref} icon={<Mail className="h-4 w-4" />}>
+                Email
+              </CommandLink>
+              <CommandLink href={openMapHref} icon={<MapPin className="h-4 w-4" />} external>
+                Map
+              </CommandLink>
+              <CommandLink href={promise.customerAccess.sharePath} icon={<UserRound className="h-4 w-4" />} external>
+                Customer
+              </CommandLink>
+              <CommandLink href="#quote" icon={<FileText className="h-4 w-4" />}>
+                Quote
+              </CommandLink>
+              <CommandLink href="#payment" icon={<ReceiptText className="h-4 w-4" />}>
+                Invoice
+              </CommandLink>
+              <CommandLink href={`/jeff/photo-drop?jobId=${promise.id}`} icon={<ImagePlus className="h-4 w-4" />}>
+                Upload
+              </CommandLink>
+              <CommandLink href={`/jeff/messages?jobId=${promise.id}`} icon={<Sparkles className="h-4 w-4" />}>
+                Ask Jeff
+              </CommandLink>
+            </div>
           </div>
 
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Field execution packet</h2>
-            {promise.fieldExecution ? (
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-background/60 p-4 md:col-span-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Service goal
+          <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 text-sm" aria-label="Promise record sections">
+            {navItems.map(([href, label]) => (
+              <a
+                className="whitespace-nowrap rounded-full border border-border bg-background/70 px-3 py-1.5 font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                href={href}
+                key={href}
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <main className="shell py-6 sm:py-8">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="min-w-0 space-y-8">
+            <Section id="overview" eyebrow="Command center" title="Overview">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <MetricTile
+                  detail={promise.customer.phone}
+                  icon={<UserRound className="h-3.5 w-3.5" />}
+                  label="Customer"
+                  value={promise.customer.name}
+                />
+                <MetricTile
+                  detail={promise.vehicle.mileage ? `${promise.vehicle.mileage.toLocaleString()} miles` : "Mileage not captured"}
+                  icon={<Wrench className="h-3.5 w-3.5" />}
+                  label="Vehicle"
+                  value={formatVehicle(promise)}
+                />
+                <MetricTile
+                  detail={promise.location.accessNotes || promise.location.territory}
+                  icon={<MapPin className="h-3.5 w-3.5" />}
+                  label="Location"
+                  value={promise.location.label}
+                />
+                <MetricTile
+                  detail={`Quote ${formatCurrency(quoteTotal)} / ${paymentStatusLabel(promise.paymentCollection?.status)}`}
+                  icon={<CalendarClock className="h-3.5 w-3.5" />}
+                  label="Schedule"
+                  value={promise.scheduledWindow.label}
+                />
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_0.85fr]">
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Immediate next action
                   </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {promise.fieldExecution.serviceGoal || "No service goal recorded"}
+                  <p className="mt-2 text-base leading-relaxed text-foreground">{promise.nextAction}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {promise.readinessSummary}
                   </p>
                 </div>
-                {[
-                  ["Parts checklist", promise.fieldExecution.partsChecklist],
-                  ["Photos required", promise.fieldExecution.photosRequired],
-                  ["Inspection checklist", promise.fieldExecution.inspectionChecklist],
-                  ["Honest add-on focus", promise.fieldExecution.upsellFocus],
-                  ["Closeout steps", promise.fieldExecution.closeoutSteps],
-                ].map(([label, items]) => (
-                  <div key={label as string} className="rounded-2xl border border-border bg-background/60 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      {label as string}
-                    </p>
-                    {Array.isArray(items) && items.length > 0 ? (
-                      <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                        {items.map((item) => (
-                          <li key={`${label}-${item}`} className="flex gap-2">
-                            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                            {item}
+
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Approval and customer view
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {customerApprovalLabel(promise.customerApproval.status)} / {formatCurrency(promise.customerApproval.requestedAmount)}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {promise.customerApproval.summary || "No customer approval summary recorded."}
+                  </p>
+                  <a
+                    className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
+                    href={promise.customerAccess.sharePath}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open customer status page
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              </div>
+            </Section>
+
+            <Section id="timeline" eyebrow="Source of truth" title="Timeline">
+              <div className="space-y-3">
+                {timeline.slice(0, 14).map((item) => (
+                  <div
+                    className="grid gap-3 rounded-xl border border-border bg-background/55 p-4 md:grid-cols-[132px_minmax(0,1fr)]"
+                    key={`${item.title}-${item.time || item.detail}`}
+                  >
+                    <div>
+                      <StatusPill className={timelineToneClasses(item.tone)}>{item.label}</StatusPill>
+                      <p className="mt-2 text-xs text-muted-foreground">{formatDateTime(item.time)}</p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground">{item.title}</p>
+                      <p className="mt-1 break-words text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            <Section
+              id="quote"
+              eyebrow="Estimate workflow"
+              title="Quote"
+              action={
+                <div className="flex flex-wrap gap-2">
+                  <CommandLink href={promise.customerAccess.sharePath} icon={<UserRound className="h-4 w-4" />} external>
+                    Customer View
+                  </CommandLink>
+                  <CommandLink href="#payment" icon={<ReceiptText className="h-4 w-4" />}>
+                    Payment
+                  </CommandLink>
+                </div>
+              }
+            >
+              {promise.quotePacket ? (
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <MetricTile label="Packet status" value={quotePacketStatusLabel(promise.quotePacket.status)} detail={`Send: ${promise.quotePacket.customerSendStatus.replace(/-/g, " ")}`} />
+                    <MetricTile label="Review owner" value={promise.quotePacket.reviewOwner} detail={`Generated by ${promise.quotePacket.generatedBy}`} />
+                    <MetricTile label="QA" value={`${qaPassCount}/${qaChecks.length} pass`} detail={qaBlockedCount ? `${qaBlockedCount} blocked` : "No hard blockers"} />
+                    <MetricTile label="Payment link" value={promise.quotePacket.paymentLinkStatus.replace(/-/g, " ")} detail={formatCurrency(quoteTotal)} />
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {qaChecks.map((check) => (
+                      <div
+                        className={`rounded-xl border p-4 text-sm ${qaStatusClasses(check.status)}`}
+                        key={`${check.label}-${check.status}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-semibold">{check.label}</p>
+                          <span className="rounded-full border border-current/20 px-2 py-0.5 text-[11px] font-semibold uppercase">
+                            {qaStatusLabel(check.status)}
+                          </span>
+                        </div>
+                        <p className="mt-2 break-words opacity-90">{check.detail || check.status}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {promise.quotePacket.blockers.length > 0 ? (
+                    <div className="rounded-xl border border-red-500/25 bg-red-500/10 p-4">
+                      <p className="text-sm font-semibold text-red-100">Blocked before customer send</p>
+                      <ul className="mt-3 space-y-2 text-sm text-red-100/85">
+                        {promise.quotePacket.blockers.map((blocker) => (
+                          <li className="flex gap-2" key={blocker}>
+                            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>{blocker}</span>
                           </li>
                         ))}
                       </ul>
-                    ) : (
-                      <p className="mt-3 text-sm text-muted-foreground">Not captured.</p>
-                    )}
-                  </div>
-                ))}
-                <div className="rounded-2xl border border-border bg-background/60 p-4 md:col-span-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Notes template
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {promise.fieldExecution.notesTemplate || "No notes template recorded"}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                No field packet captured yet.
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Collection and warranty truth</h2>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Collection
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {paymentStatusLabel(promise.paymentCollection?.status)}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Method: {promise.paymentCollection?.method || "Not captured"}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Balance due: {formatCurrency(promise.paymentCollection?.balanceDueAmount)}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.paymentCollection?.paymentSummary || "No collection summary recorded"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Warranty / comeback
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {warrantyStatusLabel(promise.warrantyCase?.status)}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.warrantyCase?.issueSummary || "No warranty issue recorded"}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Callback due: {promise.warrantyCase?.callbackDueAt || "Not scheduled"}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.warrantyCase?.resolutionSummary || "No resolution summary recorded"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Recurring account health</h2>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Account status
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {recurringStatusLabel(promise.recurringAccount?.status)}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.recurringAccount?.accountName || "No account linked"}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.recurringAccount?.primaryContactName || "No primary contact recorded"}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Cadence and terms
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.recurringAccount?.cadenceLabel || "No cadence recorded"}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.recurringAccount?.billingTerms || "No billing terms recorded"}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Vehicle count: {promise.recurringAccount?.vehicleCount ?? "Unknown"}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Monthly value: {formatCurrency(promise.recurringAccount?.monthlyValueEstimate)}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-background/60 p-4 md:col-span-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Next touch
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.recurringAccount?.nextTouchDueAt || "No next touch due"}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.recurringAccount?.nextStep || "No recurring account next step recorded"}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.recurringAccount?.summary || "No recurring account summary recorded"}
-                </p>
-              </div>
-            </div>
-            {promise.recurringAccount?.activityHistory &&
-            promise.recurringAccount.activityHistory.length > 0 ? (
-              <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Account activity
-                </p>
-                <div className="mt-3 space-y-3">
-                  {promise.recurringAccount.activityHistory.slice(0, 5).map((activity) => (
-                    <div
-                      key={`${activity.recordedAt}-${activity.summary}`}
-                      className="rounded-xl border border-border/70 bg-card/50 p-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-medium text-foreground">{activity.summary}</p>
-                        <span className="text-xs text-muted-foreground">
-                          {activity.kind} / {activity.actor}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-xs text-muted-foreground">{activity.recordedAt}</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
+                  ) : null}
 
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Commercial outcome</h2>
-            {promise.commercialOutcome ? (
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-background/60 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Outcome
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {outcomeLabel(promise.commercialOutcome.outcomeStatus)}
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {promise.commercialOutcome.convertedService || "No converted service recorded"}
-                  </p>
-                </div>
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    <QuoteDocument
+                      audience="Simon / Adam only"
+                      markdown={promise.quotePacket.internalServicePlan.markdown}
+                      summary={promise.quotePacket.internalServicePlan.summary}
+                      title={promise.quotePacket.internalServicePlan.title}
+                    />
+                    <QuoteDocument
+                      audience="Customer-safe draft"
+                      defaultOpen
+                      markdown={promise.quotePacket.externalCustomerQuote.markdown}
+                      summary={promise.quotePacket.externalCustomerQuote.summary}
+                      title={promise.quotePacket.externalCustomerQuote.title}
+                    />
+                  </div>
 
-                <div className="rounded-2xl border border-border bg-background/60 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Deferred value
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {formatCurrency(promise.commercialOutcome.deferredValueAmount)}
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {promise.commercialOutcome.outcomeSummary || "No outcome summary recorded"}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                No commercial outcome recorded yet.
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Structured closeout</h2>
-            {promise.closeout ? (
-              <>
-                {closeoutGapLabels.length > 0 ? (
-                  <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-300">
-                      Closeout still needs work
+                  <div className="rounded-xl border border-border bg-background/55 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                      Next quote action
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {closeoutGapLabels.map((gap) => (
-                        <span
-                          key={gap}
-                          className="rounded-full border border-amber-500/20 bg-background/60 px-2.5 py-1 text-[11px] text-amber-200"
-                        >
-                          {gap}
-                        </span>
+                    <p className="mt-2 text-sm text-muted-foreground">{promise.quotePacket.nextAction}</p>
+                  </div>
+                </div>
+              ) : (
+                <QuickActionUnavailable
+                  label="No quote packet captured"
+                  reason="Jeff needs to create a quote draft through the CRM tool before this can be reviewed or sent."
+                />
+              )}
+            </Section>
+
+            <Section id="schedule" eyebrow="Dispatch readiness" title="Schedule">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Appointment and route
+                  </p>
+                  <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    <p>Window: {promise.scheduledWindow.label}</p>
+                    <p>Start: {formatDateTime(promise.scheduledWindow.startIso)}</p>
+                    <p>End: {formatDateTime(promise.scheduledWindow.endIso)}</p>
+                    <p>Address: {promise.location.label}</p>
+                    <p>Access: {promise.location.accessNotes || "No access note recorded."}</p>
+                  </div>
+                  <a
+                    className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
+                    href={openMapHref}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open route in Google Maps
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+
+                <div className="grid gap-4">
+                  <BooleanChecklist
+                    title="Customer certainty"
+                    items={customerCertaintyChecks.map(([key, label]) => [
+                      label,
+                      promise.customerCertainty[key],
+                    ])}
+                  />
+                  <BooleanChecklist
+                    title="Day readiness"
+                    items={dayReadinessChecks.map(([key, label]) => [
+                      label,
+                      promise.dayReadiness[key],
+                    ])}
+                  />
+                </div>
+              </div>
+            </Section>
+
+            <Section id="parts" eyebrow="Procurement" title="Parts">
+              {promise.fieldExecution ? (
+                <div className="space-y-4">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <ListBlock
+                      empty="No parts checklist captured."
+                      items={promise.fieldExecution.partsChecklist}
+                      title="Parts checklist"
+                    />
+                    <div className="rounded-xl border border-border bg-background/55 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                        Parts run
+                      </p>
+                      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        <p>Assigned: {promise.fieldExecution.partsRunPlan?.assignedTo || "Not assigned"}</p>
+                        <p>Pickup window: {promise.fieldExecution.partsRunPlan?.pickupWindow || "Not captured"}</p>
+                        <p>Consolidate by: {promise.fieldExecution.partsRunPlan?.consolidateBy || "Not captured"}</p>
+                        <p>{promise.fieldExecution.partsRunPlan?.pickupNotes || "No pickup notes captured."}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {promise.fieldExecution.partsPlan && promise.fieldExecution.partsPlan.length > 0 ? (
+                    <div className="grid gap-3">
+                      {promise.fieldExecution.partsPlan.map((part) => (
+                        <PartItemCard key={`${part.label}-${part.partNumber || part.vendor || part.status}`} part={part} />
                       ))}
                     </div>
-                  </div>
-                ) : null}
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      Work performed
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {promise.closeout.workPerformedSummary || "No work summary recorded"}
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Completed at: {promise.closeout.completedAt || "Not captured"}
-                    </p>
+                  ) : (
+                    <QuickActionUnavailable
+                      label="No priced parts plan"
+                      reason="Jeff can research fitment and nearby inventory, but the CRM does not have a priced part line yet."
+                    />
+                  )}
+                </div>
+              ) : (
+                <QuickActionUnavailable
+                  label="No field execution packet"
+                  reason="Parts, tools, photos, and stop points need to be captured before dispatch."
+                />
+              )}
+            </Section>
+
+            <Section id="field-plan" eyebrow="Technician mode" title="Field Plan">
+              <div className="mb-4">
+                <QuickCloseoutForm promise={promise} />
+              </div>
+
+              {promise.fieldExecution ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-border bg-background/55 p-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                          Service goal
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                          {promise.fieldExecution.serviceGoal || "No service goal recorded."}
+                        </p>
+                      </div>
+                      <StatusPill>
+                        {fieldCoverage.complete}/{fieldCoverage.total} ready
+                      </StatusPill>
+                    </div>
                   </div>
 
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      Customer recap
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <ListBlock title="Required tools" items={promise.fieldExecution.requiredTools} empty="No required tools captured." />
+                    <ListBlock title="MFG specs" items={promise.fieldExecution.mfgSpecs} empty="No manufacturer specs captured." />
+                    <ListBlock title="Service data checks" items={promise.fieldExecution.serviceDataChecks} empty="No service-data checks captured." />
+                    <ListBlock title="Fitment cautions" items={promise.fieldExecution.fitmentCautions} empty="No fitment cautions captured." />
+                    <ListBlock title="Inspection checklist" items={promise.fieldExecution.inspectionChecklist} empty="No inspection checklist captured." />
+                    <ListBlock title="Photos required" items={promise.fieldExecution.photosRequired} empty="No required photos captured." />
+                    <ListBlock title="Comeback prevention" items={promise.fieldExecution.comebackPreventionSteps} empty="No comeback prevention steps captured." />
+                    <ListBlock title="Closeout steps" items={promise.fieldExecution.closeoutSteps} empty="No closeout steps captured." />
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-background/55 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                      Notes template
                     </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {promise.closeout.customerConditionSummary || "No customer recap recorded"}
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                      {promise.fieldExecution.notesTemplate || "No notes template recorded."}
                     </p>
                   </div>
                 </div>
+              ) : (
+                <QuickActionUnavailable
+                  label="No field plan captured"
+                  reason="Create a field execution packet before Simon relies on this page during the job."
+                />
+              )}
+            </Section>
 
-                <div className="mt-4 grid gap-4 xl:grid-cols-3">
-                  {[
-                    ["Now", promise.closeout.now],
-                    ["Soon", promise.closeout.soon],
-                    ["Monitor", promise.closeout.monitor],
-                  ].map(([label, items]) => (
-                    <div
-                      key={label as string}
-                      className="rounded-2xl border border-border bg-background/60 p-4"
-                    >
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                        {label as string}
-                      </p>
-                      {Array.isArray(items) && items.length > 0 ? (
-                        <ul className="mt-3 space-y-3 text-sm text-muted-foreground">
-                          {items.map((item) => (
-                            <li key={`${label}-${item.title}`} className="flex gap-2">
-                              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                              <span>
-                                <span className="font-medium text-foreground">{item.title}</span>
-                                {item.detail ? ` — ${item.detail}` : ""}
-                                {item.estimatedAmount !== undefined
-                                  ? ` (${formatCurrency(item.estimatedAmount)})`
-                                  : ""}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                          No {String(label).toLowerCase()} recap recorded.
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      Customer recap
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {promise.closeout.customerRecap?.status || "Not ready"}
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {promise.closeout.customerRecap?.summary || "No recap send summary recorded"}
-                    </p>
+            <Section
+              id="messages"
+              eyebrow="Communication"
+              title="Messages"
+              action={
+                <CommandLink href={`/jeff/messages?jobId=${promise.id}`} icon={<Sparkles className="h-4 w-4" />}>
+                  Message Jeff
+                </CommandLink>
+              }
+            >
+              <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Contact path
+                  </p>
+                  <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    <p>Phone: {promise.customer.phone}</p>
+                    <p>Email: {promise.customer.email || "Not captured"}</p>
+                    <p>Preferred: {promise.customer.preferredContact}</p>
                   </div>
-
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      Review request
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {reviewRequestLabel(promise.closeout.reviewRequest?.status)}
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {promise.closeout.reviewRequest?.summary || "No review trigger recorded"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      Maintenance reminder
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {maintenanceReminderLabel(promise.closeout.maintenanceReminder?.status)}
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {promise.closeout.maintenanceReminder?.service || "No reminder seed recorded"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-border bg-background/60 p-4 md:col-span-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      Next probable visit
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {nextProbableVisit?.service || "Not captured"}
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {nextProbableVisit?.reason || "Use closeout to connect this visit to the next one."}
-                    </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <CommandLink href={callCustomerHref} icon={<Phone className="h-4 w-4" />}>
+                      Call
+                    </CommandLink>
+                    <CommandLink href={textCustomerHref} icon={<MessageSquareShare className="h-4 w-4" />}>
+                      Text
+                    </CommandLink>
+                    <CommandLink href={emailCustomerHref} icon={<Mail className="h-4 w-4" />}>
+                      Email
+                    </CommandLink>
                   </div>
                 </div>
 
-                {promise.closeout.proofCapture ? (
-                  <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <Quote className="h-4 w-4 text-primary" />
-                      Proof capture
-                    </div>
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                          Why they booked
-                        </p>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {promise.closeout.proofCapture.bookingReason || "Not captured"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                          Promise that mattered most
-                        </p>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {promise.closeout.proofCapture.promiseThatMatteredMost || "Not captured"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                          Customer relief quote
-                        </p>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {promise.closeout.proofCapture.customerReliefQuote || "Not captured"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                          Proof notes
-                        </p>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {promise.closeout.proofCapture.proofNotes || "Not captured"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-2xl border border-border/70 bg-card/50 p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                        Saved assets
-                      </p>
-                      {promise.closeout.proofCapture.assets.length > 0 ? (
-                        <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                          {promise.closeout.proofCapture.assets.map((asset) => (
-                            <li key={`${asset.kind}-${asset.label}`} className="flex gap-2">
-                              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                              <span>
-                                <span className="font-medium text-foreground">{asset.label}</span>
-                                {asset.note ? ` - ${asset.note}` : ""}
-                                {asset.url ? ` (${asset.url})` : ""}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-3 text-sm text-muted-foreground">No proof assets logged yet.</p>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                No structured closeout recorded yet.
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Follow-through resolution</h2>
-            {promise.followThroughHistory && promise.followThroughHistory.length > 0 ? (
-              <div className="mt-4 space-y-4">
-                {promise.followThroughHistory
-                  .slice()
-                  .reverse()
-                  .map((entry) => (
-                    <div
-                      key={`${entry.resolvedAt}-${entry.action}-${entry.reason || "general"}`}
-                      className="rounded-2xl border border-border bg-background/60 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3">
+                  {[outbound.closeoutRecap, outbound.reviewAsk, outbound.reminderSeed].map((draft) => (
+                    <div className="rounded-xl border border-border bg-background/55 p-4" key={draft.headline}>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                            <History className="h-4 w-4 text-primary" />
-                            {followThroughResolutionLabel(entry.action)}
-                          </div>
-                          <p className="mt-2 text-sm text-muted-foreground">
-                            {followThroughReasonLabel(entry.reason)} / by {entry.resolvedBy}
+                          <p className="font-semibold text-foreground">{draft.headline}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {draft.status} / {draft.channel}
                           </p>
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Intl.DateTimeFormat("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                          }).format(new Date(entry.resolvedAt))}
-                        </span>
+                        {draft.subject ? <StatusPill>{draft.subject}</StatusPill> : null}
                       </div>
-                      <p className="mt-3 text-sm text-muted-foreground">
-                        {entry.summary || "No resolution summary recorded"}
+                      <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                        {draft.body}
                       </p>
+                      <p className="mt-3 text-xs text-muted-foreground">{draft.reason}</p>
                     </div>
                   ))}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                No follow-through resolution recorded yet.
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Economics snapshot</h2>
-            {economics ? (
-              <>
-                <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <DollarSign className="h-4 w-4 text-primary" />
-                      Revenue
-                    </div>
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      Quote: {formatCurrency(promise.economics?.quotedAmount)}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Final: {formatCurrency(promise.economics?.finalInvoiceAmount ?? economics.revenue)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
-                    <div className="text-sm font-semibold text-foreground">Cost stack</div>
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      Tech: {formatCurrency(economics.techPayout)}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Parts: {formatCurrency(economics.partsCost)}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Support: {formatCurrency(economics.supportCost)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
-                    <div className="text-sm font-semibold text-foreground">Clock time</div>
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      Labor: {economics.laborHours.toFixed(2)} hrs
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Travel: {economics.travelHours.toFixed(2)} hrs
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Total: {economics.clockHours.toFixed(2)} hrs
-                    </p>
-                  </div>
                 </div>
-
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      Gross profit
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">
-                      {formatCurrency(economics.grossProfitAmount)}
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Revenue less tech payout and parts cost.
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-border bg-background/60 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      Net profit estimate
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">
-                      {formatCurrency(economics.netProfitEstimateAmount)}
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {economics.netProfitPerClockHour !== undefined
-                        ? `${formatCurrency(economics.netProfitPerClockHour)} net profit per clock hour`
-                        : "Add labor and travel hours to see per-hour economics."}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Reserve assumptions
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Card fee: {economics.cardFeePercent.toFixed(2)}% (
-                    {formatCurrency(economics.cardFeeAmount)})
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Warranty reserve: {economics.warrantyReservePercent.toFixed(2)}% (
-                    {formatCurrency(economics.warrantyReserveAmount)})
-                  </p>
-                </div>
-              </>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                No economics captured yet. Add quote, invoice, costs, and hours in the promise
-                form so we can learn which promises actually create healthy work.
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <PromiseStatusForm promise={promise} />
-
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Promise breakers</h2>
-            {promise.topRisks.length > 0 ? (
-              <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-                {promise.topRisks.map((risk) => (
-                  <li key={risk} className="flex gap-2">
-                    <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-[--wr-gold]" />
-                    {risk}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                No active blockers are flagged on this promise.
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <h2 className="text-xl font-bold text-foreground">Contact path</h2>
-            <div className="mt-4 space-y-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-primary" />
-                {promise.customer.phone}
-              </div>
-              <p>Preferred contact: {promise.customer.preferredContact}</p>
-              {promise.customer.email ? <p>{promise.customer.email}</p> : null}
-            </div>
-          </div>
-
-          {(playbook.dispatchRule || playbook.quoteScript || playbook.addOnPlays.length > 0) ? (
-            <div className="rounded-3xl border border-border bg-card/50 p-6">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-xl font-bold text-foreground">Relevant playbook</h2>
-                <Link
-                  href="/ops/playbooks"
-                  className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
-                >
-                  Open full playbooks
-                </Link>
               </div>
 
-              {playbook.dispatchRule ? (
-                <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Dispatch promise
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {playbook.dispatchRule.firstPromise}
-                  </p>
-                </div>
-              ) : null}
-
-              {playbook.quoteScript ? (
-                <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Quote language
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {playbook.quoteScript.pricingLanguage}
-                  </p>
-                </div>
-              ) : null}
-
-              {playbook.addOnPlays[0] ? (
-                <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                    Closeout next-step wording
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {playbook.addOnPlays[0].customerWords}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="rounded-3xl border border-border bg-card/50 p-6">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-bold text-foreground">Outbound drafts</h2>
-              <Link
-                href={`/api/al/wrenchready/promises/${promise.id}/outbound`}
-                target="_blank"
-                className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
-              >
-                Open JSON
-              </Link>
-            </div>
-
-            <div className="mt-4 space-y-4">
-              {[
-                outbound.closeoutRecap,
-                outbound.reviewAsk,
-                outbound.reminderSeed,
-              ].map((draft) => (
-                <div key={draft.headline} className="rounded-2xl border border-border bg-background/60 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <MessageSquareShare className="h-4 w-4 text-primary" />
-                      {draft.headline}
-                    </div>
-                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-muted-foreground">
-                      {draft.status} / {draft.channel}
-                    </span>
-                  </div>
-                  {draft.subject ? (
-                    <p className="mt-3 text-sm text-foreground">Subject: {draft.subject}</p>
-                  ) : null}
-                  <pre className="mt-3 whitespace-pre-wrap rounded-xl border border-border/70 bg-card/50 p-3 text-sm text-muted-foreground">
-                    {draft.body}
-                  </pre>
-                  <p className="mt-3 text-sm text-muted-foreground">{draft.reason}</p>
-                </div>
-              ))}
-            </div>
-
-            {outbound.proofSummary.length > 0 ? (
-              <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Proof summary
+              <div className="mt-4 rounded-xl border border-border bg-background/55 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Outbound history
                 </p>
+                {promise.outboundHistory && promise.outboundHistory.length > 0 ? (
+                  <div className="mt-3 space-y-3">
+                    {promise.outboundHistory
+                      .slice()
+                      .reverse()
+                      .map((event) => (
+                        <div className="rounded-xl border border-border/70 bg-card/50 p-3" key={event.id}>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{event.headline}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {event.channelType} / {event.status} / {event.channel}
+                              </p>
+                            </div>
+                            <span className="text-xs text-muted-foreground">{formatDateTime(event.recordedAt)}</span>
+                          </div>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {event.summary || "No outbound summary recorded."}
+                          </p>
+                          {event.status === "delivered" || event.status === "responded" ? (
+                            <OutboundResultForm
+                              channelType={event.channelType}
+                              owner={promise.owner}
+                              promiseId={promise.id}
+                            />
+                          ) : null}
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">No outbound history recorded yet.</p>
+                )}
+              </div>
+            </Section>
+
+            <Section
+              id="files"
+              eyebrow="Proof and media"
+              title="Files / Photos"
+              action={
+                <CommandLink href={`/jeff/photo-drop?jobId=${promise.id}`} icon={<ImagePlus className="h-4 w-4" />}>
+                  Upload photo
+                </CommandLink>
+              }
+            >
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                        Proof score
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-foreground">{proof.proofScore}</p>
+                    </div>
+                    <StatusPill>{proof.approvedAssets} approved assets</StatusPill>
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    {proof.proofScore < 70
+                      ? "Proof is not strong enough yet. Capture job photos, customer-safe recap, and permission status."
+                      : "Proof depth is usable for closeout and customer confidence."}
+                  </p>
+                </div>
+                <ListBlock
+                  empty="No required photo checklist captured."
+                  items={promise.fieldExecution?.photosRequired}
+                  title="Photo checklist"
+                />
+              </div>
+
+              <div className="mt-4 rounded-xl border border-border bg-background/55 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Saved assets
+                </p>
+                {promise.closeout?.proofCapture?.assets && promise.closeout.proofCapture.assets.length > 0 ? (
+                  <ul className="mt-3 space-y-3 text-sm text-muted-foreground">
+                    {promise.closeout.proofCapture.assets.map((asset) => (
+                      <li className="rounded-xl border border-border/70 bg-card/50 p-3" key={`${asset.kind}-${asset.label}`}>
+                        <p className="font-semibold text-foreground">{asset.label}</p>
+                        <p className="mt-1">{asset.kind} / {asset.permissionStatus || "unknown permission"}</p>
+                        {asset.note ? <p className="mt-1">{asset.note}</p> : null}
+                        {asset.url ? (
+                          <a className="mt-2 inline-flex text-primary" href={asset.url} target="_blank" rel="noreferrer">
+                            Open asset
+                          </a>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">No uploaded media is attached to this record yet.</p>
+                )}
+              </div>
+            </Section>
+
+            <Section id="payment" eyebrow="Money and margin" title="Payment">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Collection
+                  </p>
+                  <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                    <p>Status: {paymentStatusLabel(promise.paymentCollection?.status)}</p>
+                    <p>Method: {promise.paymentCollection?.method || "Not captured"}</p>
+                    <p>Deposit: {formatCurrency(promise.paymentCollection?.depositRequestedAmount)}</p>
+                    <p>Balance due: {formatCurrency(promise.paymentCollection?.balanceDueAmount)}</p>
+                    <p>Collected: {formatCurrency(promise.paymentCollection?.amountCollected)}</p>
+                    <p>Invoice ref: {promise.paymentCollection?.invoiceReference || "Not captured"}</p>
+                    <p>{promise.paymentCollection?.paymentSummary || "No collection summary recorded."}</p>
+                  </div>
+                  <OpsPaymentLinkForm
+                    canRequestBalance={canRequestBalance}
+                    canRequestDeposit={canRequestDeposit}
+                    customerStatusPath={promise.customerAccess.sharePath}
+                    promiseId={promise.id}
+                  />
+                </div>
+
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Economics
+                  </p>
+                  {economics ? (
+                    <div className="mt-3 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+                      <p>Quote: {formatCurrency(promise.economics?.quotedAmount)}</p>
+                      <p>Final: {formatCurrency(promise.economics?.finalInvoiceAmount ?? economics.revenue)}</p>
+                      <p>Parts: {formatCurrency(economics.partsCost)}</p>
+                      <p>Tech: {formatCurrency(economics.techPayout)}</p>
+                      <p>Gross profit: {formatCurrency(economics.grossProfitAmount)}</p>
+                      <p>Net estimate: {formatCurrency(economics.netProfitEstimateAmount)}</p>
+                      <p>Labor: {economics.laborHours.toFixed(2)} hrs</p>
+                      <p>Travel: {economics.travelHours.toFixed(2)} hrs</p>
+                      <p className="sm:col-span-2">
+                        {economics.netProfitPerClockHour !== undefined
+                          ? `${formatCurrency(economics.netProfitPerClockHour)} net profit per clock hour`
+                          : "Add labor and travel to calculate per-hour economics."}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      Add quote, invoice, cost, and hours to see margin.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Section>
+
+            <Section id="jeff" eyebrow="Assistant actions" title="Jeff Notes / Assistant Actions">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Operator notes
+                  </p>
+                  {promise.notes.length > 0 ? (
+                    <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                      {promise.notes.map((note) => (
+                        <li className="flex min-w-0 gap-2" key={note}>
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                          <span className="break-words">{note}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-3 text-sm text-muted-foreground">No operator notes are visible.</p>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Relevant playbook
+                  </p>
+                  <div className="mt-3 space-y-3 text-sm text-muted-foreground">
+                    <p>{playbook.dispatchRule?.firstPromise || "No dispatch playbook matched."}</p>
+                    <p>{playbook.quoteScript?.pricingLanguage || "No quote script matched."}</p>
+                    <p>{playbook.addOnPlays[0]?.customerWords || "No closeout add-on wording matched."}</p>
+                  </div>
+                  <Link
+                    className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
+                    href="/ops/playbooks"
+                  >
+                    Open playbooks
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Follow-through
+                  </p>
+                  {promise.followThroughHistory && promise.followThroughHistory.length > 0 ? (
+                    <div className="mt-3 space-y-3">
+                      {promise.followThroughHistory
+                        .slice()
+                        .reverse()
+                        .map((entry) => (
+                          <div className="rounded-xl border border-border/70 bg-card/50 p-3" key={`${entry.resolvedAt}-${entry.action}`}>
+                            <p className="text-sm font-semibold text-foreground">{followThroughResolutionLabel(entry.action)}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {followThroughReasonLabel(entry.reason)} / by {entry.resolvedBy} / {formatDateTime(entry.resolvedAt)}
+                            </p>
+                            <p className="mt-2 text-sm text-muted-foreground">{entry.summary || "No resolution summary recorded."}</p>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-muted-foreground">No follow-through resolution recorded yet.</p>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-border bg-background/55 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    Closeout recapture
+                  </p>
+                  {closeoutGapLabels.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {closeoutGapLabels.map((gap) => (
+                        <StatusPill className="border-[--wr-gold]/25 bg-[--wr-gold]/10 text-[--wr-gold-soft]" key={gap}>
+                          {gap}
+                        </StatusPill>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-muted-foreground">Closeout has the main required fields.</p>
+                  )}
+                </div>
+              </div>
+
+              <details className="mt-4 rounded-xl border border-border bg-background/55">
+                <summary className="cursor-pointer list-none p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Edit full CRM record</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Advanced form for owner, status, quote, closeout, proof, warranty, and account fields.
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-primary" />
+                  </div>
+                </summary>
+                <div className="border-t border-border p-4">
+                  <PromiseStatusForm promise={promise} />
+                </div>
+              </details>
+            </Section>
+          </div>
+
+          <aside className="min-w-0 space-y-4 xl:sticky xl:top-36 xl:self-start">
+            <div className="rounded-xl border border-border bg-card/70 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                Next best action
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-foreground">{promise.nextAction}</p>
+              <div className="mt-4 grid gap-2">
+                <CommandLink href={`/jeff/messages?jobId=${promise.id}`} icon={<Sparkles className="h-4 w-4" />} primary>
+                  Ask Jeff
+                </CommandLink>
+                <CommandLink href="#quote" icon={<FileText className="h-4 w-4" />}>
+                  Review Quote
+                </CommandLink>
+                <CommandLink href="#field-plan" icon={<ClipboardCheck className="h-4 w-4" />}>
+                  Field Plan
+                </CommandLink>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card/70 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                Status
+              </p>
+              <div className="mt-3 grid gap-2">
+                <StatusPill>{promise.status.replace(/-/g, " ")}</StatusPill>
+                <StatusPill>{jobStageLabel(promise.jobStage)}</StatusPill>
+                <StatusPill>{quotePacketStatusLabel(promise.quotePacket?.status)}</StatusPill>
+                <StatusPill>{paymentStatusLabel(promise.paymentCollection?.status)}</StatusPill>
+                <StatusPill>{customerApprovalLabel(promise.customerApproval.status)}</StatusPill>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card/70 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                Risks
+              </p>
+              {promise.topRisks.length > 0 ? (
                 <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                  {outbound.proofSummary.map((entry) => (
-                    <li key={entry} className="flex gap-2">
-                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                      {entry}
+                  {promise.topRisks.slice(0, 5).map((risk) => (
+                    <li className="flex gap-2" key={risk}>
+                      <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-[--wr-gold]" />
+                      <span>{risk}</span>
                     </li>
                   ))}
                 </ul>
-              </div>
-            ) : null}
-
-            <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                Outbound history
-              </p>
-              {promise.outboundHistory && promise.outboundHistory.length > 0 ? (
-                <div className="mt-3 space-y-3">
-                  {promise.outboundHistory
-                    .slice()
-                    .reverse()
-                    .map((event) => (
-                      <div key={event.id} className="rounded-xl border border-border/70 bg-card/50 p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{event.headline}</p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {event.channelType} / {event.status} / {event.channel}
-                            </p>
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {new Intl.DateTimeFormat("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                            }).format(new Date(event.recordedAt))}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {event.summary || "No outbound summary recorded."}
-                        </p>
-                        {event.status === "delivered" || event.status === "responded" ? (
-                          <OutboundResultForm
-                            promiseId={promise.id}
-                            channelType={event.channelType}
-                            owner={promise.owner}
-                          />
-                        ) : null}
-                      </div>
-                    ))}
-                </div>
               ) : (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  No outbound history recorded yet.
-                </p>
+                <p className="mt-3 text-sm text-muted-foreground">No active blockers flagged.</p>
               )}
             </div>
-          </div>
+
+            <div className="rounded-xl border border-border bg-card/70 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                Warranty / account
+              </p>
+              <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <p>Warranty: {warrantyStatusLabel(promise.warrantyCase?.status)}</p>
+                <p>{promise.warrantyCase?.issueSummary || "No warranty issue recorded."}</p>
+                <p>Account: {recurringStatusLabel(promise.recurringAccount?.status)}</p>
+                <p>{promise.recurringAccount?.nextStep || "No recurring account next step."}</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card/70 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                Commercial outcome
+              </p>
+              <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <p>{outcomeLabel(promise.commercialOutcome?.outcomeStatus)}</p>
+                <p>{promise.commercialOutcome?.convertedService || promise.serviceScope}</p>
+                <p>Deferred: {formatCurrency(promise.commercialOutcome?.deferredValueAmount)}</p>
+                <p>{promise.commercialOutcome?.outcomeSummary || "No outcome summary recorded."}</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card/70 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Customer safety
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Internal service plans stay on this ops record. The public customer page reads from
+                the customer-safe approval and quote state.
+              </p>
+            </div>
+          </aside>
         </div>
-      </section>
+      </main>
     </div>
   );
 }

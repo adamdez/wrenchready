@@ -46,6 +46,10 @@ export const jeffFieldJobFixtures: JeffFieldJob[] = [
     fieldExecution: {
       serviceGoal: "Prove no-power root cause before any part recommendation.",
       partsChecklist: ["Battery/terminal service supplies only; no repair part approved yet."],
+      requiredTools: ["DVOM", "Battery tester", "Basic hand tools for access checks"],
+      mfgSpecs: ["Verify OE wiring/power distribution procedure before invasive testing."],
+      serviceDataChecks: ["Check wiring diagram, fuse layout, and applicable TSBs before parts recommendation."],
+      fitmentCautions: ["Verify VIN/engine/options before quoting any starter, module, or battery cable."],
       photosRequired: ["Battery terminals", "main ground points", "fuse/relay box", "dash/no-power state"],
       inspectionChecklist: [
         "Static battery voltage",
@@ -112,6 +116,10 @@ export const jeffFieldJobFixtures: JeffFieldJob[] = [
     fieldExecution: {
       serviceGoal: "Separate battery, cable, charging, and starter evidence.",
       partsChecklist: ["Battery replacement only if failed by test and customer approves."],
+      requiredTools: ["DVOM", "Battery load tester", "Scan tool", "Starter signal test lead"],
+      mfgSpecs: ["Confirm charging voltage target and starter circuit checks from service data."],
+      serviceDataChecks: ["Check starting circuit diagram, TSBs, and battery registration/relearn needs if applicable."],
+      fitmentCautions: ["Verify VIN, engine, battery group, terminal orientation, and starter fitment before ordering."],
       photosRequired: ["Battery label", "terminal/cable condition", "scan tool screen", "odometer"],
       inspectionChecklist: [
         "Static voltage",
@@ -178,6 +186,10 @@ export const jeffFieldJobFixtures: JeffFieldJob[] = [
     fieldExecution: {
       serviceGoal: "Replace failed battery and prove the charging system is not an immediate comeback risk.",
       partsChecklist: ["Correct Subaru battery group", "Terminal protection", "Receipt/core note"],
+      requiredTools: ["Battery tester", "Terminal cleaning tools", "Scan tool if reset/registration applies"],
+      mfgSpecs: ["Confirm battery group, CCA target, charging voltage range, and any memory/reset steps."],
+      serviceDataChecks: ["Check service data for battery replacement notes and charging-system verification."],
+      fitmentCautions: ["Verify group size, terminal orientation, hold-down fit, and core return handling."],
       photosRequired: ["Old battery label", "installed battery", "final voltage/charging reading"],
       inspectionChecklist: ["Load-test result", "Charging voltage", "Terminal condition"],
       handoffChecklist: ["Explain battery result and charging-system reading."],

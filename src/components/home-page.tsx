@@ -34,7 +34,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
 const APPOINTMENT_REQUEST_SEND_TO = "AW-18052940746/Ku9vCIGEjKEcEMqHqKBD";
 
@@ -183,10 +183,26 @@ const primaryServiceAreas = locations.filter((location) => !location.parentSlug)
 /* ───────────────────────── Intake Form ───────────────────────── */
 
 function IntakeForm() {
+  const formRef = useRef<HTMLFormElement>(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [serviceChoice, setServiceChoice] = useState("");
+  const [availableSlots, setAvailableSlots] = useState<Array<{
+    startIso: string;
+    endIso: string;
+    durationMinutes: number;
+    label: string;
+    reason: string;
+    calendarVerified: boolean;
+  }>>([]);
+  const [selectedSlot, setSelectedSlot] = useState<{
+    startIso: string;
+    endIso: string;
+    label: string;
+  } | null>(null);
+  const [availabilityMessage, setAvailabilityMessage] = useState("");
   const [intakeEvaluation, setIntakeEvaluation] = useState<{
     serviceLane: string;
     territory: string;
@@ -199,6 +215,19 @@ function IntakeForm() {
     durationMinutes: number;
     autoBook: boolean;
     customerWindowSummary: string;
+    calendarTruth?: {
+      status: "verified" | "blocked" | "error";
+      busyBlockCount: number;
+      warnings: string[];
+    };
+    routeTruthReady?: boolean;
+    safeToOfferCustomerSlots?: boolean;
+    candidateSlots?: Array<{
+      startIso: string;
+      endIso: string;
+      label: string;
+      calendarVerified: boolean;
+    }>;
   } | null>(null);
   const [confirmationEmailSent, setConfirmationEmailSent] = useState(false);
 
@@ -206,6 +235,89 @@ function IntakeForm() {
   const problemPlaceholder = selectedWedge
     ? `Describe what the vehicle is doing so we can screen the ${selectedWedge.shortLabel.toLowerCase()} path.`
     : "Describe the problem or what you need done...";
+
+  function resetSlotSelection() {
+    setAvailableSlots([]);
+    setSelectedSlot(null);
+    setAvailabilityMessage("");
+  }
+
+  function getFormSnapshot() {
+    if (!formRef.current) return null;
+
+    const data = new FormData(formRef.current);
+    const vehicle = [
+      String(data.get("year") ?? "").trim(),
+      String(data.get("make") ?? "").trim(),
+      String(data.get("model") ?? "").trim(),
+    ].filter(Boolean).join(" ");
+
+    return {
+      vehicle,
+      address: String(data.get("address") ?? "").trim(),
+      notes: String(data.get("problem") ?? "").trim(),
+      service: serviceChoice || String(data.get("service") ?? "").trim(),
+    };
+  }
+
+  async function checkOpenings() {
+    const snapshot = getFormSnapshot();
+    if (!snapshot) return;
+
+    if (!snapshot.vehicle || !snapshot.service || !snapshot.address) {
+      setErrorMessage("Add the vehicle, service, and address before checking the calendar.");
+      return;
+    }
+
+    setCheckingAvailability(true);
+    setErrorMessage("");
+    setAvailabilityMessage("");
+    setSelectedSlot(null);
+
+    try {
+      const res = await fetch("/api/scheduling/availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service: snapshot.service,
+          vehicle: snapshot.vehicle,
+          notes: snapshot.notes,
+          address: {
+            formatted: snapshot.address,
+            city: snapshot.address,
+            state: "WA",
+          },
+        }),
+      });
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(payload?.error || "Could not check openings.");
+      }
+
+      setSchedulingRead({
+        territorySupported: payload.territorySupported,
+        durationMinutes: payload.serviceEstimate?.rules?.durationMinutes ?? 0,
+        autoBook: payload.serviceEstimate?.rules?.autoBook ?? false,
+        customerWindowSummary: payload.customerWindowSummary,
+        calendarTruth: payload.calendarTruth,
+        routeTruthReady: payload.routeTruthReady,
+        safeToOfferCustomerSlots: payload.safeToOfferCustomerSlots,
+        candidateSlots: payload.candidateSlots || [],
+      });
+      setAvailableSlots(payload.candidateSlots || []);
+      setAvailabilityMessage(
+        payload.customerWindowSummary ||
+          "Calendar openings are not available right now. Send the request and Dez will confirm timing manually.",
+      );
+    } catch (err) {
+      setAvailableSlots([]);
+      setAvailabilityMessage("");
+      setErrorMessage(err instanceof Error ? err.message : "Could not check openings.");
+    } finally {
+      setCheckingAvailability(false);
+    }
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -236,8 +348,11 @@ function IntakeForm() {
           vehicle,
           serviceNeeded: serviceChoice || String(data.get("service") ?? "").trim(),
           address,
-          timing: "",
+          timing: selectedSlot?.label || "",
           notes: String(data.get("problem") ?? "").trim(),
+          requestedSlotStartIso: selectedSlot?.startIso,
+          requestedSlotEndIso: selectedSlot?.endIso,
+          requestedSlotLabel: selectedSlot?.label,
         }),
       });
       if (!res.ok) {
@@ -266,6 +381,7 @@ function IntakeForm() {
       setConfirmationEmailSent(Boolean(payload?.confirmationEmailSent));
       setSubmitted(true);
       setServiceChoice("");
+      resetSlotSelection();
       form.reset();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Something went wrong. Please call or text us instead.");
@@ -358,6 +474,7 @@ function IntakeForm() {
                 setIntakeEvaluation(null);
                 setSchedulingRead(null);
                 setConfirmationEmailSent(false);
+                resetSlotSelection();
               }}
               className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-all hover:bg-secondary"
             >
@@ -370,7 +487,7 @@ function IntakeForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
       <div className="rounded-2xl border border-border bg-background/60 p-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
           Best-fit front door
@@ -382,7 +499,10 @@ function IntakeForm() {
               <button
                 key={wedge.slug}
                 type="button"
-                onClick={() => setServiceChoice(wedge.slug)}
+                onClick={() => {
+                  setServiceChoice(wedge.slug);
+                  resetSlotSelection();
+                }}
                 className={`rounded-2xl border p-4 text-left transition-all ${
                   selected
                     ? "border-primary/30 bg-primary/10"
@@ -413,7 +533,10 @@ function IntakeForm() {
         className="form-input"
         required
         value={serviceChoice}
-        onChange={(event) => setServiceChoice(event.target.value)}
+        onChange={(event) => {
+          setServiceChoice(event.target.value);
+          resetSlotSelection();
+        }}
       >
         <option value="" disabled>What do you need?</option>
         <option value="battery-replacement">Dead battery / no-start</option>
@@ -436,6 +559,58 @@ function IntakeForm() {
         </div>
       ) : null}
       <input type="text" name="address" placeholder="Where is the vehicle? (address or ZIP)" className="form-input" required />
+      <div className="rounded-2xl border border-border bg-background/60 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Calendar openings
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              {availabilityMessage || "Check the shared calendar before requesting a time."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={checkOpenings}
+            disabled={checkingAvailability}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-all hover:bg-secondary disabled:opacity-50"
+          >
+            <Calendar className="h-4 w-4" />
+            {checkingAvailability ? "Checking..." : "Check openings"}
+          </button>
+        </div>
+        {availableSlots.length > 0 ? (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {availableSlots.map((slot) => {
+              const selected = selectedSlot?.startIso === slot.startIso;
+
+              return (
+                <button
+                  key={slot.startIso}
+                  type="button"
+                  onClick={() =>
+                    setSelectedSlot({
+                      startIso: slot.startIso,
+                      endIso: slot.endIso,
+                      label: slot.label,
+                    })
+                  }
+                  className={`rounded-xl border px-4 py-3 text-left text-sm transition-all ${
+                    selected
+                      ? "border-primary/40 bg-primary/10 text-foreground"
+                      : "border-border bg-card/50 text-muted-foreground hover:border-primary/20 hover:bg-background/70"
+                  }`}
+                >
+                  <span className="block font-semibold text-foreground">{slot.label}</span>
+                  <span className="mt-1 block text-xs">
+                    {slot.durationMinutes} min · calendar checked
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <input type="text" name="name" placeholder="Your name" className="form-input" required />
         <input type="tel" name="phone" placeholder="Phone number" className="form-input" required />

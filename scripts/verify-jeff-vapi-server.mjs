@@ -59,11 +59,13 @@ assert(config.config?.model?.functions?.some((tool) => tool.name === "get_recent
 assert(config.config?.model?.functions?.some((tool) => tool.name === "analyze_field_photo"), "config should include field photo analysis function");
 assert(config.config?.model?.functions?.some((tool) => tool.name === "send_simon_recap_email"), "config should include Simon recap email function");
 assert(config.config?.model?.functions?.some((tool) => tool.name === "prepare_quote_draft_for_review"), "config should include quote draft review function");
+assert(config.config?.model?.functions?.some((tool) => tool.name === "check_stripe_payment_status"), "config should include Stripe payment status function");
 assert(config.config?.model?.tools?.some((tool) => tool.function?.name === "get_active_field_job"), "config should include get_active_field_job Vapi tool");
 assert(config.config?.model?.tools?.some((tool) => tool.function?.name === "get_jeff_operating_context"), "config should include get_jeff_operating_context Vapi tool");
 assert(config.config?.model?.tools?.some((tool) => tool.function?.name === "get_recent_jeff_messages"), "config should include get_recent_jeff_messages Vapi tool");
 assert(config.config?.model?.tools?.some((tool) => tool.function?.name === "analyze_field_photo"), "config should include field photo analysis Vapi tool");
 assert(config.config?.model?.tools?.some((tool) => tool.function?.name === "prepare_quote_draft_for_review"), "config should include quote draft review Vapi tool");
+assert(config.config?.model?.tools?.some((tool) => tool.function?.name === "check_stripe_payment_status"), "config should include Stripe payment status Vapi tool");
 assert(config.config?.brain?.middlemanPolicy?.includes("OpenAI"), "config should document OpenAI as Jeff's brain");
 assert(config.config?.brain?.reasoningEffort === "low", "config should default Jeff backend reasoning effort to low");
 assert(!/customer or vehicle you are on/i.test(config.config?.firstMessage || ""), "first message should not force job context before helping");

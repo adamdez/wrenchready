@@ -42,6 +42,11 @@ import {
   normalizePromiseEconomics,
 } from "@/lib/promise-crm/economics";
 import {
+  extractPromiseQuotePacket,
+  mergePromiseNotesWithQuotePacket,
+  normalizePromiseQuotePacket,
+} from "@/lib/promise-crm/quote-packet";
+import {
   extractPromiseExecutionOps,
   getExecutionPacketCompleteness,
   mergeFieldExecutionPacket,
@@ -97,6 +102,7 @@ import type {
   PromiseJobStage,
   PromiseOutboundEvent,
   PromisePaymentCollection,
+  PromiseQuotePacket,
   PromiseRecord,
   PromiseRecurringAccount,
   PromiseWarrantyCase,
@@ -171,6 +177,7 @@ type UpdatePromiseInput = {
   dayReadiness?: PromiseDayReadiness | null;
   fieldExecution?: PromiseFieldExecutionPacket | null;
   paymentCollection?: PromisePaymentCollection | null;
+  quotePacket?: PromiseQuotePacket | null;
   warrantyCase?: PromiseWarrantyCase | null;
   recurringAccount?: PromiseRecurringAccount | null;
   outboundEvent?: PromiseOutboundEvent | null;
@@ -515,6 +522,10 @@ function mapPromiseRow(row: SupabasePromiseRow): PromiseRecord {
     dayReadiness,
     visibleNotes: visibleNotesWithoutReadinessState,
   } = extractPromiseReadinessState(visibleNotesWithoutCustomerState);
+  const {
+    quotePacket,
+    visibleNotes: visibleNotesWithoutQuotePacket,
+  } = extractPromiseQuotePacket(visibleNotesWithoutReadinessState);
   return reconcilePromiseRecord({
     id: row.id,
     inboundId: row.inbound_id || undefined,
@@ -550,7 +561,7 @@ function mapPromiseRow(row: SupabasePromiseRow): PromiseRecord {
     readinessSummary: row.readiness_summary,
     nextAction: row.next_action,
     topRisks: normalizeStringList(row.top_risks),
-    notes: visibleNotesWithoutReadinessState,
+    notes: visibleNotesWithoutQuotePacket,
     jobStage,
     customerCertainty,
     dayReadiness,
@@ -561,6 +572,7 @@ function mapPromiseRow(row: SupabasePromiseRow): PromiseRecord {
     customerAccess,
     customerApproval,
     economics,
+    quotePacket,
     commercialOutcome,
     closeout,
     outboundHistory,
@@ -738,6 +750,8 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const NON_OPERATOR_RECORD_MARKERS = [
   "codex",
   "mock customer",
+  "red team",
+  "red-team",
   "system test",
   "slack test",
   "sms alert verification",
@@ -1892,6 +1906,10 @@ function buildQuoteDraftFieldExecution(
         : ["No parts are approved by this quote draft unless Adam/Dez adds them after review."],
     partsPlan: input.fieldExecution?.partsPlan,
     partsRunPlan: input.fieldExecution?.partsRunPlan,
+    requiredTools: input.fieldExecution?.requiredTools || [],
+    mfgSpecs: input.fieldExecution?.mfgSpecs || [],
+    serviceDataChecks: input.fieldExecution?.serviceDataChecks || [],
+    fitmentCautions: input.fieldExecution?.fitmentCautions || [],
     photosRequired:
       input.fieldExecution?.photosRequired && input.fieldExecution.photosRequired.length > 0
         ? input.fieldExecution.photosRequired
@@ -1930,6 +1948,28 @@ function buildQuoteDraftVisibleNotes(input: PromiseQuoteDraftForReviewInput) {
   ].filter((note): note is string => Boolean(note?.trim()));
 }
 
+function isCustomerUnsafeQuoteText(value?: string) {
+  return /\b(internal|ops|crm|supabase|stripe id|payment intent|human review|review draft|draft for review|not sent)\b/i.test(
+    value || "",
+  );
+}
+
+function buildCustomerSafeQuoteSummary(input: PromiseQuoteDraftForReviewInput) {
+  const fallback = [
+    input.serviceScope,
+    input.quoteAmount !== undefined ? `$${input.quoteAmount}` : undefined,
+    input.scheduledWindowLabel,
+  ]
+    .filter(Boolean)
+    .join(" / ");
+
+  if (!input.quoteSummary || isCustomerUnsafeQuoteText(input.quoteSummary)) {
+    return fallback;
+  }
+
+  return input.quoteSummary;
+}
+
 function buildQuoteDraftPaymentCollection(): PromisePaymentCollection {
   return {
     status: "not-requested",
@@ -1945,13 +1985,7 @@ export async function upsertPromiseQuoteDraftForReview(
   const now = new Date().toISOString();
   const vehicle = parseVehicle(input.vehicleLabel);
   const location = inferQuoteDraftLocation(input);
-  const quoteSummary =
-    input.quoteSummary ||
-    [
-      input.serviceScope,
-      input.quoteAmount !== undefined ? `$${input.quoteAmount}` : undefined,
-      input.scheduledWindowLabel,
-    ].filter(Boolean).join(" / ");
+  const quoteSummary = buildCustomerSafeQuoteSummary(input);
   const customerMessage =
     input.customerMessage ||
     [
@@ -2236,6 +2270,10 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
     current.paymentCollection,
     updates.paymentCollection,
   );
+  const nextQuotePacket =
+    updates.quotePacket === undefined
+      ? current.quotePacket
+      : normalizePromiseQuotePacket(updates.quotePacket);
   const nextWarrantyCase = mergeWarrantyCase(current.warrantyCase, updates.warrantyCase);
   const nextRecurringAccount = mergeRecurringAccount(
     current.recurringAccount,
@@ -2260,6 +2298,7 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
     dayReadiness: nextDayReadiness,
     fieldExecution: nextFieldExecution,
     paymentCollection: nextPaymentCollection,
+    quotePacket: nextQuotePacket,
     warrantyCase: nextWarrantyCase,
     recurringAccount: nextRecurringAccount,
     customerAccess: current.customerAccess,
@@ -2292,40 +2331,43 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
     readiness_summary: updates.readinessSummary ?? current.readinessSummary,
     next_action: updates.nextAction ?? current.nextAction,
     top_risks: updates.topRisks ?? current.topRisks,
-    notes: mergePromiseNotesWithExecutionOps(
-      mergePromiseNotesWithReadinessState(
-        mergePromiseNotesWithCustomerState(
-          mergePromiseNotesWithOutboundHistory(
-            mergePromiseNotesWithCloseout(
-              mergePromiseNotesWithCommercialOutcome(
-                mergePromiseNotesWithFollowThroughResolution(
-                  mergePromiseNotesWithEconomics(
-                    appendNoteList(current.notes, updates.noteToAdd),
-                    updates.economics === undefined
-                      ? current.economics
-                      : normalizePromiseEconomics(updates.economics),
+    notes: mergePromiseNotesWithQuotePacket(
+      mergePromiseNotesWithExecutionOps(
+        mergePromiseNotesWithReadinessState(
+          mergePromiseNotesWithCustomerState(
+            mergePromiseNotesWithOutboundHistory(
+              mergePromiseNotesWithCloseout(
+                mergePromiseNotesWithCommercialOutcome(
+                  mergePromiseNotesWithFollowThroughResolution(
+                    mergePromiseNotesWithEconomics(
+                      appendNoteList(current.notes, updates.noteToAdd),
+                      updates.economics === undefined
+                        ? current.economics
+                        : normalizePromiseEconomics(updates.economics),
+                    ),
+                    nextFollowThroughHistory,
                   ),
-                  nextFollowThroughHistory,
+                  updates.commercialOutcome === undefined
+                    ? current.commercialOutcome
+                    : normalizeCommercialOutcome(updates.commercialOutcome),
                 ),
-                updates.commercialOutcome === undefined
-                  ? current.commercialOutcome
-                  : normalizeCommercialOutcome(updates.commercialOutcome),
+                nextCloseout,
               ),
-              nextCloseout,
+              nextOutboundHistory,
             ),
-            nextOutboundHistory,
+            current.customerAccess,
+            nextCustomerApproval,
           ),
-          current.customerAccess,
-          nextCustomerApproval,
+          nextCustomerCertainty,
+          nextDayReadiness,
         ),
-        nextCustomerCertainty,
-        nextDayReadiness,
+        nextJobStage,
+        nextFieldExecution,
+        nextPaymentCollection,
+        nextWarrantyCase,
+        nextRecurringAccount,
       ),
-      nextJobStage,
-      nextFieldExecution,
-      nextPaymentCollection,
-      nextWarrantyCase,
-      nextRecurringAccount,
+      nextQuotePacket,
     ),
     follow_through_due_at:
       updates.followThroughDueAt === undefined
@@ -2353,18 +2395,20 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
       readinessSummary: patch.readiness_summary,
       nextAction: patch.next_action,
       topRisks: patch.top_risks,
-      notes: extractPromiseReadinessState(
-        extractPromiseCustomerState(
-          extractPromiseOutboundHistory(
-            extractPromiseCloseout(
-              extractFollowThroughResolution(
-                extractPromiseExecutionOps(
-                  extractCommercialOutcome(extractPromiseEconomics(patch.notes).visibleNotes).visibleNotes,
+      notes: extractPromiseQuotePacket(
+        extractPromiseReadinessState(
+          extractPromiseCustomerState(
+            extractPromiseOutboundHistory(
+              extractPromiseCloseout(
+                extractFollowThroughResolution(
+                  extractPromiseExecutionOps(
+                    extractCommercialOutcome(extractPromiseEconomics(patch.notes).visibleNotes).visibleNotes,
+                  ).visibleNotes,
                 ).visibleNotes,
               ).visibleNotes,
             ).visibleNotes,
+            current.id,
           ).visibleNotes,
-          current.id,
         ).visibleNotes,
       ).visibleNotes,
       jobStage: nextJobStage,
@@ -2372,6 +2416,7 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
       dayReadiness: nextDayReadiness,
       fieldExecution: nextFieldExecution,
       paymentCollection: nextPaymentCollection,
+      quotePacket: nextQuotePacket,
       warrantyCase: nextWarrantyCase,
       recurringAccount: nextRecurringAccount,
       customerAccess: current.customerAccess,
@@ -2423,18 +2468,20 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
       readinessSummary: patch.readiness_summary,
       nextAction: patch.next_action,
       topRisks: patch.top_risks,
-      notes: extractPromiseReadinessState(
-        extractPromiseCustomerState(
-          extractPromiseOutboundHistory(
-            extractPromiseCloseout(
-              extractFollowThroughResolution(
-                extractPromiseExecutionOps(
-                  extractCommercialOutcome(extractPromiseEconomics(patch.notes).visibleNotes).visibleNotes,
+      notes: extractPromiseQuotePacket(
+        extractPromiseReadinessState(
+          extractPromiseCustomerState(
+            extractPromiseOutboundHistory(
+              extractPromiseCloseout(
+                extractFollowThroughResolution(
+                  extractPromiseExecutionOps(
+                    extractCommercialOutcome(extractPromiseEconomics(patch.notes).visibleNotes).visibleNotes,
+                  ).visibleNotes,
                 ).visibleNotes,
               ).visibleNotes,
             ).visibleNotes,
+            current.id,
           ).visibleNotes,
-          current.id,
         ).visibleNotes,
       ).visibleNotes,
       jobStage: nextJobStage,
@@ -2442,6 +2489,7 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
       dayReadiness: nextDayReadiness,
       fieldExecution: nextFieldExecution,
       paymentCollection: nextPaymentCollection,
+      quotePacket: nextQuotePacket,
       warrantyCase: nextWarrantyCase,
       recurringAccount: nextRecurringAccount,
       customerAccess: current.customerAccess,

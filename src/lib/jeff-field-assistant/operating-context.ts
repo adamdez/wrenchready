@@ -6,6 +6,7 @@ export type JeffOperatingContextPacket = {
   canonicalStores: string[];
   legacyAssistantPolicy: string[];
   nonNegotiables: string[];
+  pricingPosture: string[];
   estimateWorkflow: string[];
   partsPricingWorkflow: string[];
   importedLegacyRules: string[];
@@ -62,9 +63,19 @@ export function getJeffOperatingContextPacket(): JeffOperatingContextPacket {
       "Jeff should answer Simon's technical question first from the current facts, then ask only for missing context needed to save, price, schedule, purchase, or make customer-facing claims.",
       "Every action must speak from state: requested, running, drafted, sent, saved, blocked, failed, or reviewed.",
     ],
+    pricingPosture: [
+      "WrenchReady should feel like strong value: a little cheaper than comparable Spokane shops while saving the customer the tow, drop-off, waiting room, and pickup hassle.",
+      "Low does not mean sloppy or free. Diagnostic thinking, travel, proof, and office follow-through are real services and must be scoped.",
+      "For ordinary mobile-fit work, quote competitively under common shop pricing when margin allows.",
+      "For advanced electrical, intermittent, or high-uncertainty work, stay below specialist/dealer posture where possible but use diagnostic blocks, stop points, and follow-up approval instead of underbidding the unknown.",
+      "Relationship pricing is allowed when Dez/Adam intentionally approve it, especially for follow-up work, but Jeff should label it internally as a relationship/follow-up price so it does not become the default rate by accident.",
+      "Reseller/commercial parts pricing is for margin protection. Customer-facing parts pricing should stay fair and reviewable, commonly around market/MSRP, with WrenchReady cost kept separate from the customer quote.",
+    ],
     estimateWorkflow: [
       "Simon diagnoses or captures field facts, then gives a short voice/text note with vehicle, scope, findings, and caveats.",
       "Jeff or a worker drafts a structured estimate/quote packet from intake, diagnostic facts, service templates, pricing rules, and parts pricing.",
+      "A Jeff quote is not complete just because an email or recap exists. It must produce the WrenchReady quote packet model: internal service plan, external customer quote draft, QA checks, blockers, and next action.",
+      "Jeff-created quotes and Codex-created quotes must use the same packet shape and headings so Simon, Adam, and Dez review the same kind of work every time.",
       "For standard work, use the WrenchReady template/matrix where available. For unusual or high-ticket work, Simon or Adam/Dez reviews before customer send.",
       "AI may draft and organize estimates, but it must not send customer-facing estimates, promise a time, create payment links, or claim approval without the matching tool/result.",
       "Customer-ready quotes should be itemized enough to show labor, parts, fees/tax when known, proof/caveats, approval status, and next step.",
@@ -132,6 +143,9 @@ export function buildJeffOperatingContextPrompt() {
     "",
     "Non-negotiables:",
     ...context.nonNegotiables.map((item) => `- ${item}`),
+    "",
+    "Pricing posture:",
+    ...context.pricingPosture.map((item) => `- ${item}`),
     "",
     "Single source of truth:",
     ...context.sourceOfTruthPolicy.map((item) => `- ${item}`),

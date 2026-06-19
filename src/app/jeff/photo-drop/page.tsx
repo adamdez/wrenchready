@@ -21,7 +21,7 @@ type JeffPhotoDropPageProps = {
 
 export default async function JeffPhotoDropPage({ searchParams }: JeffPhotoDropPageProps) {
   const params = await searchParams;
-  const photoDrop = await getJeffPhotoDropJobs();
+  const photoDrop = await getJeffPhotoDropJobs({ includeJobId: params.jobId });
   const liveSession = params.session ? getActiveJeffLiveSessionById(params.session) : undefined;
   const allowedJobIds = new Set(
     [params.jobId, liveSession?.activeJobId].filter((value): value is string => Boolean(value)),

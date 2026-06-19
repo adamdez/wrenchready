@@ -32,4 +32,6 @@ if (process.env.JEFF_ENV_FILE) {
   loadEnvFile(resolve(process.cwd(), process.env.JEFF_ENV_FILE));
 }
 
-loadEnvFile(resolve(process.cwd(), ".env.local"));
+for (const fileName of [".env.local", ".env.vercel.local", ".env.project.local"]) {
+  loadEnvFile(resolve(process.cwd(), fileName));
+}

@@ -3,6 +3,11 @@ import "./load-local-env.mjs";
 const baseUrl = (process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
 const secret = process.env.JEFF_FIELD_ASSISTANT_TOOL_SECRET;
 const photoPin = process.env.JEFF_FIELD_PHOTO_UPLOAD_PIN;
+const opsAuthUser = process.env.WR_OPS_AUTH_USER || "ops";
+const opsAuthPassword =
+  process.env.WR_OPS_AUTH_PASSWORD ||
+  process.env.WR_OPS_BASIC_PASSWORD ||
+  process.env.JEFF_FIELD_ASSISTANT_TOOL_SECRET;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -12,6 +17,13 @@ function jsonHeaders(value = secret) {
   return {
     "Content-Type": "application/json",
     ...(value ? { Authorization: `Bearer ${value}`, "X-Vapi-Secret": value } : {}),
+  };
+}
+
+function opsAuthHeaders() {
+  assert(opsAuthPassword, "WR_OPS_AUTH_PASSWORD, WR_OPS_BASIC_PASSWORD, or JEFF_FIELD_ASSISTANT_TOOL_SECRET must be configured before ops UI verification.");
+  return {
+    Authorization: `Basic ${Buffer.from(`${opsAuthUser}:${opsAuthPassword}`).toString("base64")}`,
   };
 }
 
@@ -56,6 +68,7 @@ assert(toolNames.includes("get_jeff_operating_context"), "Jeff tool catalog shou
 assert(toolNames.includes("log_jeff_blocked_request"), "Jeff tool catalog should expose blocked-request logging.");
 assert(toolNames.includes("get_recent_jeff_messages"), "Jeff tool catalog should expose Message Jeff thread lookup.");
 assert(toolNames.includes("prepare_quote_draft_for_review"), "Jeff tool catalog should expose quote draft review workflow.");
+assert(toolNames.includes("check_stripe_payment_status"), "Jeff tool catalog should expose Stripe payment status checks.");
 
 const hubHtml = await (await rawRequest("/jeff")).text();
 assert(!/Ryan|Tammy|Kendra/.test(hubHtml), "Public Jeff hub should not expose active job customer names.");
@@ -179,6 +192,18 @@ assert(
   "Quote draft should preserve the quoted amount.",
 );
 assert(
+  quoteDraft.data?.quotePacket?.internalServicePlan?.markdown?.includes("INTERNAL SERVICE PLAN"),
+  "Quote draft should generate the WrenchReady internal service plan packet.",
+);
+assert(
+  quoteDraft.data?.quotePacket?.externalCustomerQuote?.markdown?.includes("CUSTOMER QUOTE"),
+  "Quote draft should generate the WrenchReady customer quote packet.",
+);
+assert(
+  quoteDraft.data?.quotePacket?.qaChecks?.some((check) => check.label === "Quote amount" && check.status === "pass"),
+  "Quote draft packet should include QA checks for quote amount.",
+);
+assert(
   !quoteDraft.data?.promise?.paymentCollection?.depositRequestedAmount &&
     !quoteDraft.data?.promise?.paymentCollection?.balanceDueAmount &&
     !quoteDraft.data?.promise?.paymentCollection?.depositCheckoutUrl &&
@@ -195,6 +220,43 @@ assert(
   "Quote-only customer status page should not render payment buttons.",
 );
 
+const quoteOpsHtml = await (await rawRequest(`/ops/promises/${quoteDraft.data.promiseId}`, {
+  headers: opsAuthHeaders(),
+})).text();
+assert(/CRM Record/.test(quoteOpsHtml), "Ops promise detail should render the CRM record shell.");
+assert(/Command center/.test(quoteOpsHtml), "Ops promise detail should lead with an action-first overview.");
+assert(/Timeline/.test(quoteOpsHtml), "Ops promise detail should expose the activity timeline.");
+assert(/Field Plan/.test(quoteOpsHtml), "Ops promise detail should expose the field tech plan.");
+assert(/Files \/ Photos/.test(quoteOpsHtml), "Ops promise detail should expose media and proof workflow.");
+assert(/Ask Jeff/.test(quoteOpsHtml), "Ops promise detail should expose a job-scoped Jeff action.");
+assert(
+  /Customer-safe draft/.test(quoteOpsHtml),
+  "Ops promise detail should separate customer-safe quote copy from internal service plans.",
+);
+assert(
+  !/Pay remaining balance online|Lock the visit with a deposit/i.test(quoteOpsHtml),
+  "Quote-only ops record should not imply payment buttons exist before payment-link state is ready.",
+);
+const quoteMessagesHtml = await (await rawRequest(`/jeff/messages?jobId=${quoteDraft.data.promiseId}`)).text();
+assert(
+  quoteMessagesHtml.includes(quoteDraftCustomer),
+  "Message Jeff deep link should pin the requested CRM job into the job picker.",
+);
+assert(
+  quoteMessagesHtml.includes(`value="${quoteDraft.data.promiseId}"`),
+  "Message Jeff deep link should preserve the requested CRM job id in the picker.",
+);
+const quotePhotoDropHtml = await (await rawRequest(`/jeff/photo-drop?jobId=${quoteDraft.data.promiseId}`)).text();
+assert(
+  quotePhotoDropHtml.includes(quoteDraftCustomer),
+  "Photo Drop deep link should pin the requested CRM job into the upload picker.",
+);
+const redTeamQueueSnapshot = await requestJson("/api/al/wrenchready/promises");
+assert(
+  !JSON.stringify(redTeamQueueSnapshot).includes(quoteDraftCustomer),
+  "Red-team verification quote records should stay out of the live operator queue.",
+);
+
 const mismatchedQuoteEscalation = await requestJson("/api/al/wrenchready/jeff/tools/request-approval-or-escalation", {
   jobId: "jeff-fixture-tammy-chrysler",
   reason:
@@ -206,7 +268,9 @@ const mismatchedQuoteEscalation = await requestJson("/api/al/wrenchready/jeff/to
 });
 assert(mismatchedQuoteEscalation.success === true, "Mismatched escalation should still save for review.");
 assert(
-  mismatchedQuoteEscalation.data?.jobRecordUpdateStatus === "unassigned-selected-job-conflict",
+  ["unassigned-selected-job-conflict", "unassigned-job-not-found"].includes(
+    mismatchedQuoteEscalation.data?.jobRecordUpdateStatus,
+  ),
   "Mismatched escalation should be kept out of the selected job record.",
 );
 assert(
@@ -226,12 +290,14 @@ const mismatchedQuoteDraft = await requestJson("/api/al/wrenchready/jeff/tools/p
 });
 assert(mismatchedQuoteDraft.success === true, "Mismatched quote draft should still create a review item.");
 assert(
-  mismatchedQuoteDraft.data?.selectedJobConflict === true,
-  "Mismatched quote draft should identify the selected-job conflict.",
+  mismatchedQuoteDraft.data?.selectedJobConflict === true ||
+    (mismatchedQuoteDraft.data?.createdNewPromise === true && !mismatchedQuoteDraft.data?.selectedJobId),
+  "Mismatched quote draft should identify the selected-job conflict or avoid selecting a missing fixture job.",
 );
 assert(
-  mismatchedQuoteDraft.data?.rejectedJobId === "jeff-fixture-tammy-chrysler",
-  "Mismatched quote draft should reject the selected Tammy job.",
+  mismatchedQuoteDraft.data?.rejectedJobId === "jeff-fixture-tammy-chrysler" ||
+    !mismatchedQuoteDraft.data?.selectedJobId,
+  "Mismatched quote draft should reject the selected Tammy job or create a separate review record when the fixture is unavailable.",
 );
 assert(
   mismatchedQuoteDraft.data?.promiseId !== "jeff-fixture-tammy-chrysler",
@@ -487,7 +553,9 @@ if (closeout.success) {
   );
 }
 
-const opsHtml = await (await rawRequest("/ops/field-assistant")).text();
+const opsHtml = await (await rawRequest("/ops/field-assistant", {
+  headers: opsAuthHeaders(),
+})).text();
 assert(/Latest call, open actions, and proof/.test(opsHtml), "Ops Jeff page should lead with the action-first triage panel.");
 assert(/Draft recap/.test(opsHtml), "Ops Jeff page should expose a first-screen draft recap action.");
 assert(/Send recap/.test(opsHtml), "Ops Jeff page should expose a first-screen send recap action.");

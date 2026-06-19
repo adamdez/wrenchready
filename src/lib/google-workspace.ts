@@ -470,6 +470,7 @@ export async function listGoogleCalendarEvents(input: {
 }
 
 type GoogleCalendarEventWriteInput = {
+  eventId?: string;
   summary: string;
   description?: string;
   location?: string;
@@ -480,6 +481,7 @@ type GoogleCalendarEventWriteInput = {
 
 function calendarWriteBody(input: GoogleCalendarEventWriteInput) {
   return {
+    id: input.eventId,
     summary: input.summary,
     description: input.description,
     location: input.location,
@@ -513,6 +515,35 @@ export async function createGoogleCalendarHold(input: GoogleCalendarEventWriteIn
       body: JSON.stringify(calendarWriteBody(input)),
     },
   );
+}
+
+export async function deleteGoogleCalendarEvent(eventId: string) {
+  await assertCalendarWritesReady();
+
+  const calendarId = encodeURIComponent(getGoogleWorkspaceCalendarId() || "primary");
+  const accessToken = await getGoogleWorkspaceAccessToken([CALENDAR_WRITE_SCOPE]);
+  const response = await fetch(
+    `${GOOGLE_CALENDAR_API_BASE}/calendars/${calendarId}/events/${encodeURIComponent(eventId)}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  if (response.status === 404 || response.status === 410) {
+    return { deleted: false, reason: "Event was already gone" };
+  }
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as {
+      error?: { message?: string };
+    };
+    throw new Error(body.error?.message || `Google Calendar delete failed with status ${response.status}.`);
+  }
+
+  return { deleted: true };
 }
 
 export async function upsertGoogleCalendarEventByPrivateProperty(input: GoogleCalendarEventWriteInput & {

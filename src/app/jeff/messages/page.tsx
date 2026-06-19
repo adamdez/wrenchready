@@ -16,18 +16,29 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function JeffMessagesPage() {
+type JeffMessagesPageProps = {
+  searchParams: Promise<{
+    jobId?: string;
+  }>;
+};
+
+export default async function JeffMessagesPage({ searchParams }: JeffMessagesPageProps) {
+  const params = await searchParams;
   const appAuth = getJeffFieldAppAuthStatus();
   const [thread, photoDrop] = await Promise.all([
     appAuth.required ? Promise.resolve({ messages: [], warnings: [] }) : listJeffAppThreadMessages(),
-    appAuth.required ? Promise.resolve({ jobs: [] }) : getJeffPhotoDropJobs(),
+    appAuth.required ? Promise.resolve({ jobs: [] }) : getJeffPhotoDropJobs({ includeJobId: params.jobId }),
   ]);
   const activeSession = appAuth.required ? undefined : getActiveJeffLiveSession();
   const selectableJobIds = new Set(photoDrop.jobs.map((job) => job.jobId));
   const latestThreadJobId = [...thread.messages]
     .reverse()
     .find((message) => message.jobId && selectableJobIds.has(message.jobId))?.jobId;
-  const initialSelectedJobId = activeSession?.activeJobId ||
+  const requestedJobId = params.jobId && selectableJobIds.has(params.jobId)
+    ? params.jobId
+    : undefined;
+  const initialSelectedJobId = requestedJobId ||
+    activeSession?.activeJobId ||
     latestThreadJobId ||
     (photoDrop.jobs.length === 1 ? photoDrop.jobs[0]?.jobId : undefined);
 

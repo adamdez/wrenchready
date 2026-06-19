@@ -144,7 +144,7 @@ export function QuickCloseoutForm({ promise }: QuickCloseoutFormProps) {
   }
 
   return (
-    <section className="rounded-3xl border border-border bg-card/60 p-4 sm:p-5">
+    <section className="min-w-0 rounded-3xl border border-border bg-card/60 p-4 sm:p-5">
       <div>
         <h2 className="text-lg font-bold text-foreground">Fast closeout</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -164,8 +164,8 @@ export function QuickCloseoutForm({ promise }: QuickCloseoutFormProps) {
         </div>
       ) : null}
 
-      <form className="mt-4 grid gap-3 lg:grid-cols-12" onSubmit={handleSubmit}>
-        <label className="space-y-1 lg:col-span-2">
+      <form className="mt-4 grid min-w-0 gap-3 lg:grid-cols-12" onSubmit={handleSubmit}>
+        <label className="min-w-0 space-y-1 lg:col-span-2">
           <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
             Done?
           </span>
@@ -179,7 +179,7 @@ export function QuickCloseoutForm({ promise }: QuickCloseoutFormProps) {
           </select>
         </label>
 
-        <label className="space-y-1 lg:col-span-2">
+        <label className="min-w-0 space-y-1 lg:col-span-2">
           <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
             Amount
           </span>
@@ -192,7 +192,7 @@ export function QuickCloseoutForm({ promise }: QuickCloseoutFormProps) {
           />
         </label>
 
-        <label className="space-y-1 lg:col-span-2">
+        <label className="min-w-0 space-y-1 lg:col-span-2">
           <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
             Paid?
           </span>
@@ -206,7 +206,7 @@ export function QuickCloseoutForm({ promise }: QuickCloseoutFormProps) {
           </select>
         </label>
 
-        <label className="space-y-1 lg:col-span-2">
+        <label className="min-w-0 space-y-1 lg:col-span-2">
           <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
             Follow-up?
           </span>
@@ -220,7 +220,7 @@ export function QuickCloseoutForm({ promise }: QuickCloseoutFormProps) {
           </select>
         </label>
 
-        <label className="space-y-1 lg:col-span-3">
+        <label className="min-w-0 space-y-1 lg:col-span-3">
           <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
             Note
           </span>

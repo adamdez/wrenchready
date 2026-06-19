@@ -320,6 +320,16 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
   const [partsChecklist, setPartsChecklist] = useState(
     formatList(promise.fieldExecution?.partsChecklist),
   );
+  const [requiredTools, setRequiredTools] = useState(
+    formatList(promise.fieldExecution?.requiredTools),
+  );
+  const [mfgSpecs, setMfgSpecs] = useState(formatList(promise.fieldExecution?.mfgSpecs));
+  const [serviceDataChecks, setServiceDataChecks] = useState(
+    formatList(promise.fieldExecution?.serviceDataChecks),
+  );
+  const [fitmentCautions, setFitmentCautions] = useState(
+    formatList(promise.fieldExecution?.fitmentCautions),
+  );
   const [photosRequired, setPhotosRequired] = useState(
     formatList(promise.fieldExecution?.photosRequired),
   );
@@ -596,6 +606,10 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
           fieldExecution: {
             serviceGoal: serviceGoal.trim() || undefined,
             partsChecklist: parseList(partsChecklist),
+            requiredTools: parseList(requiredTools),
+            mfgSpecs: parseList(mfgSpecs),
+            serviceDataChecks: parseList(serviceDataChecks),
+            fitmentCautions: parseList(fitmentCautions),
             photosRequired: parseList(photosRequired),
             inspectionChecklist: parseList(inspectionChecklist),
             handoffChecklist: parseList(handoffChecklist),
@@ -1537,6 +1551,54 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
                 onChange={(event) => setPartsChecklist(event.target.value)}
                 placeholder="Battery group size 35&#10;Starter core check&#10;Brake pads + rotors"
                 value={partsChecklist}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Required tools / equipment
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setRequiredTools(event.target.value)}
+                placeholder="DVOM&#10;Battery load tester&#10;Low-profile jack / stands"
+                value={requiredTools}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                MFG specs
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setMfgSpecs(event.target.value)}
+                placeholder="Torque spec&#10;Fluid capacity&#10;Idle/relearn procedure"
+                value={mfgSpecs}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Service data checks
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setServiceDataChecks(event.target.value)}
+                placeholder="TSB check&#10;Wiring diagram check&#10;Reset/adaptation steps"
+                value={serviceDataChecks}
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Fitment cautions
+              </span>
+              <textarea
+                className="form-textarea"
+                onChange={(event) => setFitmentCautions(event.target.value)}
+                placeholder="Verify VIN/options&#10;Compare connector clocking&#10;Core/return note"
+                value={fitmentCautions}
               />
             </label>
 

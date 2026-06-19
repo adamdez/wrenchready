@@ -242,12 +242,16 @@ export async function findNearbyPartsStores(input: {
   origin: LatLng;
   partName?: string;
   vehicle?: string;
+  preferredVendor?: string;
   radiusMeters?: number;
   maxResults?: number;
 }) {
   const maxResults = clampInt(input.maxResults || readIntEnv("GOOGLE_MAPS_PARTS_SEARCH_LIMIT", 5, 1, 8), 1, 8);
   const routeCandidateLimit = readIntEnv("GOOGLE_MAPS_PARTS_ROUTE_LIMIT", Math.min(3, maxResults), 1, maxResults);
+  const preferredVendor = input.preferredVendor?.trim();
   const queries = uniqueStrings([
+    preferredVendor ? `${preferredVendor} auto parts` : undefined,
+    preferredVendor && input.partName ? `${preferredVendor} ${input.partName}` : undefined,
     [input.partName ? `${input.partName} auto parts` : undefined, input.vehicle].filter(Boolean).join(" "),
     input.partName ? `${input.partName} auto parts store` : undefined,
     "auto parts store",

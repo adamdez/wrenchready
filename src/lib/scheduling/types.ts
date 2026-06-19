@@ -57,7 +57,31 @@ export type AvailableSlot = {
   startIso: string;
   endIso: string;
   durationMinutes: number;
+  label: string;
   reason: string;
+  calendarVerified: boolean;
+};
+
+export type CalendarTruthStatus = "verified" | "blocked" | "error";
+
+export type CalendarBusyBlock = {
+  startIso: string;
+  endIso: string;
+  source: "google-calendar" | "internal-calendar";
+  label: string;
+};
+
+export type CalendarTruth = {
+  status: CalendarTruthStatus;
+  source: "google-calendar-and-internal-calendar" | "not-verified";
+  checkedSources: Array<"google-calendar" | "internal-calendar">;
+  customerHoldReady: boolean;
+  checkedWindow?: {
+    startIso: string;
+    endIso: string;
+  };
+  busyBlockCount: number;
+  warnings: string[];
 };
 
 export type AvailabilityResponse = {
@@ -67,4 +91,7 @@ export type AvailabilityResponse = {
   missingIntegrations: string[];
   candidateSlots: AvailableSlot[];
   customerWindowSummary: string;
+  calendarTruth: CalendarTruth;
+  routeTruthReady: boolean;
+  safeToOfferCustomerSlots: boolean;
 };

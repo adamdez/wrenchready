@@ -2,7 +2,7 @@ import { getJeffEmailDeliveryStatus } from "@/lib/email";
 import { readEnv } from "@/lib/env";
 import { getGoogleMapsIntegrationStatus } from "@/lib/google-maps";
 import { getGoogleWorkspaceIntegrationStatus } from "@/lib/google-workspace";
-import { isStripeConfigured } from "@/lib/stripe";
+import { isStripeConfigured, isStripeSecretConfigured } from "@/lib/stripe";
 import { getLatestSimonLocation } from "@/lib/jeff-field-assistant/location";
 import { getJeffLocalMirrorStatus } from "@/lib/jeff-field-assistant/sync";
 import { getJeffEmailIntegrationStatus } from "@/lib/jeff-field-assistant/email-ingest";
@@ -83,6 +83,7 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
   const fieldPhoneReady = envReady("JEFF_FIELD_PHONE_NUMBER", "VAPI_JEFF_PHONE_NUMBER");
   const appPinReady = envReady("JEFF_FIELD_APP_PIN", "JEFF_FIELD_PHOTO_UPLOAD_PIN");
   const stripeReady = isStripeConfigured();
+  const stripeReadReady = isStripeSecretConfigured();
   const freshLocation = Boolean(location.location && !location.location.stale);
   const anyLocation = Boolean(location.location);
 
@@ -253,14 +254,14 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
       area: "parts",
       state: googleMaps.ready ? "partial" : "blocked",
       reason: googleMaps.ready
-        ? "Jeff can rank stores, prepare exact fitment/inventory questions, and save vendor-confirmed results, but direct vendor web/API inventory lookup is not built yet."
+        ? "Jeff can rank stores, prefer O'Reilly when reasonable, prepare a Simon review/pay vendor handoff, and save vendor-confirmed results, but direct vendor web/API inventory lookup is not built yet."
         : "Jeff needs Google Maps configured before the location-aware parts workflow is useful.",
-      whatJeffCanDo: "Help identify the likely part, ask for the vehicle/engine facts that matter, tell Simon what to ask the counter or vendor site, and save confirmed part number, availability, price, core charge, and pickup timing.",
-      whatJeffShouldSay: "I can find the closest stores and get the exact inventory questions ready. If you read me the vendor result, I'll save it with the job.",
+      whatJeffCanDo: "Help identify the likely part, ask for the vehicle/engine facts that matter, prepare a tappable O'Reilly review/pay link for Simon, and save confirmed part number, availability, price, core charge, and pickup timing.",
+      whatJeffShouldSay: "I can prep the O'Reilly review link and parts plan, but you still verify fitment, price, and pay yourself.",
       operatorAction: googleMaps.ready
         ? "Build a direct vendor inventory/browser workflow when WrenchReady wants Jeff to verify inventory without Simon reading it back."
         : "Set GOOGLE_MAPS_API_KEY, then build direct vendor inventory/browser workflow when ready.",
-      missing: googleMaps.ready ? ["direct vendor inventory lookup"] : ["GOOGLE_MAPS_API_KEY", "direct vendor inventory lookup"],
+      missing: googleMaps.ready ? ["direct vendor inventory lookup", "automated vendor cart session"] : ["GOOGLE_MAPS_API_KEY", "direct vendor inventory lookup", "automated vendor cart session"],
     }),
     capability({
       id: "parts-purchase",
@@ -282,16 +283,26 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
       id: "invoice-payment",
       label: "Invoices and field payment",
       area: "money",
-      state: stripeReady ? "partial" : "blocked",
-      reason: stripeReady
-        ? "Stripe is configured for secure payment links, but instant field invoice generation still needs a finished workflow."
-        : "Stripe is not fully configured, so Jeff cannot create payment links reliably.",
-      whatJeffCanDo: "Check payment/invoice context and avoid money promises unless CRM/payment state confirms it.",
-      whatJeffShouldSay: stripeReady
-        ? "I can help route payment-link work, but I need the invoice facts confirmed."
-        : "I can note the payment need, but payment links are not ready yet.",
-      operatorAction: stripeReady ? "Finish instant invoice/payment action flow." : "Set Stripe secret and publishable keys.",
-      missing: stripeReady ? ["instant invoice action workflow"] : ["STRIPE_SECRET_KEY", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"],
+      state: stripeReadReady ? "partial" : "blocked",
+      reason: stripeReadReady
+        ? stripeReady
+          ? "Stripe can be checked server-side and secure payment links are configured, but instant field invoice generation still needs a finished workflow."
+          : "Stripe can be checked server-side, but customer-facing payment links still need the publishable key/configuration."
+        : "Stripe payment status cannot be checked until the server-side Stripe secret key is configured.",
+      whatJeffCanDo: "Check Stripe payment status from stored job references, payment intents, checkout sessions, invoices, or payment-link URLs; reconcile CRM only when the Stripe payment safely matches the job.",
+      whatJeffShouldSay: stripeReadReady
+        ? "I can check Stripe and tell you whether Stripe shows paid."
+        : "I can read the CRM payment note, but I cannot verify Stripe from here yet.",
+      operatorAction: stripeReady
+        ? "Finish instant invoice/payment action flow."
+        : stripeReadReady
+          ? "Set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY for customer-facing payment links; invoice generation still needs finishing."
+          : "Set STRIPE_SECRET_KEY, then finish instant invoice/payment action flow.",
+      missing: stripeReady
+        ? ["instant invoice action workflow"]
+        : stripeReadReady
+          ? ["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "instant invoice action workflow"]
+          : ["STRIPE_SECRET_KEY", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"],
     }),
     capability({
       id: "job-memory",

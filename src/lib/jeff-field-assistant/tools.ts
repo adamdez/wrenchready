@@ -15,11 +15,14 @@ import {
 import { getJeffCapabilityReport } from "@/lib/jeff-field-assistant/capabilities";
 import { getJeffOperatingContextPacket } from "@/lib/jeff-field-assistant/operating-context";
 import { getPromiseRecords, updatePromiseRecord, upsertPromiseQuoteDraftForReview } from "@/lib/promise-crm/server";
-import type { PromiseFieldExecutionPacket, PromiseRecord } from "@/lib/promise-crm/types";
+import { buildPromiseQuotePacket } from "@/lib/promise-crm/quote-packet";
+import type { PromiseFieldExecutionPacket, PromisePartItem, PromisePaymentCollection, PromiseRecord } from "@/lib/promise-crm/types";
+import { checkStripePaymentReferences, isStripeSecretConfigured, type StripePaymentStatusCheck } from "@/lib/stripe";
 import schedulingEngine from "@/lib/scheduling/engine";
 import type { AvailabilityRequest } from "@/lib/scheduling/types";
 import { normalizePhone } from "@/lib/twilio";
 import { jeffFieldJobFixtures } from "@/lib/jeff-field-assistant/fixtures";
+import { findNearbyPartsStoresForSimon } from "@/lib/jeff-field-assistant/location";
 import {
   isJeffEvaluationMemory,
   isJeffFieldSelectableJob,
@@ -134,6 +137,54 @@ type PhotoUploadInput = ActiveJobInput & {
   photos?: unknown[];
 };
 
+type PartsCartInput = ActiveJobInput & {
+  partName?: string;
+  requestedPart?: string;
+  preferredVendor?: string;
+  quantity?: number;
+  latitude?: number;
+  longitude?: number;
+  maxLocationAgeMinutes?: number;
+  sourceChannel?: JeffFieldChannel;
+  spokenRequest?: string;
+};
+
+type StripePaymentCheckInput = ActiveJobInput & {
+  stripeReference?: string;
+  stripeReferences?: string[];
+  checkoutSessionId?: string;
+  checkoutSessionIds?: string[];
+  paymentIntentId?: string;
+  paymentIntentIds?: string[];
+  invoiceId?: string;
+  invoiceIds?: string[];
+  paymentLinkUrl?: string;
+  paymentLinkUrls?: string[];
+  reconcile?: boolean;
+  searchStripeByPromiseId?: boolean;
+};
+
+type PartsStoreCandidate = {
+  name: string;
+  address?: string;
+  phone?: string;
+  websiteUri?: string;
+  googleMapsUri?: string;
+  straightLineDistanceMiles?: number;
+  route?: {
+    durationMinutes?: number;
+    distanceMiles?: number;
+  };
+};
+
+type PartsFitmentReview = {
+  status: "needs_vehicle_facts" | "vendor_fitment_required" | "fitment_verified";
+  knownFacts: string[];
+  missingFacts: string[];
+  requiredFacts: string[];
+  instructions: string[];
+};
+
 type BookingRisk = "low" | "medium" | "high";
 
 type NormalizedPhotoInput = {
@@ -210,6 +261,7 @@ const MEMORY_STATUSES: JeffDurableMemoryStatus[] = [
 const BASE_ROUTE = "/api/al/wrenchready/jeff/tools";
 const GENERAL_JEFF_REQUEST_JOB_ID = "jeff-general-requests";
 const BLOCKED_REQUEST_SOURCE_PREFIX = "jeff-blocked-request:";
+const PARTS_CART_SOURCE_PREFIX = "jeff-parts-cart:";
 const MAX_PHOTOS_PER_UPLOAD = 8;
 const MAX_RUNTIME_PHOTO_BYTES = 7 * 1024 * 1024;
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
@@ -263,6 +315,10 @@ function stringList(value: unknown) {
   return value
     .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
     .filter(Boolean);
+}
+
+function uniqueText(values: Array<string | undefined | null>) {
+  return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
 }
 
 function normalizeChannel(value: unknown): JeffFieldChannel {
@@ -503,6 +559,155 @@ function paymentStatusLabel(job: JeffFieldJob) {
   ];
 
   return parts.filter(Boolean).join(" ");
+}
+
+function formatMoney(amount?: number) {
+  if (amount === undefined || Number.isNaN(amount)) return undefined;
+  return `$${amount.toFixed(2)}`;
+}
+
+function paymentCollectionReferences(payment?: JeffFieldJob["paymentCollection"]) {
+  if (!payment) return [];
+
+  return uniqueText([
+    payment.depositSessionId,
+    payment.depositCheckoutUrl,
+    payment.balanceSessionId,
+    payment.balanceCheckoutUrl,
+    payment.lastPaymentReference,
+    payment.invoiceReference,
+  ]);
+}
+
+function explicitStripeReferences(input: StripePaymentCheckInput) {
+  return uniqueText([
+    input.stripeReference,
+    ...(input.stripeReferences || []),
+    input.checkoutSessionId,
+    ...(input.checkoutSessionIds || []),
+    input.paymentIntentId,
+    ...(input.paymentIntentIds || []),
+    input.invoiceId,
+    ...(input.invoiceIds || []),
+    input.paymentLinkUrl,
+    ...(input.paymentLinkUrls || []),
+  ]);
+}
+
+function jobStripeReferenceStrings(job?: JeffFieldJob) {
+  if (!job) return [];
+
+  return uniqueText([
+    ...paymentCollectionReferences(job.paymentCollection),
+    ...job.notes,
+  ]);
+}
+
+function stripePaymentMatchesJob(match: StripePaymentStatusCheck["matches"][number], job: JeffFieldJob) {
+  return match.promiseId === job.id ||
+    paymentCollectionReferences(job.paymentCollection).some((reference) =>
+      reference.includes(match.id) ||
+      (match.checkoutSessionId && reference.includes(match.checkoutSessionId)) ||
+      (match.paymentIntentId && reference.includes(match.paymentIntentId)) ||
+      (match.invoiceId && reference.includes(match.invoiceId)) ||
+      (match.paymentLinkId && reference.includes(match.paymentLinkId)),
+    );
+}
+
+function stripeCheckCanReconcile(input: {
+  job?: JeffFieldJob;
+  explicitReferences: string[];
+  check: StripePaymentStatusCheck;
+  requestedReconcile: boolean;
+}) {
+  if (!input.requestedReconcile || !input.job || input.job.source !== "promise-crm") return false;
+  if (input.check.paidMatches.some((match) => stripePaymentMatchesJob(match, input.job as JeffFieldJob))) return true;
+
+  return input.explicitReferences.length === 0 &&
+    input.check.paidMatches.some((match) => match.promiseId === input.job?.id);
+}
+
+function expectedPaymentTotal(job: JeffFieldJob) {
+  return (
+    job.paymentCollection?.balanceDueAmount ||
+    job.paymentCollection?.depositRequestedAmount ||
+    job.customerApproval.requestedAmount
+  );
+}
+
+function reconcilePaymentCollectionFromStripe(
+  job: JeffFieldJob,
+  check: StripePaymentStatusCheck,
+): PromisePaymentCollection | undefined {
+  if (check.paidMatches.length === 0) return undefined;
+
+  const existing = job.paymentCollection;
+  const totalPaid = check.totalPaidAmount || existing?.amountCollected || 0;
+  const expected = expectedPaymentTotal(job);
+  const hasPaidBalance = check.paidMatches.some((match) => match.paymentType === "visit-balance");
+  const hasPaidDeposit = check.paidMatches.some((match) => match.paymentType === "visit-deposit");
+  const hasPaidInvoiceOrPaymentLink = check.paidMatches.some((match) =>
+    match.kind === "invoice" || match.kind === "payment_link",
+  );
+  const paidInFull =
+    hasPaidBalance ||
+    hasPaidInvoiceOrPaymentLink ||
+    (expected !== undefined && totalPaid >= expected - 0.01);
+  const status: PromisePaymentCollection["status"] = paidInFull
+    ? "paid"
+    : hasPaidDeposit || totalPaid > 0
+      ? "partial"
+      : existing?.status || "awaiting-payment";
+  const latestPaid = check.latestPaidAt || new Date().toISOString();
+  const balanceDueAmount =
+    expected !== undefined
+      ? Math.max(expected - totalPaid, 0)
+      : existing?.balanceDueAmount;
+  const firstPaid = check.paidMatches[0];
+
+  return {
+    status,
+    processor: "stripe",
+    method: firstPaid.method || existing?.method || "card",
+    depositRequestedAmount: existing?.depositRequestedAmount,
+    depositRequestedAt: existing?.depositRequestedAt,
+    depositSessionId:
+      existing?.depositSessionId ||
+      (hasPaidDeposit ? firstPaid.checkoutSessionId : undefined),
+    depositCheckoutUrl: existing?.depositCheckoutUrl,
+    depositPaidAt:
+      existing?.depositPaidAt ||
+      (hasPaidDeposit || status === "paid" ? latestPaid : undefined),
+    balanceRequestedAt: existing?.balanceRequestedAt,
+    balanceSessionId:
+      existing?.balanceSessionId ||
+      (hasPaidBalance ? firstPaid.checkoutSessionId : undefined),
+    balanceCheckoutUrl: existing?.balanceCheckoutUrl,
+    balancePaidAt:
+      existing?.balancePaidAt ||
+      (status === "paid" ? latestPaid : undefined),
+    lastPaymentReference:
+      firstPaid.paymentIntentId ||
+      firstPaid.checkoutSessionId ||
+      firstPaid.invoiceId ||
+      firstPaid.paymentLinkId ||
+      firstPaid.id ||
+      existing?.lastPaymentReference,
+    amountCollected: totalPaid || existing?.amountCollected,
+    balanceDueAmount,
+    collectedAt: latestPaid,
+    invoiceReference:
+      existing?.invoiceReference ||
+      firstPaid.invoiceId ||
+      firstPaid.hostedInvoiceUrl ||
+      firstPaid.paymentLinkUrl ||
+      firstPaid.checkoutSessionId,
+    writeOffReason: existing?.writeOffReason,
+    paymentSummary:
+      status === "paid"
+        ? `Stripe checked ${check.checkedAt}. Payment appears paid in Stripe${formatMoney(totalPaid) ? ` (${formatMoney(totalPaid)})` : ""}.`
+        : `Stripe checked ${check.checkedAt}. Payment appears partially paid${formatMoney(totalPaid) ? ` (${formatMoney(totalPaid)})` : ""}; balance still needs review.`,
+  };
 }
 
 function customerApprovalLabel(job: JeffFieldJob) {
@@ -1303,6 +1508,10 @@ function buildQuoteDraftExecutionPacket(input: {
   priorDiagnosticFacts: string[];
   diagnosticChecklist: string[];
   partsChecklist: string[];
+  requiredTools: string[];
+  mfgSpecs: string[];
+  serviceDataChecks: string[];
+  fitmentCautions: string[];
   photosRequired: string[];
   handoffChecklist: string[];
   notesTemplate?: string;
@@ -1312,6 +1521,10 @@ function buildQuoteDraftExecutionPacket(input: {
     partsChecklist: input.partsChecklist.length
       ? input.partsChecklist
       : ["No parts are approved by this quote draft; quote or approve parts separately after diagnosis."],
+    requiredTools: input.requiredTools,
+    mfgSpecs: input.mfgSpecs,
+    serviceDataChecks: input.serviceDataChecks,
+    fitmentCautions: input.fitmentCautions,
     photosRequired: input.photosRequired.length
       ? input.photosRequired
       : ["Capture test evidence that supports the recommendation."],
@@ -1385,6 +1598,20 @@ export async function prepareQuoteDraftForReview(payload: unknown) {
     ...stringList(input.nextTests),
   ];
   const partsChecklist = stringList(input.partsChecklist);
+  const requiredTools = stringList(input.requiredTools);
+  const mfgSpecs = [
+    ...stringList(input.mfgSpecs),
+    ...stringList(input.manufacturerSpecs),
+    ...stringList(input.specs),
+  ];
+  const serviceDataChecks = [
+    ...stringList(input.serviceDataChecks),
+    ...stringList(input.serviceInfoChecks),
+  ];
+  const fitmentCautions = [
+    ...stringList(input.fitmentCautions),
+    ...stringList(input.partsFitmentCautions),
+  ];
   const photosRequired = stringList(input.photosRequired);
   const handoffChecklist = stringList(input.handoffChecklist);
   const quoteSummary =
@@ -1478,6 +1705,10 @@ export async function prepareQuoteDraftForReview(payload: unknown) {
     priorDiagnosticFacts,
     diagnosticChecklist,
     partsChecklist,
+    requiredTools,
+    mfgSpecs,
+    serviceDataChecks,
+    fitmentCautions,
     photosRequired,
     handoffChecklist,
     notesTemplate: optionalString(input.notesTemplate),
@@ -1538,6 +1769,31 @@ export async function prepareQuoteDraftForReview(payload: unknown) {
     );
   }
 
+  try {
+    const quotePacket = buildPromiseQuotePacket(promise, {
+      generatedBy: "Jeff",
+      reviewOwner: "Dez",
+    });
+    promise = await updatePromiseRecord(promise.id, {
+      quotePacket,
+      noteToAdd:
+        "Jeff generated WrenchReady quote packet v1: internal service plan plus customer quote draft.",
+    });
+  } catch (error) {
+    return blocked(
+      "prepare_quote_draft_for_review",
+      "I created the CRM quote draft, but I could not generate the WrenchReady quote packet. I did not send anything to the customer or create a payment link.",
+      {
+        quoteDraftStatus: "blocked-packet-generation",
+        promiseId: promise.id,
+        error: error instanceof Error ? error.message : "Unknown quote packet failure.",
+        paymentLinkCreated: false,
+        customerSendStatus: "not-sent",
+      },
+      warnings,
+    );
+  }
+
   const draftJob = mapPromiseToFieldJob(promise);
   const { event, noteStatus, fieldEventStorage } = await saveEvent(
     {
@@ -1574,6 +1830,7 @@ export async function prepareQuoteDraftForReview(payload: unknown) {
       createdNewPromise,
       customerApprovalStatus: promise.customerApproval.status,
       quoteAmount,
+      quotePacket: promise.quotePacket,
       opsReviewUrl: urls.opsReviewUrl,
       customerStatusUrl: urls.customerStatusUrl,
       customerSendStatus: "not-sent",
@@ -2341,9 +2598,12 @@ export async function getJeffBlockedRequestQueue(limit = 12) {
   };
 }
 
-export async function getJeffPhotoDropJobs() {
+export async function getJeffPhotoDropJobs(options: { includeJobId?: string } = {}) {
   const { jobs, warnings } = await getAllJobs();
   const allowFixtures = jeffFixturesEnabled();
+  const requestedJob = options.includeJobId
+    ? jobs.find((job) => job.id === options.includeJobId && isJeffFieldSelectableJob(job, allowFixtures))
+    : undefined;
   const activeJobs = jobs
     .filter((job) => isJeffFieldSelectableJob(job, allowFixtures))
     .filter((job) => job.owner === "Simon" || job.jobStage === "on-site" || job.jobStage === "en-route")
@@ -2352,7 +2612,11 @@ export async function getJeffPhotoDropJobs() {
         job.jobStage === "on-site" ? 3 : job.jobStage === "en-route" ? 2 : 1;
       return stageWeight(b) - stageWeight(a);
     })
-    .slice(0, 12)
+    .filter((job) => job.id !== requestedJob?.id);
+  const selectableJobs = requestedJob
+    ? [requestedJob, ...activeJobs].slice(0, 12)
+    : activeJobs.slice(0, 12);
+  const mappedJobs = selectableJobs
     .map((job) => ({
       jobId: job.id,
       customerName: job.customer.name,
@@ -2363,7 +2627,7 @@ export async function getJeffPhotoDropJobs() {
     }));
 
   return {
-    jobs: activeJobs,
+    jobs: mappedJobs,
     warnings,
     uploadPinConfigured: Boolean(readEnv("JEFF_FIELD_PHOTO_UPLOAD_PIN")),
     maxPhotosPerUpload: MAX_PHOTOS_PER_UPLOAD,
@@ -2783,7 +3047,7 @@ export async function getScheduleContext(payload: unknown) {
     );
   }
 
-  const availability = schedulingEngine.evaluateAvailability({
+  const availability = await schedulingEngine.evaluateAvailability({
     service: optionalString(input.service) || "unknown",
     vehicle: optionalString(input.vehicle),
     notes: optionalString(input.notes),
@@ -3050,7 +3314,7 @@ export async function evaluateBookingRequest(payload: unknown) {
     scheduleItems: Array<ReturnType<typeof promiseScheduleItem>>;
   };
 
-  const availability = schedulingEngine.evaluateAvailability(request);
+  const availability = await schedulingEngine.evaluateAvailability(request);
   const reviewReasons = bookingReviewReasons({
     territorySupported: availability.territorySupported,
     integrationsReady: availability.requiredIntegrationsReady,
@@ -3839,6 +4103,237 @@ export async function requestApprovalOrEscalation(payload: unknown) {
   );
 }
 
+export async function checkStripePaymentStatus(payload: unknown) {
+  const input = isObject(payload) ? payload : {};
+  const body: StripePaymentCheckInput = {
+    callerPhone: optionalString(input.callerPhone),
+    customerName: optionalString(input.customerName),
+    vehicle: optionalString(input.vehicle),
+    jobId: optionalString(input.jobId),
+    stripeReference: optionalString(input.stripeReference),
+    stripeReferences: stringList(input.stripeReferences),
+    checkoutSessionId: optionalString(input.checkoutSessionId),
+    checkoutSessionIds: stringList(input.checkoutSessionIds),
+    paymentIntentId: optionalString(input.paymentIntentId),
+    paymentIntentIds: stringList(input.paymentIntentIds),
+    invoiceId: optionalString(input.invoiceId),
+    invoiceIds: stringList(input.invoiceIds),
+    paymentLinkUrl: optionalString(input.paymentLinkUrl),
+    paymentLinkUrls: stringList(input.paymentLinkUrls),
+    reconcile: optionalBoolean(input.reconcile),
+    searchStripeByPromiseId: optionalBoolean(input.searchStripeByPromiseId),
+  };
+
+  const hasJobHint = Boolean(body.jobId || body.callerPhone || body.customerName || body.vehicle);
+  const explicitReferences = explicitStripeReferences(body);
+  const lookup = hasJobHint
+    ? await resolveFieldJob(body)
+    : { job: undefined, warnings: [] as string[], needsClarification: false, candidates: [] as JeffFieldJob[] };
+  const job = lookup.job;
+  const jobReferences = jobStripeReferenceStrings(job);
+  const references = uniqueText([...explicitReferences, ...jobReferences]);
+  const searchByPromiseId =
+    body.searchStripeByPromiseId !== false &&
+    Boolean(job && job.source === "promise-crm");
+
+  if (!isStripeSecretConfigured()) {
+    return blocked(
+      "check_stripe_payment_status",
+      "I cannot check Stripe yet because the Stripe secret key is not configured in this runtime.",
+      {
+        job: job
+          ? {
+              jobId: job.id,
+              customerName: job.customer.name,
+              vehicle: vehicleLabel(job),
+            }
+          : null,
+        currentCrmPayment: job?.paymentCollection || null,
+        stripe: null,
+        reconciliation: {
+          status: "blocked-missing-stripe-secret",
+          crmUpdated: false,
+        },
+      },
+      lookup.warnings,
+    );
+  }
+
+  if (references.length === 0 && !searchByPromiseId) {
+    return blocked(
+      "check_stripe_payment_status",
+      job
+        ? "I found the job, but it does not have a Stripe session, invoice, payment link, or payment intent reference to check."
+        : "I need a job or a Stripe payment reference before I can check payment status.",
+      {
+        job: job
+          ? {
+              jobId: job.id,
+              customerName: job.customer.name,
+              vehicle: vehicleLabel(job),
+            }
+          : null,
+        currentCrmPayment: job?.paymentCollection || null,
+        stripe: null,
+        reconciliation: {
+          status: "blocked-missing-stripe-reference",
+          crmUpdated: false,
+        },
+        candidates: lookup.candidates.map((candidate) => ({
+          jobId: candidate.id,
+          customerName: candidate.customer.name,
+          vehicle: vehicleLabel(candidate),
+          serviceScope: candidate.serviceScope,
+          jobStage: candidate.jobStage,
+        })),
+      },
+      lookup.warnings,
+    );
+  }
+
+  const stripe = await checkStripePaymentReferences({
+    promiseId: job?.source === "promise-crm" ? job.id : optionalString(input.promiseId),
+    references,
+    checkoutSessionIds: uniqueText([body.checkoutSessionId, ...(body.checkoutSessionIds || [])]),
+    paymentIntentIds: uniqueText([body.paymentIntentId, ...(body.paymentIntentIds || [])]),
+    invoiceIds: uniqueText([body.invoiceId, ...(body.invoiceIds || [])]),
+    paymentLinkUrls: uniqueText([body.paymentLinkUrl, ...(body.paymentLinkUrls || [])]),
+    searchPaymentIntentsByPromiseId: searchByPromiseId,
+  });
+  const parsedStripeReferenceCount =
+    stripe.references.checkoutSessionIds.length +
+    stripe.references.paymentIntentIds.length +
+    stripe.references.invoiceIds.length +
+    stripe.references.paymentLinkIds.length +
+    stripe.references.paymentLinkUrls.length;
+
+  if (parsedStripeReferenceCount === 0 && !stripe.searchedByPromiseId) {
+    return blocked(
+      "check_stripe_payment_status",
+      job
+        ? "The job has payment notes, but I do not see a usable Stripe checkout session, payment intent, invoice id, or payment-link URL to verify."
+        : "I need a usable Stripe checkout session, payment intent, invoice id, or payment-link URL before I can verify payment.",
+      {
+        job: job
+          ? {
+              jobId: job.id,
+              customerName: job.customer.name,
+              vehicle: vehicleLabel(job),
+              serviceScope: job.serviceScope,
+            }
+          : null,
+        currentCrmPayment: job?.paymentCollection || null,
+        stripe,
+        reconciliation: {
+          status: "blocked-no-usable-stripe-reference",
+          crmUpdated: false,
+          requestedReconcile: body.reconcile !== false,
+          safeToAutoReconcile: false,
+          explicitReferenceCount: explicitReferences.length,
+          storedReferenceCount: jobReferences.length,
+          parsedStripeReferenceCount,
+        },
+      },
+      [...lookup.warnings, ...stripe.warnings],
+    );
+  }
+
+  const requestedReconcile = body.reconcile !== false;
+  const canReconcile = stripeCheckCanReconcile({
+    job,
+    explicitReferences,
+    check: stripe,
+    requestedReconcile,
+  });
+  let updatedPromise: PromiseRecord | undefined;
+  let event: JeffFieldEvent | undefined;
+  let fieldEventStorageStatus: string | undefined;
+  let jobRecordUpdateStatus = "not-updated";
+  let reconciliationStatus =
+    stripe.hasPaidStripePayment
+      ? canReconcile
+        ? "eligible"
+        : "paid-in-stripe-not-auto-reconciled"
+      : "no-paid-stripe-payment";
+
+  if (canReconcile && job) {
+    const paymentCollection = reconcilePaymentCollectionFromStripe(job, stripe);
+    if (paymentCollection) {
+      updatedPromise = await updatePromiseRecord(job.id, {
+        paymentCollection,
+        jobStage: paymentCollection.status === "paid" ? "collected" : job.jobStage,
+        nextAction:
+          paymentCollection.status === "paid"
+            ? "Payment is confirmed in Stripe. Close the visit cleanly, save proof, and ask for the review."
+            : "Stripe shows partial payment. Confirm remaining balance before treating the job as collected.",
+        noteToAdd: `Jeff checked Stripe payment status. Result: ${paymentCollection.paymentSummary}`,
+      });
+      const updatedJob = mapPromiseToFieldJob(updatedPromise);
+      const saved = await saveEvent(
+        {
+          jobId: updatedJob.id,
+          channel: "payment",
+          eventType: "invoice_updated",
+          sender: "Jeff",
+          summary: paymentCollection.paymentSummary || "Stripe payment status checked and reconciled.",
+          extractedFacts: {
+            paymentStatus: paymentCollection.status,
+            invoiceReference: paymentCollection.invoiceReference,
+          },
+          rawSourceReference: paymentCollection.lastPaymentReference,
+          confidence: "high",
+          needsReview: paymentCollection.status !== "paid",
+        },
+        updatedJob,
+      );
+      event = saved.event;
+      fieldEventStorageStatus = saved.fieldEventStorage.status;
+      jobRecordUpdateStatus = saved.noteStatus;
+      reconciliationStatus = paymentCollection.status === "paid" ? "crm-marked-paid" : "crm-marked-partial";
+      if (saved.fieldEventStorage.warning) stripe.warnings.push(saved.fieldEventStorage.warning);
+    }
+  }
+
+  const amount = formatMoney(stripe.totalPaidAmount);
+  const assistantSay = stripe.hasPaidStripePayment
+    ? updatedPromise
+      ? `Stripe shows payment collected${amount ? ` (${amount})` : ""}. I updated the WrenchReady job payment status.`
+      : `Stripe shows payment collected${amount ? ` (${amount})` : ""}. I did not change the job record because that Stripe reference is not safely tied to this CRM job.`
+    : stripe.matches.length > 0
+      ? "I checked Stripe. The matching Stripe payment is not paid yet."
+      : "I checked Stripe but did not find a matching payment for the stored reference.";
+
+  return result(
+    "check_stripe_payment_status",
+    assistantSay,
+    {
+      job: job
+        ? {
+            jobId: job.id,
+            customerName: job.customer.name,
+            vehicle: vehicleLabel(job),
+            serviceScope: job.serviceScope,
+          }
+        : null,
+      currentCrmPayment: job?.paymentCollection || null,
+      updatedCrmPayment: updatedPromise?.paymentCollection || null,
+      stripe,
+      reconciliation: {
+        status: reconciliationStatus,
+        crmUpdated: Boolean(updatedPromise),
+        requestedReconcile,
+        safeToAutoReconcile: canReconcile,
+        explicitReferenceCount: explicitReferences.length,
+        storedReferenceCount: jobReferences.length,
+        jobRecordUpdateStatus,
+        fieldEventStorageStatus,
+        event,
+      },
+    },
+    [...lookup.warnings, ...stripe.warnings],
+  );
+}
+
 export async function startCloseout(payload: unknown) {
   const input = isObject(payload) ? payload : {};
   const jobId = optionalString(input.jobId);
@@ -4169,6 +4664,429 @@ export async function sendSimonRecapEmail(payload: unknown) {
       [...warnings, message],
     );
   }
+}
+
+function normalizePartsCartInput(payload: unknown): PartsCartInput {
+  const input = isObject(payload) ? payload : {};
+
+  return {
+    jobId: optionalString(input.jobId),
+    callerPhone: optionalString(input.callerPhone),
+    customerName: optionalString(input.customerName),
+    vehicle: optionalString(input.vehicle),
+    partName: optionalString(input.partName) || optionalString(input.part) || optionalString(input.requestedPart),
+    requestedPart: optionalString(input.requestedPart),
+    preferredVendor: optionalString(input.preferredVendor) || optionalString(input.vendor) || "O'Reilly Auto Parts",
+    quantity: optionalNumber(input.quantity),
+    latitude: optionalNumber(input.latitude),
+    longitude: optionalNumber(input.longitude),
+    maxLocationAgeMinutes: optionalNumber(input.maxLocationAgeMinutes),
+    sourceChannel: normalizeChannel(input.sourceChannel || input.channel || "sms"),
+    spokenRequest: optionalString(input.spokenRequest) || optionalString(input.message) || optionalString(input.text),
+  };
+}
+
+function storeFromValue(value: unknown): PartsStoreCandidate | null {
+  if (!isObject(value)) return null;
+  const name = optionalString(value.name);
+  if (!name) return null;
+  const route = isObject(value.route) ? value.route : {};
+
+  return {
+    name,
+    address: optionalString(value.address),
+    phone: optionalString(value.phone),
+    websiteUri: optionalString(value.websiteUri),
+    googleMapsUri: optionalString(value.googleMapsUri),
+    straightLineDistanceMiles: optionalNumber(value.straightLineDistanceMiles),
+    route: {
+      durationMinutes: optionalNumber(route.durationMinutes),
+      distanceMiles: optionalNumber(route.distanceMiles),
+    },
+  };
+}
+
+function storeListFromValue(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(storeFromValue).filter((store): store is PartsStoreCandidate => Boolean(store))
+    : [];
+}
+
+function normalizedStoreVendor(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function storeMatchesVendor(store: PartsStoreCandidate, preferredVendor: string) {
+  const storeName = normalizedStoreVendor(store.name);
+  const vendor = normalizedStoreVendor(preferredVendor);
+  if (!vendor) return false;
+  if (vendor.includes("oreilly")) return storeName.includes("oreilly");
+  return storeName.includes(vendor);
+}
+
+function choosePartsCartStore(stores: PartsStoreCandidate[], preferredVendor: string) {
+  if (stores.length === 0) return undefined;
+  const nearest = stores[0];
+  const preferred = stores.find((store) => storeMatchesVendor(store, preferredVendor));
+  if (!preferred) return nearest;
+
+  const nearestMinutes = nearest.route?.durationMinutes;
+  const preferredMinutes = preferred.route?.durationMinutes;
+  if (nearestMinutes !== undefined && preferredMinutes !== undefined) {
+    return preferredMinutes <= nearestMinutes + 8 ? preferred : nearest;
+  }
+
+  const nearestMiles = nearest.route?.distanceMiles ?? nearest.straightLineDistanceMiles;
+  const preferredMiles = preferred.route?.distanceMiles ?? preferred.straightLineDistanceMiles;
+  if (nearestMiles !== undefined && preferredMiles !== undefined) {
+    return preferredMiles <= nearestMiles + 5 ? preferred : nearest;
+  }
+
+  return preferred;
+}
+
+function buildVendorSearchUrl(input: {
+  partName: string;
+  vehicle?: string;
+  preferredVendor: string;
+  store?: PartsStoreCandidate;
+}) {
+  const query = [input.vehicle, input.partName].filter(Boolean).join(" ");
+  if (
+    normalizedStoreVendor(input.preferredVendor).includes("oreilly") ||
+    (input.store && storeMatchesVendor(input.store, "oreilly"))
+  ) {
+    return `https://www.oreillyauto.com/search?q=${encodeURIComponent(query || input.partName)}`;
+  }
+  return input.store?.websiteUri || input.store?.googleMapsUri || `https://www.google.com/search?q=${encodeURIComponent(`${input.preferredVendor} ${query}`)}`;
+}
+
+function buildPartsCartFitmentNotes(input: {
+  vehicle?: string;
+  store?: PartsStoreCandidate;
+  reviewPayUrl: string;
+  fitment: PartsFitmentReview;
+}) {
+  return [
+    input.vehicle ? `Vehicle/context: ${input.vehicle}.` : "Vehicle/context not fully confirmed.",
+    input.store ? `Preferred pickup/store candidate: ${input.store.name}${input.store.address ? `, ${input.store.address}` : ""}.` : undefined,
+    `Fitment status: ${input.fitment.status}.`,
+    input.fitment.missingFacts.length ? `Missing fitment facts: ${input.fitment.missingFacts.join(", ")}.` : undefined,
+    "Simon must verify exact fitment, availability, final price, and core charge in the vendor cart before paying.",
+    `Review/pay link: ${input.reviewPayUrl}`,
+  ].filter(Boolean).join(" ");
+}
+
+function knownFitmentFacts(vehicle?: string, explicitFacts: string[] = []) {
+  const facts = new Set(explicitFacts.map((fact) => fact.trim()).filter(Boolean));
+  const vehicleText = vehicle || "";
+  const year = vehicleText.match(/\b(19|20)\d{2}\b/)?.[0];
+  if (year) facts.add(`year:${year}`);
+  const tokens = vehicleText
+    .replace(/\b(19|20)\d{2}\b/g, "")
+    .split(/\s+/)
+    .map((token) => token.replace(/[^a-z0-9-]/gi, "").trim())
+    .filter(Boolean);
+  if (tokens[0]) facts.add(`make:${tokens[0]}`);
+  if (tokens.length >= 2) facts.add(`model:${tokens.slice(1).join(" ")}`);
+  if (/\b(v6|v8|i4|l4|flat[- ]?4|h4|h6|\d\.\d\s*l|diesel|hybrid|turbo)\b/i.test(vehicleText)) {
+    facts.add("engine");
+  }
+  if (/\b(front|rear|left|right|driver|passenger)\b/i.test(vehicleText)) {
+    facts.add("position");
+  }
+  if (/\b(awd|4wd|fwd|rwd)\b/i.test(vehicleText)) {
+    facts.add("drivetrain");
+  }
+  if (/\b(group\s*\d+[a-z]?|agm|cca|terminal)\b/i.test(vehicleText)) {
+    facts.add("battery-spec");
+  }
+
+  return [...facts];
+}
+
+function hasFitmentFact(facts: string[], fact: string) {
+  return facts.some((entry) => entry === fact || entry.startsWith(`${fact}:`));
+}
+
+function requiredFitmentFacts(partName: string) {
+  const normalized = partName.toLowerCase();
+  const required = ["year", "make", "model"];
+
+  if (/\b(starter|alternator|fuel pump|water pump|sensor|spark plug|spark plugs|coil|ignition coil|thermostat|belt|hose)\b/.test(normalized)) {
+    required.push("engine");
+  }
+  if (/\b(brake|pad|pads|rotor|rotors|caliper|calipers|hub|bearing|axle|strut|shock)\b/.test(normalized)) {
+    required.push("position");
+  }
+  if (/\b(cv axle|axle|transfer case|differential|wheel bearing|hub)\b/.test(normalized)) {
+    required.push("drivetrain");
+  }
+  if (/\bbattery\b/.test(normalized)) {
+    required.push("battery-spec");
+  }
+
+  return [...new Set(required)];
+}
+
+function buildFitmentReview(input: {
+  partName: string;
+  vehicle?: string;
+  vendorFitmentConfirmed?: boolean;
+  explicitFacts?: string[];
+}): PartsFitmentReview {
+  const knownFacts = knownFitmentFacts(input.vehicle, input.explicitFacts);
+  const requiredFacts = requiredFitmentFacts(input.partName);
+  const missingFacts = requiredFacts.filter((fact) => !hasFitmentFact(knownFacts, fact));
+
+  if (input.vendorFitmentConfirmed && missingFacts.length === 0) {
+    return {
+      status: "fitment_verified",
+      knownFacts,
+      missingFacts,
+      requiredFacts,
+      instructions: [
+        "Vendor fitment was marked confirmed for the known vehicle facts.",
+        "Still compare part number, connector/terminal style, and any engine or position notes before paying.",
+      ],
+    };
+  }
+
+  if (missingFacts.length > 0) {
+    return {
+      status: "needs_vehicle_facts",
+      knownFacts,
+      missingFacts,
+      requiredFacts,
+      instructions: [
+        `Get missing fitment facts before treating ${input.partName} as the right part: ${missingFacts.join(", ")}.`,
+        "Use the vendor page fitment checker or call the store with VIN/year/make/model/engine and position details.",
+      ],
+    };
+  }
+
+  return {
+    status: "vendor_fitment_required",
+    knownFacts,
+    missingFacts,
+    requiredFacts,
+    instructions: [
+      "Vehicle facts are present enough to start vendor lookup.",
+      "Open the link and use the vendor fitment checker before paying.",
+      "Do not call this fit verified until O'Reilly or the counter confirms exact fitment.",
+    ],
+  };
+}
+
+function mergePartsCartItem(input: {
+  current: PromisePartItem[];
+  partName: string;
+  quantity: number;
+  store?: PartsStoreCandidate;
+  reviewPayUrl: string;
+  vehicle?: string;
+  fitment: PartsFitmentReview;
+}) {
+  const now = nowIso();
+  const normalizedPartName = input.partName.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const existingIndex = input.current.findIndex((part) => (
+    part.label.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() === normalizedPartName
+  ));
+  const fitmentNotes = buildPartsCartFitmentNotes({
+    vehicle: input.vehicle,
+    store: input.store,
+    reviewPayUrl: input.reviewPayUrl,
+    fitment: input.fitment,
+  });
+  const existing = existingIndex >= 0 ? input.current[existingIndex] : undefined;
+  const nextItem: PromisePartItem = {
+    label: existing?.label || input.partName,
+    partNumber: existing?.partNumber,
+    quantity: existing?.quantity || input.quantity,
+    vendor: input.store?.name || existing?.vendor,
+    vendorLocation: input.store?.address || existing?.vendorLocation,
+    sourceUrl: input.reviewPayUrl,
+    fitmentNotes,
+    estimatedCost: existing?.estimatedCost,
+    requiredForVisit: existing?.requiredForVisit ?? true,
+    status: existing?.status && existing.status !== "research-needed" ? existing.status : "research-needed",
+    notes: [
+      existing?.notes,
+      `Jeff prepared a Simon review/pay vendor handoff at ${now}. No purchase, reservation, or order was completed by Jeff.`,
+      input.store?.phone ? `Store phone: ${input.store.phone}.` : undefined,
+    ].filter(Boolean).join(" "),
+  };
+
+  if (existingIndex < 0) return [...input.current, nextItem];
+  return input.current.map((part, index) => index === existingIndex ? nextItem : part);
+}
+
+export async function preparePartsCartForSimon(payload: unknown) {
+  const input = normalizePartsCartInput(payload);
+  const preferredVendor = input.preferredVendor || "O'Reilly Auto Parts";
+  const partName = input.partName || input.requestedPart;
+  const quantity = Math.max(1, Math.min(Math.round(input.quantity || 1), 12));
+
+  if (!partName) {
+    return blocked(
+      "prepare_parts_cart",
+      "I need the part Simon wants before I can prepare a parts-cart handoff.",
+      { cartStatus: "needs_more_info", missing: ["partName"] },
+    );
+  }
+
+  const resolved = input.jobId ? await findJob(input.jobId) : await resolveFieldJob(input);
+  const job = resolved.job;
+  const vehicle = input.vehicle || (job ? vehicleLabel(job) : undefined);
+  const storeSearch = await findNearbyPartsStoresForSimon({
+    partName,
+    vehicle,
+    preferredVendor,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    maxLocationAgeMinutes: input.maxLocationAgeMinutes,
+  });
+  const storeSearchData: Record<string, unknown> = isObject(storeSearch) ? storeSearch : {};
+  const warnings = [
+    ...resolved.warnings,
+    ...(Array.isArray(storeSearchData.warnings)
+      ? storeSearchData.warnings.filter((warning): warning is string => typeof warning === "string")
+      : []),
+  ];
+
+  if (storeSearchData.success !== true) {
+    return blocked(
+      "prepare_parts_cart",
+      optionalString(storeSearchData.assistantSay) ||
+        "I could not prepare the cart handoff yet because the store search is blocked.",
+      {
+        cartStatus: storeSearchData.status || "blocked",
+        partName,
+        vehicle,
+        preferredVendor,
+        storeSearch,
+      },
+      warnings,
+    );
+  }
+
+  const stores = storeListFromValue(storeSearchData.stores);
+  const selectedStore = choosePartsCartStore(stores, preferredVendor);
+  const reviewPayUrl = buildVendorSearchUrl({
+    partName,
+    vehicle,
+    preferredVendor,
+    store: selectedStore,
+  });
+  const fitment = buildFitmentReview({ partName, vehicle });
+  const cartStatus =
+    fitment.status === "needs_vehicle_facts"
+      ? "needs_fitment_facts"
+      : "ready_for_simon_review";
+  const summary = [
+    `Jeff prepared a parts-cart handoff for ${quantity} ${partName}.`,
+    selectedStore ? `Store candidate: ${selectedStore.name}${selectedStore.address ? `, ${selectedStore.address}` : ""}.` : undefined,
+    `Fitment status: ${fitment.status}.`,
+    fitment.missingFacts.length ? `Missing fitment facts: ${fitment.missingFacts.join(", ")}.` : undefined,
+    `Review/pay link: ${reviewPayUrl}.`,
+    "Jeff did not purchase, reserve, or order the part.",
+  ].filter(Boolean).join(" ");
+  const { event, noteStatus, fieldEventStorage } = await saveEvent(
+    {
+      jobId: job?.id || input.jobId || GENERAL_JEFF_REQUEST_JOB_ID,
+      channel: input.sourceChannel || "sms",
+      eventType: "cart_prepared",
+      sender: "Jeff",
+      summary,
+      rawSourceReference: `${PARTS_CART_SOURCE_PREFIX}${reviewPayUrl}`,
+      extractedFacts: {
+        vehicle,
+        partNeeded: partName,
+        authorization: `Simon must verify fitment and review/pay in vendor cart. Jeff did not purchase or reserve. Fitment status: ${fitment.status}.`,
+      },
+      confidence: "medium",
+      needsReview: true,
+    },
+    job,
+  );
+
+  let partsPlanUpdateStatus: "updated" | "skipped-no-job" | "failed" = "skipped-no-job";
+  let updatedPartsPlan: PromisePartItem[] | undefined;
+
+  if (job?.source === "promise-crm") {
+    updatedPartsPlan = mergePartsCartItem({
+      current: job.fieldExecution?.partsPlan || [],
+      partName,
+      quantity,
+      store: selectedStore,
+      reviewPayUrl,
+      vehicle,
+      fitment,
+    });
+
+    try {
+      await updatePromiseRecord(job.id, {
+        fieldExecution: {
+          serviceGoal: job.fieldExecution?.serviceGoal,
+          partsChecklist: job.fieldExecution?.partsChecklist || [],
+          partsPlan: updatedPartsPlan,
+          partsRunPlan: job.fieldExecution?.partsRunPlan,
+          requiredTools: job.fieldExecution?.requiredTools || [],
+          mfgSpecs: job.fieldExecution?.mfgSpecs || [],
+          serviceDataChecks: job.fieldExecution?.serviceDataChecks || [],
+          fitmentCautions: job.fieldExecution?.fitmentCautions || [],
+          photosRequired: job.fieldExecution?.photosRequired || [],
+          inspectionChecklist: job.fieldExecution?.inspectionChecklist || [],
+          handoffChecklist: job.fieldExecution?.handoffChecklist || [],
+          comebackPreventionSteps: job.fieldExecution?.comebackPreventionSteps || [],
+          notesTemplate: job.fieldExecution?.notesTemplate,
+          upsellFocus: job.fieldExecution?.upsellFocus || [],
+          closeoutSteps: job.fieldExecution?.closeoutSteps || [],
+        },
+        noteToAdd: `Jeff prepared parts-cart handoff for ${partName}: ${reviewPayUrl}`,
+      });
+      partsPlanUpdateStatus = "updated";
+    } catch (error) {
+      partsPlanUpdateStatus = "failed";
+      warnings.push(error instanceof Error ? error.message : "Promise CRM parts plan update failed.");
+    }
+  }
+
+  return result(
+    "prepare_parts_cart",
+    [
+      selectedStore
+        ? `I prepared a ${preferredVendor} parts-cart handoff for ${partName} at ${selectedStore.name}.`
+        : `I prepared a ${preferredVendor} parts search handoff for ${partName}.`,
+      `Simon can review and pay here: ${reviewPayUrl}`,
+      "I did not purchase, reserve, or order it. Verify exact fitment, availability, final price, and core charge before paying.",
+    ].join(" "),
+    {
+      cartStatus,
+      fitmentStatus: fitment.status,
+      fitment,
+      partName,
+      quantity,
+      vehicle,
+      preferredVendor,
+      selectedStore,
+      stores,
+      reviewPayUrl,
+      vendorSearchUrl: reviewPayUrl,
+      storeMapUrl: selectedStore?.googleMapsUri,
+      policy: "Jeff may prepare a vendor cart/search handoff and write the parts plan. Simon must click through, verify fitment/availability/price/core, and pay. Jeff does not purchase, reserve, or order.",
+      event,
+      fieldEventStorageStatus: fieldEventStorage.status,
+      jobRecordUpdateStatus: noteStatus,
+      partsPlanUpdateStatus,
+      updatedPartsPlan,
+    },
+    [...warnings, fieldEventStorage.warning].filter((warning): warning is string => Boolean(warning)),
+  );
 }
 
 export async function purchaseOrReservePartBlocked(payload: unknown) {
@@ -4557,6 +5475,33 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
       },
     },
     {
+      name: "check_stripe_payment_status",
+      description: "Check Stripe for a job payment, checkout session, payment intent, invoice, or payment-link URL, then reconcile the CRM only when the Stripe payment is safely tied to the current WrenchReady job.",
+      endpoint: `${BASE_ROUTE}/check-stripe-payment-status`,
+      method: "POST",
+      parameters: {
+        type: "object",
+        properties: {
+          jobId: { type: "string" },
+          callerPhone: { type: "string" },
+          customerName: { type: "string" },
+          vehicle: { type: "string" },
+          stripeReference: { type: "string" },
+          stripeReferences: { type: "array", items: { type: "string" } },
+          checkoutSessionId: { type: "string" },
+          checkoutSessionIds: { type: "array", items: { type: "string" } },
+          paymentIntentId: { type: "string" },
+          paymentIntentIds: { type: "array", items: { type: "string" } },
+          invoiceId: { type: "string" },
+          invoiceIds: { type: "array", items: { type: "string" } },
+          paymentLinkUrl: { type: "string" },
+          paymentLinkUrls: { type: "array", items: { type: "string" } },
+          reconcile: { type: "boolean" },
+          searchStripeByPromiseId: { type: "boolean" },
+        },
+      },
+    },
+    {
       name: "sync_jeff_gmail_inbox",
       description: "Check Jeff's Google Workspace Gmail inbox and ingest matching emails or scan reports into Jeff's workspace.",
       endpoint: `${BASE_ROUTE}/sync-jeff-gmail-inbox`,
@@ -4620,6 +5565,29 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
       },
     },
     {
+      name: "prepare_parts_cart",
+      description: "Prepare a preferred O'Reilly parts-cart/search handoff for Simon, update the job parts plan, and return a review/pay URL. Does not purchase, reserve, or order.",
+      endpoint: `${BASE_ROUTE}/prepare-parts-cart`,
+      method: "POST",
+      parameters: {
+        type: "object",
+        properties: {
+          jobId: { type: "string" },
+          partName: { type: "string" },
+          requestedPart: { type: "string" },
+          vehicle: { type: "string" },
+          preferredVendor: { type: "string" },
+          quantity: { type: "number" },
+          latitude: { type: "number" },
+          longitude: { type: "number" },
+          maxLocationAgeMinutes: { type: "number" },
+          sourceChannel: { type: "string", enum: CHANNELS },
+          spokenRequest: { type: "string" },
+        },
+        required: ["partName"],
+      },
+    },
+    {
       name: "find_nearby_parts_stores",
       description: "Use Simon's fresh shared location and Google Maps to rank nearby auto parts stores by drive time and prepare the inventory-confirmation next step. Does not prove inventory and does not buy, reserve, or order parts.",
       endpoint: `${BASE_ROUTE}/find-nearby-parts-stores`,
@@ -4629,6 +5597,7 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
         properties: {
           partName: { type: "string" },
           vehicle: { type: "string" },
+          preferredVendor: { type: "string" },
           latitude: { type: "number" },
           longitude: { type: "number" },
           maxLocationAgeMinutes: { type: "number" },

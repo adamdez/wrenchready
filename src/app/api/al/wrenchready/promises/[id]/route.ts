@@ -151,6 +151,10 @@ type UpdatePromisePayload = {
       pickupNotes?: string;
       consolidateBy?: string;
     };
+    requiredTools?: string[];
+    mfgSpecs?: string[];
+    serviceDataChecks?: string[];
+    fitmentCautions?: string[];
     photosRequired?: string[];
     inspectionChecklist?: string[];
     handoffChecklist?: string[];
@@ -467,6 +471,11 @@ function isFieldExecutionPayload(value: unknown) {
     (candidate.partsPlan === undefined ||
       (Array.isArray(candidate.partsPlan) && candidate.partsPlan.every(isPartItemPayload))) &&
     isPartsRunPlanPayload(candidate.partsRunPlan) &&
+    (candidate.requiredTools === undefined || isStringArray(candidate.requiredTools)) &&
+    (candidate.mfgSpecs === undefined || isStringArray(candidate.mfgSpecs)) &&
+    (candidate.serviceDataChecks === undefined ||
+      isStringArray(candidate.serviceDataChecks)) &&
+    (candidate.fitmentCautions === undefined || isStringArray(candidate.fitmentCautions)) &&
     (candidate.photosRequired === undefined || isStringArray(candidate.photosRequired)) &&
     (candidate.inspectionChecklist === undefined ||
       isStringArray(candidate.inspectionChecklist)) &&

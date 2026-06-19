@@ -20,6 +20,7 @@ type SimonLocationCheckInInput = {
 type PartsStoreInput = {
   partName?: string;
   vehicle?: string;
+  preferredVendor?: string;
   latitude?: number;
   longitude?: number;
   maxLocationAgeMinutes?: number;
@@ -97,6 +98,7 @@ function normalizePartsStoreInput(payload: unknown): PartsStoreInput {
   return {
     partName: optionalString(input.partName) || optionalString(input.part),
     vehicle: optionalString(input.vehicle),
+    preferredVendor: optionalString(input.preferredVendor) || optionalString(input.vendor),
     latitude: optionalNumber(input.latitude),
     longitude: optionalNumber(input.longitude),
     maxLocationAgeMinutes: optionalNumber(input.maxLocationAgeMinutes),
@@ -288,6 +290,7 @@ export async function findNearbyPartsStoresForSimon(payload: unknown) {
     },
     partName: input.partName,
     vehicle: input.vehicle,
+    preferredVendor: input.preferredVendor,
     maxResults: 5,
   });
   const best = stores[0];

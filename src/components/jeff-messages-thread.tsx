@@ -103,6 +103,7 @@ const MAX_ATTACHMENTS = 4;
 const MIN_COMPOSER_HEIGHT = 96;
 const MAX_COMPOSER_HEIGHT = 220;
 const MAX_ATTACHMENT_BYTES = 2_500_000;
+const URL_PATTERN = /(https?:\/\/[^\s<>()]+[^\s<>().,!?;:])/g;
 
 function formatTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -123,6 +124,26 @@ function appendDictationText(current: string, next: string) {
   const separator = current.trim() ? " " : "";
 
   return `${current}${separator}${trimmed}`;
+}
+
+function renderLinkedText(text: string, isSimon: boolean) {
+  return text.split(URL_PATTERN).map((part, index) => {
+    if (!/^https?:\/\//i.test(part)) return part;
+
+    return (
+      <a
+        className={`font-semibold underline decoration-1 underline-offset-2 ${
+          isSimon ? "text-white" : "text-[#1677ff]"
+        }`}
+        href={part}
+        key={`${part}-${index}`}
+        rel="noreferrer"
+        target="_blank"
+      >
+        {part}
+      </a>
+    );
+  });
 }
 
 async function fileToAttachment(file: File): Promise<JeffMessageAttachment> {
@@ -506,7 +527,7 @@ export function JeffMessagesThread({
                       {message.jobLabel}
                     </p>
                   ) : null}
-                  <p className="whitespace-pre-wrap">{message.text}</p>
+                  <p className="whitespace-pre-wrap">{renderLinkedText(message.text, isSimon)}</p>
                   {message.attachments?.length ? (
                     <div className="mt-2 space-y-1">
                       {message.attachments.map((attachment) => (

@@ -59,6 +59,10 @@ assert(
   catalog.assistant?.tools?.some((tool) => tool.name === "get_jeff_operating_context"),
   "catalog should expose forced WrenchReady operating context",
 );
+assert(
+  catalog.assistant?.tools?.some((tool) => tool.name === "check_stripe_payment_status"),
+  "catalog should expose Stripe payment status checks",
+);
 
 const operatingContext = await request("/api/al/wrenchready/jeff/tools/get-jeff-operating-context", {
   focus: "quote parts pricing",
@@ -184,6 +188,15 @@ assert(context.data?.context?.latestPhotos?.length >= 1, "context should include
 assert(
   Array.isArray(context.data?.context?.durableMemories),
   "context should include approved durable memory rows",
+);
+
+const stripeNoReference = await request("/api/al/wrenchready/jeff/tools/check-stripe-payment-status", {
+  jobId: "jeff-fixture-tammy-chrysler",
+});
+assert(stripeNoReference.success === false, "Stripe payment check should fail closed without a Stripe reference");
+assert(
+  stripeNoReference.data?.reconciliation?.crmUpdated === false,
+  "Stripe payment check should not update CRM without a safe Stripe reference",
 );
 
 const memoryCandidate = await request("/api/al/wrenchready/jeff/tools/propose-core-memory-update", {

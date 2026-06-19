@@ -215,6 +215,10 @@ export type PromiseFieldExecutionPacket = {
   partsChecklist: string[];
   partsPlan?: PromisePartItem[];
   partsRunPlan?: PromisePartsRunPlan;
+  requiredTools: string[];
+  mfgSpecs: string[];
+  serviceDataChecks: string[];
+  fitmentCautions: string[];
   photosRequired: string[];
   inspectionChecklist: string[];
   handoffChecklist: string[];
@@ -222,6 +226,39 @@ export type PromiseFieldExecutionPacket = {
   notesTemplate?: string;
   upsellFocus: string[];
   closeoutSteps: string[];
+};
+
+export type PromiseQuotePacketStatus = "draft-for-review" | "send-ready" | "blocked";
+export type PromiseQuotePacketQaStatus = "pass" | "needs-review" | "blocked";
+export type PromiseQuotePacketDocumentAudience = "internal" | "customer";
+
+export type PromiseQuotePacketQaCheck = {
+  label: string;
+  status: PromiseQuotePacketQaStatus;
+  detail?: string;
+};
+
+export type PromiseQuotePacketDocument = {
+  audience: PromiseQuotePacketDocumentAudience;
+  title: string;
+  summary: string;
+  markdown: string;
+};
+
+export type PromiseQuotePacket = {
+  version: "wrenchready-quote-packet-v1";
+  generatedAt: string;
+  generatedBy: "Jeff" | "Codex" | "System";
+  source: "promise-crm";
+  status: PromiseQuotePacketStatus;
+  customerSendStatus: "not-sent" | "ready-after-review" | "sent";
+  paymentLinkStatus: "not-created" | "pending-review" | "ready" | "blocked";
+  reviewOwner: "Dez" | "Adam" | "Simon" | "Ops";
+  internalServicePlan: PromiseQuotePacketDocument;
+  externalCustomerQuote: PromiseQuotePacketDocument;
+  qaChecks: PromiseQuotePacketQaCheck[];
+  blockers: string[];
+  nextAction: string;
 };
 
 export type PromisePaymentMethod =
@@ -482,6 +519,7 @@ export type PromiseRecord = {
   customerAccess: PromiseCustomerAccess;
   customerApproval: PromiseCustomerApproval;
   economics?: PromiseEconomicsSnapshot;
+  quotePacket?: PromiseQuotePacket;
   commercialOutcome?: PromiseCommercialOutcome;
   closeout?: PromiseCloseout;
   outboundHistory?: PromiseOutboundEvent[];

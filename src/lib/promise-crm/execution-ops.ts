@@ -204,6 +204,10 @@ export function normalizeFieldExecutionPacket(
     partsChecklist: normalizeStringList(value.partsChecklist),
     partsPlan: normalizePartsPlan(value.partsPlan),
     partsRunPlan: normalizePartsRunPlan(value.partsRunPlan),
+    requiredTools: normalizeStringList(value.requiredTools),
+    mfgSpecs: normalizeStringList(value.mfgSpecs),
+    serviceDataChecks: normalizeStringList(value.serviceDataChecks),
+    fitmentCautions: normalizeStringList(value.fitmentCautions),
     photosRequired: normalizeStringList(value.photosRequired),
     inspectionChecklist: normalizeStringList(value.inspectionChecklist),
     handoffChecklist: normalizeStringList(value.handoffChecklist),
@@ -218,6 +222,10 @@ export function normalizeFieldExecutionPacket(
     normalized.partsChecklist.length > 0 ||
     (normalized.partsPlan?.length || 0) > 0 ||
     normalized.partsRunPlan ||
+    normalized.requiredTools.length > 0 ||
+    normalized.mfgSpecs.length > 0 ||
+    normalized.serviceDataChecks.length > 0 ||
+    normalized.fitmentCautions.length > 0 ||
     normalized.photosRequired.length > 0 ||
     normalized.inspectionChecklist.length > 0 ||
     normalized.handoffChecklist.length > 0 ||
@@ -241,6 +249,10 @@ export function mergeFieldExecutionPacket(
     partsChecklist: updates.partsChecklist ?? current?.partsChecklist ?? [],
     partsPlan: updates.partsPlan ?? current?.partsPlan ?? [],
     partsRunPlan: updates.partsRunPlan ?? current?.partsRunPlan,
+    requiredTools: updates.requiredTools ?? current?.requiredTools ?? [],
+    mfgSpecs: updates.mfgSpecs ?? current?.mfgSpecs ?? [],
+    serviceDataChecks: updates.serviceDataChecks ?? current?.serviceDataChecks ?? [],
+    fitmentCautions: updates.fitmentCautions ?? current?.fitmentCautions ?? [],
     photosRequired: updates.photosRequired ?? current?.photosRequired ?? [],
     inspectionChecklist: updates.inspectionChecklist ?? current?.inspectionChecklist ?? [],
     handoffChecklist: updates.handoffChecklist ?? current?.handoffChecklist ?? [],

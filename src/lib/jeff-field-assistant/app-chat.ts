@@ -15,6 +15,7 @@ import { findNearbyPartsStoresForSimon } from "@/lib/jeff-field-assistant/locati
 import {
   analyzeFieldPhoto,
   prepareQuoteDraftForReview,
+  preparePartsCartForSimon,
   proposeCoreMemoryUpdate,
   purchaseOrReservePartBlocked,
   recordFieldNote,
@@ -548,6 +549,14 @@ function likelyWantsPurchaseBlocked(text: string) {
   return /\b(buy|order|reserve|cart|purchase|pay for|checkout|pick up|pickup)\b/i.test(text);
 }
 
+function likelyWantsPartsCartPrep(text: string) {
+  return (likelyWantsPartStore(text) || likelyPartsFollowUp(text)) &&
+    (
+      /\b(cart|checkout|review\/?pay|payment link)\b/i.test(text) ||
+      /\b(add|put)\b.{0,45}\b(cart)\b/i.test(text)
+    );
+}
+
 function likelyWantsFieldNote(text: string) {
   return /\b(log|note|save this|record this|customer said|tech note|field note)\b/i.test(text);
 }
@@ -677,7 +686,7 @@ function selectedJobAppearsDifferent(jobLabel: string | undefined, vehicle: stri
 
 function likelyPartsFollowUp(text: string) {
   return (
-    /\b(where|who|which|closest|near|close|buy|get|order|reserve|pickup|pick up|in stock|available|has one|have one)\b/i.test(text) &&
+    /\b(where|who|which|closest|near|close|buy|get|order|reserve|pickup|pick up|in stock|available|has one|have one|add|cart|checkout|review|pay)\b/i.test(text) &&
     /\b(one|it|that|this|part|pump|starter|alternator|battery|sensor|plug|coil|filter)\b/i.test(text)
   );
 }
@@ -822,13 +831,25 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
   if (wantsPartsStore) {
     const partName = input.inferredPartName || extractPartName(text);
     const vehicle = input.inferredVehicle || input.jobLabel;
-    actions.push(messageActionFromResult(await findNearbyPartsStoresForSimon({
-      partName,
-      vehicle,
-    }), "find_nearby_parts_stores"));
+    if (likelyWantsPartsCartPrep(text)) {
+      actions.push(messageActionFromResult(await preparePartsCartForSimon({
+        jobId: input.jobId,
+        partName,
+        vehicle,
+        preferredVendor: "O'Reilly Auto Parts",
+        sourceChannel: input.attachments?.length ? "mms" : "sms",
+        spokenRequest: text,
+      }), "prepare_parts_cart"));
+    } else {
+      actions.push(messageActionFromResult(await findNearbyPartsStoresForSimon({
+        partName,
+        vehicle,
+        preferredVendor: "O'Reilly Auto Parts",
+      }), "find_nearby_parts_stores"));
+    }
   }
 
-  if (likelyWantsPurchaseBlocked(text)) {
+  if (likelyWantsPurchaseBlocked(text) && !likelyWantsPartsCartPrep(text)) {
     actions.push(messageActionFromResult(await purchaseOrReservePartBlocked({
       jobId: input.jobId,
       requestedPart: extractPartName(text),
@@ -884,18 +905,72 @@ function partsStoreActionSummary(data: unknown) {
   return [...rows, question ? `Inventory question: ${question}` : undefined].filter(Boolean).join("\n");
 }
 
+function partsCartActionSummary(data: unknown) {
+  if (!isObject(data)) return undefined;
+  const reviewPayUrl = optionalString(data.reviewPayUrl) || optionalString(data.vendorSearchUrl);
+  const partName = optionalString(data.partName);
+  const cartStatus = optionalString(data.cartStatus);
+  const selectedStore = isObject(data.selectedStore) ? data.selectedStore : undefined;
+  const storeName = selectedStore ? optionalString(selectedStore.name) : undefined;
+  const storeAddress = selectedStore ? optionalString(selectedStore.address) : undefined;
+  const storePhone = selectedStore ? optionalString(selectedStore.phone) : undefined;
+  const storeMapUrl = optionalString(data.storeMapUrl);
+
+  return [
+    cartStatus ? `Cart status: ${cartStatus}` : undefined,
+    partName ? `Part: ${partName}` : undefined,
+    storeName ? `Store: ${[storeName, storeAddress, storePhone].filter(Boolean).join(" / ")}` : undefined,
+    reviewPayUrl ? `Review/pay URL: ${reviewPayUrl}` : undefined,
+    storeMapUrl ? `Store map: ${storeMapUrl}` : undefined,
+    "Boundary: Jeff did not purchase, reserve, or order. Simon must verify fitment, availability, price, core charge, and pay.",
+  ].filter(Boolean).join("\n");
+}
+
 function buildActionContext(actions: MessageToolAction[]) {
   if (actions.length === 0) return "- No tool-backed action was run for this message.";
 
   return actions
     .map((action) => {
       const partsSummary = action.tool === "find_nearby_parts_stores" ? partsStoreActionSummary(action.data) : undefined;
+      const cartSummary = action.tool === "prepare_parts_cart" ? partsCartActionSummary(action.data) : undefined;
       return [
         `- ${action.tool}: ${action.success ? "success" : "blocked/failed"}${action.assistantSay ? ` - ${action.assistantSay}` : ""}${action.warning ? ` Warning: ${action.warning}` : ""}`,
         partsSummary ? `  ${partsSummary.replace(/\n/g, "\n  ")}` : undefined,
+        cartSummary ? `  ${cartSummary.replace(/\n/g, "\n  ")}` : undefined,
       ].filter(Boolean).join("\n");
     })
     .join("\n");
+}
+
+function fallbackReplyFromActions(actions: MessageToolAction[]) {
+  const cartAction = actions.find((action) => action.tool === "prepare_parts_cart");
+  if (cartAction?.success && isObject(cartAction.data)) {
+    const reviewPayUrl = optionalString(cartAction.data.reviewPayUrl) || optionalString(cartAction.data.vendorSearchUrl);
+    const partName = optionalString(cartAction.data.partName) || "that part";
+    const fitmentStatus = optionalString(cartAction.data.fitmentStatus);
+    const fitment = isObject(cartAction.data.fitment) ? cartAction.data.fitment : {};
+    const missingFacts = Array.isArray(fitment.missingFacts)
+      ? fitment.missingFacts.filter((fact): fact is string => typeof fact === "string")
+      : [];
+    const selectedStore = isObject(cartAction.data.selectedStore) ? cartAction.data.selectedStore : undefined;
+    const storeName = selectedStore ? optionalString(selectedStore.name) : undefined;
+
+    return [
+      storeName
+        ? `I prepared the parts handoff for ${partName} at ${storeName}.`
+        : `I prepared the parts handoff for ${partName}.`,
+      fitmentStatus ? `Fitment status: ${fitmentStatus}.` : undefined,
+      missingFacts.length ? `Still need: ${missingFacts.join(", ")}.` : undefined,
+      reviewPayUrl ? `Review and pay here: ${reviewPayUrl}` : undefined,
+      "I did not buy, reserve, or order it. Verify exact fitment, availability, final price, and core charge before paying.",
+    ].filter(Boolean).join("\n");
+  }
+
+  const usefulActions = actions
+    .filter((action) => action.assistantSay)
+    .map((action) => action.assistantSay);
+
+  return usefulActions.length > 0 ? usefulActions.join("\n\n") : undefined;
 }
 
 async function askJeffTextModel(
@@ -907,10 +982,11 @@ async function askJeffTextModel(
   const model = readEnv("JEFF_FIELD_TEXT_MODEL", "JEFF_FIELD_REASONING_MODEL") || "gpt-4.1-mini";
   const memories = await listApprovedJeffDurableMemories(50);
   const capabilities = await getJeffCapabilityReport();
+  const actionFallback = fallbackReplyFromActions(actions);
 
   if (!apiKey) {
     return {
-      reply: "I saved that, but my text brain is not connected because OPENAI_API_KEY is missing.",
+      reply: actionFallback || "I saved that, but my text brain is not connected because OPENAI_API_KEY is missing.",
       model,
       warning: "OPENAI_API_KEY is not configured.",
     };
@@ -939,6 +1015,7 @@ async function askJeffTextModel(
               "For quote-draft actions, say whether the draft is ready for human review. Do not say it was sent to a customer or turned into a payment link unless a separate tool action proves that.",
               "When tool-backed actions are listed, treat those outcomes as ground truth and summarize them plainly.",
               "For nearby parts-store results, include store names plus phone/address/map when available and the exact inventory-confirmation question. Do not claim live inventory unless a vendor-confirmed source proves it.",
+              "For prepare_parts_cart results, include the exact review/pay URL from the tool result as a plain https link so the message portal can make it tappable. Say clearly that Jeff did not buy, reserve, or order the part.",
               "Use live capability status quietly. Do not recite system internals unless Simon asks what is connected or why something is blocked.",
               "",
               buildJeffCapabilityPromptContext(capabilities),
@@ -994,7 +1071,7 @@ async function askJeffTextModel(
     });
   } catch (error) {
     return {
-      reply: "I saved your message, but I could not get a live answer from Jeff's text brain yet.",
+      reply: actionFallback || "I saved your message, but I could not get a live answer from Jeff's text brain yet.",
       model,
       warning: error instanceof Error ? error.message : "OpenAI text response failed before Jeff could answer.",
     };
@@ -1004,7 +1081,7 @@ async function askJeffTextModel(
   if (!response.ok) {
     const message = extractOpenAIErrorMessage(responseBody);
     return {
-      reply: "I saved your message, but I could not get a live answer from Jeff's text brain yet.",
+      reply: actionFallback || "I saved your message, but I could not get a live answer from Jeff's text brain yet.",
       model,
       warning: message || `OpenAI text response failed with status ${response.status}.`,
     };
