@@ -11,6 +11,10 @@ function opsPasswordCandidates() {
   ].filter((value): value is string => Boolean(value));
 }
 
+function opsUsernameCandidate() {
+  return process.env.WR_OPS_AUTH_USER?.trim();
+}
+
 function basicCredentials(authorization: string | null) {
   if (!authorization?.startsWith("Basic ")) return undefined;
 
@@ -52,10 +56,15 @@ function unauthorized(request: NextRequest) {
 
 export function proxy(request: NextRequest) {
   const passwords = opsPasswordCandidates();
+  const username = opsUsernameCandidate();
   const credentials = basicCredentials(request.headers.get("authorization"));
 
   if (passwords.length === 0) return unauthorized(request);
-  if (credentials && passwords.includes(credentials.password)) {
+  if (
+    credentials &&
+    passwords.includes(credentials.password) &&
+    (!username || credentials.username === username)
+  ) {
     return NextResponse.next();
   }
 
@@ -63,5 +72,21 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/ops", "/ops/:path*", "/api/al/wrenchready/promises", "/api/al/wrenchready/promises/:path*"],
+  matcher: [
+    "/ops",
+    "/ops/:path*",
+    "/api/al/wrenchready/alert-proof",
+    "/api/al/wrenchready/dispatch",
+    "/api/al/wrenchready/follow-through",
+    "/api/al/wrenchready/inbound",
+    "/api/al/wrenchready/inbound/:path*",
+    "/api/al/wrenchready/integrations",
+    "/api/al/wrenchready/outbound",
+    "/api/al/wrenchready/owners/:path*",
+    "/api/al/wrenchready/persistence-proof",
+    "/api/al/wrenchready/promises",
+    "/api/al/wrenchready/promises/:path*",
+    "/api/al/wrenchready/systems",
+    "/api/al/wrenchready/tomorrow",
+  ],
 };
