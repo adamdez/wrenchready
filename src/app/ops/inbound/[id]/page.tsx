@@ -78,6 +78,44 @@ function riskClasses(record: InboundDetailRecord) {
   return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
 }
 
+function sourceLabel(source: InboundDetailRecord["source"]) {
+  if (source === "voicemail") return "Voicemail";
+  if (source === "phone") return "Phone call";
+  if (source === "text") return "Text";
+  if (source === "manual") return "Manual";
+  return "Website";
+}
+
+function sourceClasses(source: InboundDetailRecord["source"]) {
+  if (source === "voicemail") return "border-red-500/30 bg-red-500/10 text-red-200";
+  if (source === "phone") {
+    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  }
+  if (source === "text") return "border-primary/25 bg-primary/10 text-primary";
+  return "border-border bg-background text-muted-foreground";
+}
+
+function isVoiceLead(record: InboundDetailRecord) {
+  return record.source === "voicemail" || record.source === "phone";
+}
+
+function findRecordingUrl(record: InboundDetailRecord) {
+  const searchable = [
+    record.symptomSummary,
+    record.location.accessNotes,
+    ...record.notes,
+  ].filter(Boolean);
+
+  for (const value of searchable) {
+    const match = String(value).match(/https?:\/\/\S+/);
+    if (match && /recording|voicemail|\.mp3/i.test(String(value))) {
+      return match[0].replace(/[),.]+$/, "");
+    }
+  }
+
+  return undefined;
+}
+
 function DataUnavailable({ message }: { message: string }) {
   return (
     <div className="shell py-10 sm:py-14">
@@ -169,6 +207,8 @@ export default async function InboundDetailPage({ params }: InboundDetailPagePro
   const timingMissing = isMissingTiming(inbound.preferredWindow.label);
   const callHref = phoneHref(inbound.customer.phone);
   const textHref = smsHref(inbound.customer.phone);
+  const recordingUrl = findRecordingUrl(inbound);
+  const voiceLead = isVoiceLead(inbound);
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -198,6 +238,16 @@ export default async function InboundDetailPage({ params }: InboundDetailPagePro
                 {promised ? <CheckCircle2 className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
                 {promised ? "Promise exists" : "No appointment promised yet"}
               </span>
+              <span
+                className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${sourceClasses(inbound.source)}`}
+              >
+                {inbound.source === "text" ? (
+                  <MessageSquareText className="h-3.5 w-3.5" />
+                ) : (
+                  <Phone className="h-3.5 w-3.5" />
+                )}
+                {sourceLabel(inbound.source)}
+              </span>
             </div>
 
             <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
@@ -212,6 +262,28 @@ export default async function InboundDetailPage({ params }: InboundDetailPagePro
               </p>
               <p className="mt-2 text-base leading-relaxed text-foreground">{inbound.nextAction}</p>
             </div>
+            {voiceLead ? (
+              <div className="mt-4 rounded-2xl border border-red-500/25 bg-red-500/10 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-red-200">
+                  Missed call / voicemail action
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-red-100">
+                  Call back first. Confirm the request, vehicle, worksite, timing, and whether this
+                  should become a promised appointment.
+                </p>
+                {recordingUrl ? (
+                  <a
+                    className="mt-3 inline-flex items-center gap-2 rounded-full border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-100 transition-all hover:bg-red-500/15"
+                    href={recordingUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <Phone className="h-4 w-4" />
+                    Open voicemail recording
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="min-w-0 rounded-2xl border border-border bg-card/50 p-4 xl:w-[22rem]">

@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Mail,
+  MessageSquareText,
   Phone,
   TimerReset,
   Wrench,
@@ -65,6 +66,44 @@ function isMissingTiming(label?: string) {
     normalized.includes("not selected") ||
     normalized.includes("tbd")
   );
+}
+
+function sourceLabel(source: InboundRecord["source"]) {
+  if (source === "voicemail") return "Voicemail";
+  if (source === "phone") return "Phone call";
+  if (source === "text") return "Text";
+  if (source === "manual") return "Manual";
+  return "Website";
+}
+
+function sourceClasses(source: InboundRecord["source"]) {
+  if (source === "voicemail") return "border-red-500/30 bg-red-500/10 text-red-200";
+  if (source === "phone") {
+    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  }
+  if (source === "text") return "border-primary/25 bg-primary/10 text-primary";
+  return "border-border bg-background text-muted-foreground";
+}
+
+function isVoiceLead(record: InboundRecord) {
+  return record.source === "voicemail" || record.source === "phone";
+}
+
+function findRecordingUrl(record: InboundRecord) {
+  const searchable = [
+    record.symptomSummary,
+    record.location.accessNotes,
+    ...record.notes,
+  ].filter(Boolean);
+
+  for (const value of searchable) {
+    const match = String(value).match(/https?:\/\/\S+/);
+    if (match && /recording|voicemail|\.mp3/i.test(String(value))) {
+      return match[0].replace(/[),.]+$/, "");
+    }
+  }
+
+  return undefined;
 }
 
 function EmptyState({ children }: { children: React.ReactNode }) {
@@ -140,6 +179,8 @@ function ContactActions({ customer }: { customer: InboundRecord["customer"] }) {
 
 function InboundQueueItem({ record }: { record: InboundRecord }) {
   const timingMissing = isMissingTiming(record.preferredWindow.label);
+  const recordingUrl = findRecordingUrl(record);
+  const voiceLead = isVoiceLead(record);
 
   return (
     <article className="rounded-2xl border border-border bg-card/50 p-4">
@@ -149,6 +190,16 @@ function InboundQueueItem({ record }: { record: InboundRecord }) {
             <h3 className="text-base font-bold text-foreground">{record.customer.name}</h3>
             <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
               Not promised yet
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${sourceClasses(record.source)}`}
+            >
+              {record.source === "text" ? (
+                <MessageSquareText className="h-3.5 w-3.5" />
+              ) : (
+                <Phone className="h-3.5 w-3.5" />
+              )}
+              {sourceLabel(record.source)}
             </span>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">{record.requestedService}</p>
@@ -182,6 +233,33 @@ function InboundQueueItem({ record }: { record: InboundRecord }) {
         </p>
         <p className="mt-2 text-sm leading-relaxed text-foreground">{record.nextAction}</p>
       </div>
+
+      {voiceLead ? (
+        <div className="mt-4 rounded-2xl border border-red-500/25 bg-red-500/10 p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-red-200">
+                Missed call / voicemail action
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-red-100">
+                Call back first. Confirm customer, vehicle, location, timing, and whether this is
+                an appointment request before promising anything.
+              </p>
+            </div>
+            {recordingUrl ? (
+              <a
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-100 transition-all hover:bg-red-500/15"
+                href={recordingUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Open recording
+                <ArrowRight className="h-3.5 w-3.5" />
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <ContactActions customer={record.customer} />

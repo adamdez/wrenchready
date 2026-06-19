@@ -87,7 +87,7 @@ async function handler(req: NextRequest) {
     customerPhone: callerNumber,
     preferredContact: "call",
     vehicle: "Unknown vehicle",
-    requestedService: "Voicemail callback needed",
+    requestedService: "Missed call / voicemail callback needed",
     address: "Needs territory check",
     timingLabel: "Call back as soon as possible",
     notes: recordingUrl
