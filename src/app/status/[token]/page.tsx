@@ -21,7 +21,11 @@ import {
   getCloseoutRecapItems,
   getNextProbableVisit,
 } from "@/lib/promise-crm/closeout-recapture";
-import { buildCustomerStatusView } from "@/lib/promise-crm/customer-view";
+import {
+  buildCustomerStatusView,
+  customerSafeScheduleLabel,
+  customerSafeText,
+} from "@/lib/promise-crm/customer-view";
 import { computePromiseEconomics } from "@/lib/promise-crm/economics";
 import { getPromiseRecordByCustomerToken } from "@/lib/promise-crm/server";
 import { siteConfig } from "@/data/site";
@@ -118,7 +122,7 @@ export default async function CustomerStatusPage({
           </div>
 
           <div className={`rounded-2xl border px-4 py-3 text-sm ${toneClasses(view.tone)}`}>
-            {promise.scheduledWindow.label}
+            {customerSafeScheduleLabel(promise.scheduledWindow.label)}
           </div>
         </div>
 
@@ -269,10 +273,12 @@ export default async function CustomerStatusPage({
                     "No repair outcome recorded yet"}
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.closeout?.customerConditionSummary ||
-                    promise.commercialOutcome?.outcomeSummary ||
-                    promise.customerApproval.summary ||
-                    promise.nextAction}
+                  {customerSafeText(
+                    promise.closeout?.customerConditionSummary ||
+                      promise.commercialOutcome?.outcomeSummary ||
+                      promise.customerApproval.summary ||
+                      promise.nextAction,
+                  )}
                 </p>
               </div>
 
@@ -288,9 +294,11 @@ export default async function CustomerStatusPage({
                       : "No additional amount recorded yet"}
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.customerApproval.customerMessage ||
-                    promise.closeout?.reviewRequest?.summary ||
-                    "If we recommend a next step, it will be recorded here clearly."}
+                  {customerSafeText(
+                    promise.customerApproval.customerMessage ||
+                      promise.closeout?.reviewRequest?.summary,
+                    "If we recommend a next step, it will be recorded here clearly.",
+                  )}
                 </p>
               </div>
             </div>
@@ -343,7 +351,9 @@ export default async function CustomerStatusPage({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
                   Scheduled window
                 </p>
-                <p className="mt-2 text-sm text-muted-foreground">{promise.scheduledWindow.label}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {customerSafeScheduleLabel(promise.scheduledWindow.label)}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-border bg-background/60 p-4">
@@ -402,10 +412,12 @@ export default async function CustomerStatusPage({
                   Current recap
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {promise.customerApproval.customerMessage ||
-                    promise.closeout?.customerConditionSummary ||
-                    promise.commercialOutcome?.outcomeSummary ||
-                    promise.readinessSummary}
+                  {customerSafeText(
+                    promise.customerApproval.customerMessage ||
+                      promise.closeout?.customerConditionSummary ||
+                      promise.commercialOutcome?.outcomeSummary ||
+                      promise.readinessSummary,
+                  )}
                 </p>
               </div>
 
@@ -436,10 +448,12 @@ export default async function CustomerStatusPage({
                 </p>
                 <p className="mt-2 text-sm font-medium text-foreground">{recommendedService}</p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {nextProbableVisit?.reason ||
-                    promise.customerApproval.summary ||
-                    promise.commercialOutcome?.outcomeSummary ||
-                    promise.nextAction}
+                  {customerSafeText(
+                    nextProbableVisit?.reason ||
+                      promise.customerApproval.summary ||
+                      promise.commercialOutcome?.outcomeSummary ||
+                      promise.nextAction,
+                  )}
                 </p>
               </div>
 

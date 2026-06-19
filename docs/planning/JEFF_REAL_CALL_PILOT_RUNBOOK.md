@@ -36,9 +36,11 @@ Set:
 - `OPENAI_API_KEY=<OpenAI project key>`
 - `JEFF_FIELD_ASSISTANT_TOOL_SECRET=<long random secret>`
 - `JEFF_FIELD_PHOTO_UPLOAD_PIN=<short Simon-only PIN, optional but recommended>`
+- `JEFF_FIELD_TEXT_MODEL=gpt-5.5`
 - `JEFF_FIELD_REALTIME_MODEL=gpt-realtime-2`
 - `JEFF_FIELD_REASONING_MODEL=gpt-5.5`
 - `JEFF_FIELD_VISION_MODEL=gpt-5.5`
+- `VAPI_JEFF_OPENAI_MODEL=gpt-5.4-mini`
 - `VAPI_JEFF_ASSISTANT_ID=<after assistant is created>`
 - `VAPI_JEFF_PHONE_NUMBER_ID=<after number is attached>`
 - `WR_ENABLE_JEFF_FIELD_DEMO_FIXTURES=true` for pilot fixture testing only

@@ -14,12 +14,14 @@ import { persistJeffMediaItems } from "@/lib/jeff-field-assistant/media";
 import { findNearbyPartsStoresForSimon } from "@/lib/jeff-field-assistant/location";
 import {
   analyzeFieldPhoto,
+  getFieldBrief,
   prepareQuoteDraftForReview,
   preparePartsCartForSimon,
   proposeCoreMemoryUpdate,
   purchaseOrReservePartBlocked,
   recordFieldNote,
   recordFieldPhotoUpload,
+  searchWrenchReadyKnowledge,
   sendSimonRecapEmail,
   startCloseout,
   syncJeffCalendar,
@@ -35,6 +37,7 @@ import {
   isJeffFieldThreadConversation,
 } from "@/lib/jeff-field-assistant/conversation-filters";
 import { buildQuoteDraftPayloadFromText } from "@/lib/jeff-field-assistant/quote-intake";
+import { upsertOperatorTask } from "@/lib/promise-crm/operator-tasks";
 import type {
   JeffConversation,
   JeffConversationSummary,
@@ -82,6 +85,13 @@ type MessageToolAction = {
   assistantSay?: string;
   warning?: string;
   data?: unknown;
+};
+
+type MessageFieldContext = {
+  status: "loaded" | "skipped" | "blocked" | "error";
+  text?: string;
+  summary?: string;
+  warning?: string;
 };
 
 export type JeffAppThreadMessage = {
@@ -530,6 +540,15 @@ function likelyWantsCalendarSync(text: string) {
   return /\b(sync|mirror|update|push)\b.{0,35}\b(calendar|schedule)\b/i.test(text);
 }
 
+function likelyWantsKnowledgeSearch(text: string) {
+  if (/https?:\/\/\S+/i.test(text)) return true;
+
+  return (
+    /\b(sop|playbook|rule|policy|process|template|quote format|pricing rule|how do we|how should we|what do we charge|rate|diagnostic quote|customer quote|internal service plan)\b/i.test(text) ||
+    /\b(parasitic draw|battery disconnect|remote disconnect|starter|alternator|fuel pump|no[- ]?start|battery diagnostic|oreilly|o'reilly|parts cart|invoice|payment link|reseller|commercial account)\b/i.test(text)
+  );
+}
+
 function likelyWantsPhotoAnalysis(text: string, attachments: JeffAppAttachment[] = []) {
   return attachments.some(isImageAttachment) && /\b(photo|picture|image|look|see|analy[sz]e|what is this|what do you see)\b/i.test(text);
 }
@@ -709,6 +728,19 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
 
   const actions: MessageToolAction[] = [];
 
+  if (likelyWantsKnowledgeSearch(text)) {
+    actions.push(messageActionFromResult(await searchWrenchReadyKnowledge({
+      query: [
+        input.jobLabel ? `Job: ${input.jobLabel}` : undefined,
+        input.inferredVehicle ? `Vehicle: ${input.inferredVehicle}` : undefined,
+        input.inferredPartName ? `Part: ${input.inferredPartName}` : undefined,
+        text,
+      ].filter(Boolean).join("\n"),
+      focus: input.contextMode,
+      limit: 5,
+    }), "search_wrenchready_knowledge"));
+  }
+
   if (likelyWantsFieldNote(text) && input.jobId) {
     actions.push(messageActionFromResult(await recordFieldNote({
       jobId: input.jobId,
@@ -854,6 +886,22 @@ function partsCartActionSummary(data: unknown) {
   ].filter(Boolean).join("\n");
 }
 
+function knowledgeActionSummary(data: unknown) {
+  if (!isObject(data) || !Array.isArray(data.matches)) return undefined;
+  const rows = data.matches.slice(0, 4).flatMap((match, index) => {
+    if (!isObject(match)) return [];
+    const title = optionalString(match.title) || `Knowledge match ${index + 1}`;
+    const sourcePath = optionalString(match.sourcePath);
+    const excerpt = optionalString(match.excerpt);
+
+    return [
+      `${index + 1}. ${[title, sourcePath].filter(Boolean).join(" / ")}${excerpt ? `: ${excerpt}` : ""}`,
+    ];
+  });
+
+  return rows.length > 0 ? rows.join("\n") : "No strong WrenchReady knowledge match found.";
+}
+
 function buildActionContext(actions: MessageToolAction[]) {
   if (actions.length === 0) return "- No tool-backed action was run for this message.";
 
@@ -861,13 +909,101 @@ function buildActionContext(actions: MessageToolAction[]) {
     .map((action) => {
       const partsSummary = action.tool === "find_nearby_parts_stores" ? partsStoreActionSummary(action.data) : undefined;
       const cartSummary = action.tool === "prepare_parts_cart" ? partsCartActionSummary(action.data) : undefined;
+      const knowledgeSummary = action.tool === "search_wrenchready_knowledge" ? knowledgeActionSummary(action.data) : undefined;
       return [
         `- ${action.tool}: ${action.success ? "success" : "blocked/failed"}${action.assistantSay ? ` - ${action.assistantSay}` : ""}${action.warning ? ` Warning: ${action.warning}` : ""}`,
+        knowledgeSummary ? `  ${knowledgeSummary.replace(/\n/g, "\n  ")}` : undefined,
         partsSummary ? `  ${partsSummary.replace(/\n/g, "\n  ")}` : undefined,
         cartSummary ? `  ${cartSummary.replace(/\n/g, "\n  ")}` : undefined,
       ].filter(Boolean).join("\n");
     })
     .join("\n");
+}
+
+async function upsertOperatorTasksFromMessage(input: JeffAppMessageInput, params: {
+  conversationId: string;
+  summary: JeffConversationSummary;
+  actions: MessageToolAction[];
+}) {
+  const sourceUrl = input.jobId ? `/ops/promises/${input.jobId}` : "/ops/field-assistant#jeff-call-workspace";
+  const common = {
+    promiseId: input.jobId,
+    customerName: input.jobLabel,
+    vehicleLabel: input.inferredVehicle || input.jobLabel,
+    sourceChannel: "message" as const,
+    sourceKind: "jeff-app-message",
+    sourceId: params.conversationId,
+    sourceUrl,
+    metadata: {
+      contextMode: input.contextMode,
+      selectedJobId: input.selectedJobId,
+      selectedJobLabel: input.selectedJobLabel,
+      inferredVehicle: input.inferredVehicle,
+      inferredPartName: input.inferredPartName,
+      actions: params.actions.map((action) => ({
+        tool: action.tool,
+        success: action.success,
+        warning: action.warning,
+      })),
+    },
+  };
+  const taskWrites: Array<Promise<unknown>> = [];
+  const blockedAction = params.actions.find((action) => !action.success || action.warning);
+
+  if (!input.jobId && input.contextMode !== "parts-only") {
+    taskWrites.push(upsertOperatorTask({
+      id: `operator-task-jeff-message-${params.conversationId}-review`,
+      title: `Review Jeff message: ${input.inferredVehicle || input.inferredPartName || "unmatched message"}`,
+      detail: input.text || params.summary.summary,
+      type: "jeff-review",
+      priority: input.contextMode === "admin" || input.contextMode === "different-job" ? "high" : "normal",
+      owner: "Adam",
+      blocker: "Message is not attached to a confirmed CRM job.",
+      ...common,
+    }));
+  }
+
+  if (params.actions.some((action) => action.tool === "prepare_quote_draft_for_review")) {
+    taskWrites.push(upsertOperatorTask({
+      id: `operator-task-jeff-message-${params.conversationId}-quote`,
+      title: "Review quote draft from Message Jeff",
+      detail: params.summary.recommendationSummary || input.text || "Jeff prepared or detected quote work that needs office review.",
+      type: "quote-review",
+      priority: "high",
+      owner: "Adam",
+      ...common,
+    }));
+  }
+
+  if (params.actions.some((action) => ["prepare_parts_cart", "find_nearby_parts_stores", "purchase_or_reserve_part"].includes(action.tool))) {
+    taskWrites.push(upsertOperatorTask({
+      id: `operator-task-jeff-message-${params.conversationId}-parts`,
+      title: "Parts follow-up from Simon",
+      detail: params.summary.recommendationSummary || input.text || "Simon asked Jeff for parts support.",
+      type: "parts",
+      priority: "high",
+      owner: "Simon",
+      blocker: blockedAction?.tool === "purchase_or_reserve_part"
+        ? "Jeff can help find stores and inventory questions, but purchasing/reserving is blocked."
+        : undefined,
+      ...common,
+    }));
+  }
+
+  if (blockedAction) {
+    taskWrites.push(upsertOperatorTask({
+      id: `operator-task-jeff-message-${params.conversationId}-blocked`,
+      title: `Unblock Jeff: ${blockedAction.tool}`,
+      detail: blockedAction.warning || blockedAction.assistantSay || input.text || "Jeff reported a blocked or partial tool action.",
+      type: "system",
+      priority: "high",
+      owner: "Adam",
+      blocker: blockedAction.warning || "Tool action was blocked or partial.",
+      ...common,
+    }));
+  }
+
+  await Promise.all(taskWrites);
 }
 
 function fallbackReplyFromActions(actions: MessageToolAction[]) {
@@ -901,13 +1037,112 @@ function fallbackReplyFromActions(actions: MessageToolAction[]) {
   return usefulActions.length > 0 ? usefulActions.join("\n\n") : undefined;
 }
 
+function compactReadableValue(value: unknown, limit = 240): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") return value.trim().slice(0, limit) || undefined;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    const parts = value
+      .slice(0, 5)
+      .map((entry) => compactReadableValue(entry, 90))
+      .filter((entry): entry is string => Boolean(entry));
+    if (!parts.length) return undefined;
+    return `${parts.join("; ")}${value.length > parts.length ? `; +${value.length - parts.length} more` : ""}`.slice(0, limit);
+  }
+  if (!isObject(value)) return undefined;
+
+  const usefulKeys = [
+    "summary",
+    "label",
+    "name",
+    "status",
+    "partName",
+    "part",
+    "source",
+    "note",
+    "amount",
+    "question",
+    "result",
+    "nextAction",
+  ];
+  const parts = usefulKeys
+    .flatMap((key) => {
+      const nested = compactReadableValue(value[key], 80);
+      return nested ? [`${key}: ${nested}`] : [];
+    })
+    .slice(0, 4);
+
+  return (parts.length ? parts.join("; ") : JSON.stringify(value).slice(0, limit)).slice(0, limit);
+}
+
+function fieldBriefLine(label: string, value: unknown) {
+  const compact = compactReadableValue(value);
+  return compact ? `- ${label}: ${compact}` : undefined;
+}
+
+function buildFieldBriefContextText(brief: unknown) {
+  if (!isObject(brief)) return undefined;
+
+  const customer = isObject(brief.customer) ? optionalString(brief.customer.name) : undefined;
+  const lines = [
+    customer ? `- Customer: ${customer}` : undefined,
+    fieldBriefLine("Vehicle", brief.vehicle),
+    fieldBriefLine("Scope", brief.serviceScope),
+    fieldBriefLine("Authorized scope", brief.authorizedScope),
+    fieldBriefLine("Approval", brief.approval),
+    fieldBriefLine("Stop points", brief.stopPoints),
+    fieldBriefLine("Known diagnostic path", brief.diagnosticPath),
+    fieldBriefLine("Parts status", brief.partsStatus),
+    fieldBriefLine("Invoice/payment", brief.invoicePaymentStatus),
+    fieldBriefLine("Evidence needed", brief.evidenceChecklist),
+    fieldBriefLine("Next safe action", brief.nextAction),
+  ].filter(Boolean);
+
+  if (!lines.length) return undefined;
+  return [
+    "Selected job field packet. Use this silently; do not say you are checking context.",
+    ...lines,
+  ].join("\n");
+}
+
+async function loadMessageFieldContext(input: JeffAppMessageInput): Promise<MessageFieldContext> {
+  if (!input.jobId) {
+    return { status: "skipped" };
+  }
+
+  try {
+    const fieldBrief = await getFieldBrief({ jobId: input.jobId });
+    if (!fieldBrief.success) {
+      return {
+        status: "blocked",
+        warning: fieldBrief.assistantSay,
+      };
+    }
+
+    const data: Record<string, unknown> = isObject(fieldBrief.data) ? fieldBrief.data : {};
+    const text = buildFieldBriefContextText(data.brief);
+    return {
+      status: text ? "loaded" : "blocked",
+      text,
+      summary: fieldBrief.assistantSay,
+      warning: fieldBrief.warnings[0],
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      warning: error instanceof Error ? error.message : "Could not load selected job context.",
+    };
+  }
+}
+
 async function askJeffTextModel(
   input: JeffAppMessageInput,
   recentMessages: JeffAppThreadMessage[],
   actions: MessageToolAction[] = [],
+  fieldContext: MessageFieldContext = { status: "skipped" },
 ) {
   const apiKey = readEnv("OPENAI_API_KEY");
-  const model = readEnv("JEFF_FIELD_TEXT_MODEL", "JEFF_FIELD_REASONING_MODEL") || "gpt-4.1-mini";
+  const model = readEnv("JEFF_FIELD_TEXT_MODEL", "JEFF_FIELD_REASONING_MODEL") || "gpt-5.5";
   const memories = await listApprovedJeffDurableMemories(50);
   const capabilities = await getJeffCapabilityReport();
   const actionFallback = fallbackReplyFromActions(actions);
@@ -936,6 +1171,7 @@ async function askJeffTextModel(
               "Assume Simon is usually working alone. Give one-person-safe steps and one physical action at a time.",
               "Use research, memories, tools, and context internally, then answer like a human coach. Do not say according to my research, the research says, or the source says unless Simon asks for source detail.",
               "Default to: quick takeaway, one-sentence reason, next physical action.",
+              "For mechanical questions, help from the symptom and test facts first. Do not force CRM context, job id, VIN, or customer details before giving a useful next test.",
               "If the message context says different-job, parts-only, personal, or no-job, do not drag the answer back to the selected CRM job.",
               "If Simon asks a follow-up like where can I buy one, continue the most recent part/vehicle from the thread unless the tool context says otherwise.",
               "If Simon asks for a part, test, purchase, diagnosis, safety judgment, invoice, or customer message, say what you can do now and what must be verified.",
@@ -953,6 +1189,9 @@ async function askJeffTextModel(
               "",
               "Recent Jeff thread:",
               buildRecentContext(recentMessages) || "- No recent thread messages.",
+              "",
+              "Selected-job context loaded by the backend:",
+              fieldContext.text || (fieldContext.status === "skipped" ? "- No selected job for this message." : `- ${fieldContext.status}: ${fieldContext.warning || "field context unavailable"}`),
               "",
               "Tool-backed actions for this message:",
               buildActionContext(actions),
@@ -978,6 +1217,8 @@ async function askJeffTextModel(
                 ? `Attachments mentioned: ${input.attachments.map((attachment) => attachment.fileName).join(", ")}`
                 : undefined,
               input.fieldPhotoStatus ? `Attachment status: ${input.fieldPhotoStatus}` : undefined,
+              fieldContext.summary ? `Backend-loaded field context: ${fieldContext.summary}` : undefined,
+              fieldContext.warning ? `Field context warning: ${fieldContext.warning}` : undefined,
               actions.length ? `Actions run: ${actions.map((action) => action.tool).join(", ")}` : undefined,
               `Simon says: ${input.text}`,
             ].filter(Boolean).join("\n"),
@@ -1056,7 +1297,8 @@ export async function sendJeffAppMessage(payload: unknown) {
   ];
   const mediaStorage = await persistJeffMediaItems(mediaWithConversation);
   const actions = await runMessageActionTools(input);
-  const answer = await askJeffTextModel(input, recent.messages, actions);
+  const fieldContext = await loadMessageFieldContext(input);
+  const answer = await askJeffTextModel(input, recent.messages, actions, fieldContext);
   const timestamp = nowIso();
   const subject = input.jobLabel || input.inferredVehicle || input.inferredPartName || text?.slice(0, 90) || "Jeff app message";
   const transcript = [
@@ -1111,6 +1353,9 @@ export async function sendJeffAppMessage(payload: unknown) {
       userMessage: text,
       assistantMessage: answer.reply,
       model: answer.model,
+      fieldContextStatus: fieldContext.status,
+      fieldContextSummary: fieldContext.summary,
+      fieldContextWarning: fieldContext.warning,
       attachments: input.attachments,
       warning: answer.warning,
       attachmentStorage: savedAttachments.warnings.length > 0 ? "mixed-or-local" : "google-drive-or-none",
@@ -1140,6 +1385,7 @@ export async function sendJeffAppMessage(payload: unknown) {
       input.contextMode ? `Context: ${input.contextMode}` : undefined,
       input.inferredVehicle ? `Vehicle: ${input.inferredVehicle}` : undefined,
       input.inferredPartName ? `Part: ${input.inferredPartName}` : undefined,
+      fieldContext.summary ? `Field context: ${fieldContext.summary}` : undefined,
       input.attachments?.length ? `Attachments: ${input.attachments.length}` : undefined,
     ].filter((entry): entry is string => Boolean(entry)),
     testsPerformed: [],
@@ -1162,6 +1408,9 @@ export async function sendJeffAppMessage(payload: unknown) {
       inferredVehicle: input.inferredVehicle,
       inferredPartName: input.inferredPartName,
       model: answer.model,
+      fieldContextStatus: fieldContext.status,
+      fieldContextSummary: fieldContext.summary,
+      fieldContextWarning: fieldContext.warning,
       warning: answer.warning,
       attachmentStorageWarnings: savedAttachments.warnings,
       fieldPhotoRegistrationWarnings: photoRegistration.warnings,
@@ -1170,6 +1419,11 @@ export async function sendJeffAppMessage(payload: unknown) {
     },
   };
   const storage = await persistJeffConversationWorkspace({ conversation, summary });
+  await upsertOperatorTasksFromMessage(input, {
+    conversationId,
+    summary,
+    actions,
+  });
 
   return {
     success: true,
@@ -1178,6 +1432,7 @@ export async function sendJeffAppMessage(payload: unknown) {
     storageStatus: storage.status,
     warning: answer.warning || mediaStorage.warning || storage.warning,
     warnings: [
+      fieldContext.warning,
       ...photoRegistration.warnings,
       ...savedAttachments.warnings,
       mediaStorage.warning,

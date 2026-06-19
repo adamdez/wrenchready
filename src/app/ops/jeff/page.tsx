@@ -11,6 +11,7 @@ import {
   Bot,
   CalendarDays,
   CheckCircle2,
+  ClipboardCheck,
   Database,
   FileText,
   FlaskConical,
@@ -43,6 +44,10 @@ import {
   syncJeffCalendar,
   syncJeffGmailInbox,
 } from "@/lib/jeff-field-assistant/tools";
+import { getOperatorTaskQueue, updateOperatorTaskStatus } from "@/lib/promise-crm/server";
+import type { OperatorTask } from "@/lib/promise-crm/types";
+
+type OperatorTaskQueue = Awaited<ReturnType<typeof getOperatorTaskQueue>>;
 
 export const metadata: Metadata = {
   title: "Jeff Field Files",
@@ -180,6 +185,23 @@ function reviewPriorityLabel(conversation?: { needsReview?: boolean; callType?: 
   return "Captured";
 }
 
+function taskPriorityTone(priority: OperatorTask["priority"]) {
+  if (priority === "critical") return "border-red-500/20 bg-red-500/10 text-red-100";
+  if (priority === "high") return "border-amber-500/20 bg-amber-500/10 text-amber-100";
+  if (priority === "low") return "border-border bg-background/60 text-muted-foreground";
+  return "border-sky-500/20 bg-sky-500/10 text-sky-100";
+}
+
+function taskStatusTone(status: OperatorTask["status"]) {
+  if (status === "blocked") return "border-red-500/20 bg-red-500/10 text-red-100";
+  if (status === "in-progress") return "border-sky-500/20 bg-sky-500/10 text-sky-100";
+  return "border-border bg-background/60 text-muted-foreground";
+}
+
+function taskTypeLabel(type: OperatorTask["type"]) {
+  return type.replace(/-/g, " ");
+}
+
 type JeffActionParams = Record<string, string | string[] | undefined>;
 
 function searchParamValue(params: JeffActionParams, key: string) {
@@ -285,6 +307,133 @@ async function markConversationReviewedAction(formData: FormData) {
   redirect(actionRedirectUrl("mark-reviewed", response));
 }
 
+async function updateOperatorTaskAction(formData: FormData) {
+  "use server";
+
+  const id = formData.get("id");
+  const status = formData.get("status");
+
+  if (typeof id !== "string" || typeof status !== "string") {
+    throw new Error("Task update requires id and status.");
+  }
+  if (status !== "open" && status !== "in-progress" && status !== "blocked" && status !== "done" && status !== "dismissed") {
+    throw new Error("Invalid task status.");
+  }
+
+  await updateOperatorTaskStatus({
+    id,
+    status,
+    completionSummary: status === "done" ? "Completed from Jeff Workbench." : undefined,
+  });
+  revalidatePath("/ops/jeff");
+  revalidatePath("/ops/field-assistant");
+}
+
+function OperatorTaskWorkbenchCard({ task }: { task: OperatorTask }) {
+  return (
+    <article className="rounded-2xl border border-border bg-background/60 p-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap gap-1.5">
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase ${taskPriorityTone(task.priority)}`}>
+              {task.priority}
+            </span>
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase ${taskStatusTone(task.status)}`}>
+              {task.status}
+            </span>
+            <span className="rounded-full border border-border bg-card/60 px-2.5 py-1 text-[11px] text-muted-foreground">
+              {taskTypeLabel(task.type)}
+            </span>
+          </div>
+          <p className="mt-2 text-sm font-semibold text-foreground">{task.title}</p>
+          <p className="mt-1 line-clamp-3 text-sm leading-relaxed text-muted-foreground">{task.detail}</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {task.owner} / {task.sourceChannel}{task.customerName ? ` / ${task.customerName}` : ""}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {task.sourceUrl ? (
+            <a
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-border bg-secondary/60 px-3 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+              href={task.sourceUrl}
+            >
+              Open
+            </a>
+          ) : null}
+          <form action={updateOperatorTaskAction}>
+            <input name="id" type="hidden" value={task.id} />
+            <input name="status" type="hidden" value="in-progress" />
+            <button
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 text-xs font-medium text-sky-100 transition-colors hover:bg-sky-500/20"
+              type="submit"
+            >
+              Working
+            </button>
+          </form>
+          <form action={updateOperatorTaskAction}>
+            <input name="id" type="hidden" value={task.id} />
+            <input name="status" type="hidden" value="done" />
+            <button
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 text-xs font-medium text-emerald-100 transition-colors hover:bg-emerald-500/20"
+              type="submit"
+            >
+              Done
+            </button>
+          </form>
+        </div>
+      </div>
+      {task.blocker ? (
+        <p className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 p-2 text-xs text-red-100">
+          Blocker: {task.blocker}
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
+function OperatorTaskQueueSection({ queue }: { queue: OperatorTaskQueue }) {
+  return (
+    <section id="jeff-open-tasks" className="mt-6 scroll-mt-6 rounded-3xl border border-border bg-card/50 p-5 sm:p-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <ClipboardCheck className="h-4 w-4 text-primary" />
+            Open Tasks
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Calls, messages, emails, quotes, parts asks, blockers, and follow-ups should land here as real operator work.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-[11px]">
+          <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-red-100">
+            blocked: {queue.counts.blocked}
+          </span>
+          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-amber-100">
+            critical: {queue.counts.critical}
+          </span>
+          <span className="rounded-full border border-border bg-background/60 px-2.5 py-1 text-muted-foreground">
+            {queue.storageStatus}
+          </span>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-3 xl:grid-cols-2">
+        {queue.tasks.length > 0 ? queue.tasks.slice(0, 4).map((task) => (
+          <OperatorTaskWorkbenchCard key={task.id} task={task} />
+        )) : (
+          <p className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
+            No open operator task is visible. That is only good news if recent Jeff calls, messages, quotes, payments, and customer promises have all been reviewed.
+          </p>
+        )}
+      </div>
+      {queue.tasks.length > 4 ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Showing 4 of {queue.tasks.length} active tasks. Complete or dismiss reviewed items to keep Jeff moving fast.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export default async function JeffFieldFilesPage({
   searchParams,
 }: {
@@ -300,6 +449,7 @@ export default async function JeffFieldFilesPage({
     simonLocation,
     capabilityReport,
     blockedRequestQueue,
+    operatorTaskQueue,
   ] = await Promise.all([
     getJeffFieldFiles(),
     getJeffLocalMirrorStatus(),
@@ -308,6 +458,7 @@ export default async function JeffFieldFilesPage({
     getLatestSimonLocation(),
     getJeffCapabilityReport(),
     getJeffBlockedRequestQueue(8),
+    getOperatorTaskQueue({ limit: 30 }),
   ]);
   const uniqueWarnings = [...new Set([
     ...warnings,
@@ -315,6 +466,7 @@ export default async function JeffFieldFilesPage({
     ...workspaceQueue.warnings,
     ...capabilityReport.warnings,
     ...blockedRequestQueue.warnings,
+    ...operatorTaskQueue.warnings,
   ])].slice(0, 5);
   const emailStatus = getJeffEmailIntegrationStatus();
   const googleWorkspaceStatus = getGoogleWorkspaceIntegrationStatus();
@@ -443,6 +595,18 @@ export default async function JeffFieldFilesPage({
         <ArrowLeft className="h-4 w-4" />
         Back to Ops
       </Link>
+
+      {notice ? (
+        <div className={`mt-6 rounded-2xl border p-4 text-sm ${
+          notice.success
+            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-100"
+            : "border-amber-500/20 bg-amber-500/10 text-amber-100"
+        }`}>
+          {notice.message}
+        </div>
+      ) : null}
+
+      <OperatorTaskQueueSection queue={operatorTaskQueue} />
 
       <section className="mt-6 overflow-hidden rounded-3xl border border-border bg-card/60 p-5 backdrop-blur-sm sm:p-6">
         <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
@@ -617,17 +781,7 @@ export default async function JeffFieldFilesPage({
         ) : null}
       </section>
 
-      {notice ? (
-        <div className={`mt-6 rounded-2xl border p-4 text-sm ${
-          notice.success
-            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-100"
-            : "border-amber-500/20 bg-amber-500/10 text-amber-100"
-        }`}>
-          {notice.message}
-        </div>
-      ) : null}
-
-      <details id="jeff-capabilities" className="mt-6 scroll-mt-6 rounded-3xl border border-border bg-card/50 p-6">
+      <details id="jeff-capabilities" className="mt-6 scroll-mt-6 overflow-hidden rounded-3xl border border-border bg-card/50 p-6">
         <summary className="cursor-pointer list-none">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
@@ -652,9 +806,9 @@ export default async function JeffFieldFilesPage({
             </div>
           </div>
         </summary>
-        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+        <div className="mt-5 grid min-w-0 gap-3 lg:grid-cols-2">
           {capabilityItems.map((capability) => (
-            <article key={capability.id} className={`rounded-2xl border p-4 ${capabilityTone(capability.state)}`}>
+            <article key={capability.id} className={`min-w-0 break-words rounded-2xl border p-4 ${capabilityTone(capability.state)}`}>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold">{capability.label}</p>
@@ -666,10 +820,10 @@ export default async function JeffFieldFilesPage({
                   {capability.available ? "works now" : capability.state === "partial" ? "manual step" : "blocked"}
                 </span>
               </div>
-              <p className="mt-3 text-sm opacity-90">{capability.reason}</p>
-              <p className="mt-2 text-xs opacity-80">Jeff says: {capability.whatJeffShouldSay}</p>
+              <p className="mt-3 break-words text-sm opacity-90">{capability.reason}</p>
+              <p className="mt-2 break-words text-xs opacity-80">Jeff says: {capability.whatJeffShouldSay}</p>
               {capability.operatorAction ? (
-                <p className="mt-2 text-xs opacity-80">Next unlock: {capability.operatorAction}</p>
+                <p className="mt-2 break-words text-xs opacity-80">Next unlock: {capability.operatorAction}</p>
               ) : null}
             </article>
           ))}

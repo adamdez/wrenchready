@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
@@ -32,10 +33,11 @@ import { computePromiseEconomics } from "@/lib/promise-crm/economics";
 import { getPromiseOutboundSnapshot } from "@/lib/promise-crm/outbound-drafts";
 import { getPlaybookRecommendation } from "@/lib/promise-crm/playbooks";
 import { getProofDisciplineForPromise } from "@/lib/promise-crm/proof-discipline";
-import { getPromiseRecord } from "@/lib/promise-crm/server";
+import { getOperatorTaskQueue, getPromiseRecord, updateOperatorTaskStatus } from "@/lib/promise-crm/server";
 import type {
   CommercialOutcomeStatus,
   FollowThroughResolutionAction,
+  OperatorTask,
   PromiseFieldExecutionPacket,
   PromisePartItem,
   PromiseRecord,
@@ -56,22 +58,22 @@ type TimelineItem = {
 };
 
 const commandButtonClass =
-  "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-border bg-background/70 px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary sm:min-h-11 sm:gap-2 sm:rounded-xl sm:px-3.5 sm:text-sm";
+  "inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border bg-background/70 px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary sm:min-h-11 sm:gap-2 sm:rounded-xl sm:px-3.5 sm:text-sm";
 
 const primaryCommandButtonClass =
-  "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 py-2 text-xs font-semibold text-primary-foreground transition-all hover:brightness-110 sm:min-h-11 sm:gap-2 sm:rounded-xl sm:px-3.5 sm:text-sm";
+  "inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-2.5 py-2 text-xs font-semibold text-primary-foreground transition-all hover:brightness-110 sm:min-h-11 sm:gap-2 sm:rounded-xl sm:px-3.5 sm:text-sm";
 
 const navItems = [
-  ["#overview", "Overview"],
+  ["#promise-file", "File"],
+  ["#open-tasks", "Tasks"],
+  ["#workflow", "Workflow"],
   ["#timeline", "Timeline"],
   ["#quote", "Quote"],
   ["#schedule", "Schedule"],
   ["#parts", "Parts"],
-  ["#field-plan", "Field Plan"],
-  ["#messages", "Messages"],
-  ["#files", "Files"],
   ["#payment", "Payment"],
-  ["#jeff", "Jeff"],
+  ["#next-actions", "Actions"],
+  ["#record-drawers", "Drawers"],
 ];
 
 const customerCertaintyChecks: Array<[
@@ -444,7 +446,10 @@ function StatusPill({
   className?: string;
 }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}
+      style={{ flexShrink: 0, whiteSpace: "nowrap" }}
+    >
       {children}
     </span>
   );
@@ -680,6 +685,259 @@ function fieldPacketCoverage(fieldExecution?: PromiseFieldExecutionPacket) {
   };
 }
 
+type FunnelStepState = "done" | "current" | "blocked" | "upcoming";
+
+type FunnelStep = {
+  label: string;
+  state: FunnelStepState;
+  detail: string;
+  href: string;
+};
+
+function funnelStepClasses(state: FunnelStepState) {
+  if (state === "done") return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  if (state === "current") return "border-primary/35 bg-primary/12 text-primary";
+  if (state === "blocked") return "border-red-500/30 bg-red-500/10 text-red-100";
+  return "border-border bg-background/50 text-muted-foreground";
+}
+
+function quoteIsBlocked(promise: PromiseDetailRecord) {
+  return Boolean(promise.quotePacket?.blockers.length || promise.quotePacket?.status === "blocked");
+}
+
+function buildFunnelSteps(promise: PromiseDetailRecord, quoteReview: boolean): FunnelStep[] {
+  const quoteBlocked = quoteIsBlocked(promise);
+  const paymentPaid = promise.paymentCollection?.status === "paid" || promise.jobStage === "collected";
+  const closeoutDone = Boolean(promise.closeout?.completedAt || promise.followThroughResolution);
+  const scheduled = Boolean(promise.scheduledWindow.startIso) || ["scheduled", "confirmed", "en-route", "on-site", "completed", "collected"].includes(promise.jobStage);
+  const fieldStarted = ["en-route", "on-site", "waiting-approval", "completed", "collected"].includes(promise.jobStage);
+  const fieldDone = ["completed", "collected"].includes(promise.jobStage);
+  const quoteDone = promise.customerApproval.status === "approved" || ["scheduled", "confirmed", "en-route", "on-site", "completed", "collected"].includes(promise.jobStage);
+
+  return [
+    {
+      label: "Intake",
+      state: "done",
+      detail: promise.inboundId ? "Lead promoted" : "Record created",
+      href: "#promise-file",
+    },
+    {
+      label: "Quote",
+      state: quoteBlocked
+        ? "blocked"
+        : quoteDone
+          ? "done"
+          : promise.quotePacket || quoteReview || promise.jobStage === "quoted"
+            ? "current"
+            : "upcoming",
+      detail: promise.quotePacket
+        ? `${quotePacketStatusLabel(promise.quotePacket.status)} / ${customerSendLabel(promise.quotePacket.customerSendStatus)}`
+        : customerApprovalLabel(promise.customerApproval.status),
+      href: "#quote-summary",
+    },
+    {
+      label: "Schedule",
+      state: scheduled
+        ? fieldStarted
+          ? "done"
+          : "current"
+        : quoteReview
+          ? "blocked"
+          : "upcoming",
+      detail: promise.scheduledWindow.label,
+      href: "#schedule-summary",
+    },
+    {
+      label: "Field",
+      state: fieldDone ? "done" : fieldStarted ? "current" : "upcoming",
+      detail: promise.fieldExecution ? "Field plan exists" : "Needs field packet",
+      href: "#field-summary",
+    },
+    {
+      label: "Payment",
+      state: paymentPaid
+        ? "done"
+        : promise.paymentCollection?.status && promise.paymentCollection.status !== "not-requested"
+          ? "current"
+          : promise.quotePacket?.paymentLinkStatus === "blocked"
+            ? "blocked"
+            : "upcoming",
+      detail: `${paymentStatusLabel(promise.paymentCollection?.status)} / ${formatCurrency(quoteAmount(promise))}`,
+      href: "#payment-summary",
+    },
+    {
+      label: "Follow-up",
+      state: closeoutDone ? "done" : fieldDone || promise.followThroughDueAt ? "current" : "upcoming",
+      detail: closeoutDone ? "Closed loop" : nextFollowUpDetail(promise),
+      href: "#record-drawers",
+    },
+  ];
+}
+
+function nextFollowUpDetail(promise: PromiseDetailRecord) {
+  if (promise.followThroughDueAt) return `Due ${formatDateTime(promise.followThroughDueAt)}`;
+  if (!promise.closeout?.completedAt) return "Closeout not complete";
+  return "No follow-up due";
+}
+
+function FunnelRail({ steps }: { steps: FunnelStep[] }) {
+  return (
+    <div id="workflow" className="flex gap-2 overflow-x-auto pb-1 xl:grid xl:grid-cols-6 xl:overflow-visible xl:pb-0">
+      {steps.map((step, index) => (
+        <a
+          className={`min-w-[9.5rem] rounded-xl border p-3 transition-colors hover:bg-secondary/60 xl:min-w-0 ${funnelStepClasses(step.state)}`}
+          href={step.href}
+          key={step.label}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-80">
+              {index + 1}
+            </span>
+            <span className="rounded-full border border-current/20 px-2 py-0.5 text-[10px] font-semibold uppercase">
+              {step.state}
+            </span>
+          </div>
+          <p className="mt-2 text-sm font-semibold">{step.label}</p>
+          <p className="mt-1 line-clamp-2 text-xs opacity-85">{step.detail}</p>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function ActionPanel({
+  id,
+  title,
+  detail,
+  action,
+  tone = "default",
+}: {
+  id?: string;
+  title: string;
+  detail: string;
+  action?: ReactNode;
+  tone?: "default" | "warning" | "danger" | "success";
+}) {
+  const toneClass = tone === "danger"
+    ? "border-red-500/25 bg-red-500/10"
+    : tone === "warning"
+      ? "border-[--wr-gold]/25 bg-[--wr-gold]/10"
+      : tone === "success"
+        ? "border-[--wr-teal]/25 bg-[--wr-teal]/10"
+        : "border-border bg-background/55";
+
+  return (
+    <div id={id} className={`rounded-xl border p-4 ${toneClass}`}>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{detail}</p>
+      {action ? <div className="mt-4">{action}</div> : null}
+    </div>
+  );
+}
+
+function taskPriorityClasses(priority: OperatorTask["priority"]) {
+  if (priority === "critical") return "border-red-500/30 bg-red-500/10 text-red-100";
+  if (priority === "high") return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  if (priority === "low") return "border-border bg-background/60 text-muted-foreground";
+  return "border-primary/20 bg-primary/10 text-primary";
+}
+
+function taskStatusClasses(status: OperatorTask["status"]) {
+  if (status === "blocked") return "border-red-500/30 bg-red-500/10 text-red-100";
+  if (status === "in-progress") return "border-primary/20 bg-primary/10 text-primary";
+  return "border-border bg-background/60 text-muted-foreground";
+}
+
+function taskTypeLabel(type: OperatorTask["type"]) {
+  return type.replace(/-/g, " ");
+}
+
+async function updateTaskStatusAction(formData: FormData) {
+  "use server";
+
+  const id = formData.get("id");
+  const status = formData.get("status");
+  const promiseId = formData.get("promiseId");
+
+  if (typeof id !== "string" || typeof status !== "string") {
+    throw new Error("Task update requires id and status.");
+  }
+
+  if (status !== "open" && status !== "in-progress" && status !== "blocked" && status !== "done" && status !== "dismissed") {
+    throw new Error("Invalid task status.");
+  }
+
+  await updateOperatorTaskStatus({
+    id,
+    status,
+    completionSummary: status === "done" ? "Completed from Promise CRM record." : undefined,
+  });
+
+  if (typeof promiseId === "string" && promiseId) {
+    revalidatePath(`/ops/promises/${promiseId}`);
+  }
+  revalidatePath("/ops/field-assistant");
+  revalidatePath("/ops/jeff");
+}
+
+function OperatorTaskCard({ task, promiseId }: { task: OperatorTask; promiseId: string }) {
+  return (
+    <article className="rounded-xl border border-border bg-background/55 p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap gap-1.5">
+            <StatusPill className={taskPriorityClasses(task.priority)}>{task.priority}</StatusPill>
+            <StatusPill className={taskStatusClasses(task.status)}>{task.status}</StatusPill>
+            <StatusPill>{taskTypeLabel(task.type)}</StatusPill>
+          </div>
+          <p className="mt-2 text-sm font-semibold text-foreground">{task.title}</p>
+          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground sm:line-clamp-3">{task.detail}</p>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {task.owner} {task.dueAt ? `/ due ${formatDateTime(task.dueAt)}` : ""} / {task.sourceChannel}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {task.sourceUrl ? (
+            <a
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-secondary/50 px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary"
+              href={task.sourceUrl}
+            >
+              Open
+            </a>
+          ) : null}
+          <form action={updateTaskStatusAction}>
+            <input name="id" type="hidden" value={task.id} />
+            <input name="promiseId" type="hidden" value={promiseId} />
+            <input name="status" type="hidden" value="in-progress" />
+            <button
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+              type="submit"
+            >
+              Working
+            </button>
+          </form>
+          <form action={updateTaskStatusAction}>
+            <input name="id" type="hidden" value={task.id} />
+            <input name="promiseId" type="hidden" value={promiseId} />
+            <input name="status" type="hidden" value="done" />
+            <button
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-[--wr-teal]/25 bg-[--wr-teal]/10 px-2.5 text-xs font-semibold text-[--wr-teal-soft] transition-colors hover:bg-[--wr-teal]/15"
+              type="submit"
+            >
+              Done
+            </button>
+          </form>
+        </div>
+      </div>
+      {task.blocker ? (
+        <p className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 p-2 text-xs text-red-100">
+          Blocker: {task.blocker}
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
 export const metadata: Metadata = {
   title: "Promise CRM Record",
   robots: {
@@ -701,6 +959,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
   const economics = computePromiseEconomics(promise.economics);
   const nextProbableVisit = getNextProbableVisit(promise);
   const proof = getProofDisciplineForPromise(promise);
+  const taskQueue = await getOperatorTaskQueue({ promiseId: id, limit: 12 });
   const outbound = getPromiseOutboundSnapshot(promise);
   const playbook = getPlaybookRecommendation(
     `${promise.serviceScope} ${promise.commercialOutcome?.convertedService || ""} ${promise.nextAction}`,
@@ -728,6 +987,14 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
       promise.paymentCollection.status !== "paid",
   );
   const quoteReview = isQuoteScheduleReview(promise);
+  const funnelSteps = buildFunnelSteps(promise, quoteReview);
+  const activeBlockers = [
+    ...(promise.quotePacket?.blockers || []),
+    ...promise.topRisks.slice(0, 3),
+  ];
+  const latestTimeline = timeline.slice(0, 3);
+  const openTasks = taskQueue.tasks;
+  const topOpenTasks = openTasks.slice(0, 1);
 
   return (
     <div className="bg-background pb-12">
@@ -764,16 +1031,19 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 </StatusPill>
               </div>
               <div className="mt-2 flex min-w-0 flex-col gap-1 lg:flex-row lg:items-baseline lg:gap-3">
-                <h1 className="truncate text-xl font-bold tracking-tight text-foreground sm:text-3xl">
+                <h1 className="overflow-hidden text-ellipsis whitespace-nowrap text-xl font-bold tracking-tight text-foreground sm:text-3xl">
                   {promise.customer.name}
                 </h1>
-                <p className="truncate text-sm text-muted-foreground sm:text-base">
+                <p
+                  className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-muted-foreground sm:text-base"
+                  style={{ whiteSpace: "nowrap" }}
+                >
                   {formatVehicle(promise)} / {promise.serviceScope}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap xl:justify-end">
+            <div className="flex gap-2 overflow-x-auto pb-1 xl:flex-wrap xl:justify-end xl:overflow-visible xl:pb-0">
               <CommandLink href={callCustomerHref} icon={<Phone className="h-4 w-4" />} primary>
                 Call
               </CommandLink>
@@ -791,6 +1061,9 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               </CommandLink>
               <CommandLink href="#quote" icon={<FileText className="h-4 w-4" />}>
                 Quote
+              </CommandLink>
+              <CommandLink href="#schedule-summary" icon={<CalendarClock className="h-4 w-4" />}>
+                Schedule
               </CommandLink>
               <CommandLink href="#payment" icon={<ReceiptText className="h-4 w-4" />}>
                 Invoice
@@ -820,20 +1093,18 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
 
       <main className="shell py-6 sm:py-8">
         {quoteReview ? (
-          <section className="mb-6 rounded-xl border border-[--wr-gold]/30 bg-[--wr-gold]/10 p-4 text-[--wr-gold-soft]">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <section className="mb-4 rounded-xl border border-[--wr-gold]/30 bg-[--wr-gold]/10 p-3 text-[--wr-gold-soft] sm:mb-6 sm:p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <CircleAlert className="h-4 w-4 shrink-0" />
                   Not a scheduled customer promise
                 </div>
-                <p className="mt-2 text-sm leading-relaxed">
-                  Jeff prepared this as a quote or schedule review draft. Adam/Dez still needs to
-                  approve scope, price, caveats, customer send, payment link, and calendar before
-                  this becomes a customer-facing appointment.
+                <p className="hidden text-sm leading-relaxed sm:mt-2 sm:block">
+                  Review scope, price, customer send, payment link, and calendar before this becomes customer-facing.
                 </p>
               </div>
-              <div className="grid min-w-0 gap-2 text-xs sm:grid-cols-3 lg:w-[32rem]">
+              <div className="flex min-w-0 gap-2 overflow-x-auto pb-1 text-xs sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 lg:w-[32rem]">
                 <StatusPill className="border-[--wr-gold]/30 bg-background/40 text-[--wr-gold-soft]">
                   Customer: {customerSendLabel(promise.quotePacket?.customerSendStatus)}
                 </StatusPill>
@@ -848,7 +1119,191 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
           </section>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section id="promise-file" className="rounded-2xl border border-border bg-card/65 p-4 shadow-sm sm:p-5">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+            <div className="min-w-0">
+              <div className="hidden flex-wrap items-center gap-2 sm:flex">
+                <StatusPill className={riskClasses(promise.readinessRisk)}>
+                  {promise.readinessRisk} risk
+                </StatusPill>
+                <StatusPill>{promiseBoardStatusLabel(promise)}</StatusPill>
+                <StatusPill>{jobStageLabel(promise.jobStage)}</StatusPill>
+                <StatusPill>Owner: {promise.owner}</StatusPill>
+              </div>
+              <h2 className="mt-3 text-xl font-bold text-foreground sm:mt-4 sm:text-2xl">
+                {promise.customer.name}
+              </h2>
+              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                {formatVehicle(promise)} / {promise.serviceScope}
+              </p>
+
+              <div className="mt-5">
+                <FunnelRail steps={funnelSteps} />
+              </div>
+
+              <div id="open-tasks" className="mt-5 rounded-xl border border-border bg-background/45 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                      Open work
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {taskQueue.counts.blocked} blocked / {taskQueue.counts.critical} critical / {taskQueue.counts.open + taskQueue.counts.inProgress} active
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <StatusPill className={taskQueue.warnings.length ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]" : "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]"}>
+                      tasks: {taskQueue.storageStatus}
+                    </StatusPill>
+                    <CommandLink href="/ops/field-assistant#jeff-open-tasks" icon={<ClipboardCheck className="h-4 w-4" />}>
+                      All tasks
+                    </CommandLink>
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-3">
+                  {topOpenTasks.length > 0 ? topOpenTasks.map((task) => (
+                    <OperatorTaskCard key={task.id} task={task} promiseId={promise.id} />
+                  )) : (
+                    <p className="rounded-xl border border-dashed border-border bg-card/40 p-4 text-sm text-muted-foreground">
+                      No open CRM task is attached to this record. Review the latest timeline and quote/payment state before calling it clean.
+                    </p>
+                  )}
+                </div>
+                {openTasks.length > topOpenTasks.length ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {openTasks.length - topOpenTasks.length} more task{openTasks.length - topOpenTasks.length === 1 ? "" : "s"} available in Jeff Workbench.
+                  </p>
+                ) : null}
+                {taskQueue.warnings.length ? (
+                  <p className="mt-3 text-xs text-[--wr-gold-soft]">{taskQueue.warnings[0]}</p>
+                ) : null}
+              </div>
+
+              <div id="next-actions" className="mt-5 grid gap-3 lg:grid-cols-3">
+                <ActionPanel
+                  title="Next move"
+                  detail={topOpenTasks[0]?.detail || promise.nextAction}
+                  tone={activeBlockers.length > 0 ? "warning" : "default"}
+                  action={
+                    <div className="grid grid-cols-2 gap-2">
+                      <CommandLink href="#open-tasks" icon={<ClipboardCheck className="h-4 w-4" />} primary>
+                        Tasks
+                      </CommandLink>
+                      <CommandLink href="#quote-summary" icon={<FileText className="h-4 w-4" />} primary>
+                        Quote
+                      </CommandLink>
+                    </div>
+                  }
+                />
+                <ActionPanel
+                  title="Customer promise"
+                  detail={`${customerApprovalLabel(promise.customerApproval.status)} / ${formatCurrency(promise.customerApproval.requestedAmount)} / ${customerSendLabel(promise.quotePacket?.customerSendStatus)}`}
+                  action={
+                    <div className="grid grid-cols-2 gap-2">
+                      <CommandLink href={promise.customerAccess.sharePath} icon={<UserRound className="h-4 w-4" />} external>
+                        View
+                      </CommandLink>
+                      <CommandLink href={textCustomerHref} icon={<MessageSquareShare className="h-4 w-4" />}>
+                        Text
+                      </CommandLink>
+                    </div>
+                  }
+                />
+                <ActionPanel
+                  id="payment-summary"
+                  title="Money"
+                  detail={`${paymentStatusLabel(promise.paymentCollection?.status)} / quote ${formatCurrency(quoteTotal)} / link ${paymentLinkLabel(promise.quotePacket?.paymentLinkStatus)}`}
+                  tone={promise.quotePacket?.paymentLinkStatus === "blocked" ? "danger" : "default"}
+                  action={
+                    <div className="grid grid-cols-2 gap-2">
+                      <CommandLink href="#payment-summary" icon={<ReceiptText className="h-4 w-4" />}>
+                        Invoice
+                      </CommandLink>
+                      <CommandLink href="#record-drawers" icon={<ClipboardCheck className="h-4 w-4" />}>
+                        Details
+                      </CommandLink>
+                    </div>
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              <div id="quote-summary" className="rounded-xl border border-border bg-background/55 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                      Quote file
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">
+                      {formatCurrency(quoteTotal)}
+                    </p>
+                  </div>
+                  <StatusPill>{quotePacketStatusLabel(promise.quotePacket?.status)}</StatusPill>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {promise.quotePacket?.nextAction || promise.customerApproval.summary || "No quote packet is attached yet."}
+                </p>
+                {promise.quotePacket?.blockers.length ? (
+                  <div className="mt-3 rounded-lg border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-100">
+                    {promise.quotePacket.blockers[0]}
+                  </div>
+                ) : null}
+              </div>
+
+              <div id="schedule-summary" className="rounded-xl border border-border bg-background/55 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Schedule and route
+                </p>
+                <p className="mt-2 text-sm font-semibold text-foreground">{promise.scheduledWindow.label}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{promise.location.label}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <CommandLink href={openMapHref} icon={<MapPin className="h-4 w-4" />} external>
+                    Map
+                  </CommandLink>
+                  <CommandLink href="#record-drawers" icon={<CalendarClock className="h-4 w-4" />}>
+                    Schedule
+                  </CommandLink>
+                </div>
+              </div>
+
+              <div id="field-summary" className="rounded-xl border border-border bg-background/55 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                  Latest activity
+                </p>
+                <div className="mt-3 space-y-3">
+                  {latestTimeline.map((item) => (
+                    <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3 text-sm" key={`${item.title}-${item.time || item.detail}`}>
+                      <StatusPill className={timelineToneClasses(item.tone)}>{item.label}</StatusPill>
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground">{item.title}</p>
+                        <p className="mt-0.5 line-clamp-2 text-muted-foreground">{item.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <details id="record-drawers" className="mt-6 rounded-2xl border border-border bg-card/45 p-4 sm:p-5">
+          <summary className="cursor-pointer list-none">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Full CRM drawers</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Timeline, full quote packet, field plan, messages, files, payment, and advanced edit form.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                Open drawers
+                <ChevronRight className="h-4 w-4" />
+              </span>
+            </div>
+          </summary>
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="min-w-0 space-y-8">
             <Section id="overview" eyebrow="Command center" title="Overview">
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1000,7 +1455,6 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                     />
                     <QuoteDocument
                       audience="Customer-safe draft"
-                      defaultOpen
                       markdown={promise.quotePacket.externalCustomerQuote.markdown}
                       summary={promise.quotePacket.externalCustomerQuote.summary}
                       title={promise.quotePacket.externalCustomerQuote.title}
@@ -1563,6 +2017,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
             </div>
           </aside>
         </div>
+        </details>
       </main>
     </div>
   );

@@ -30,5 +30,10 @@ export {
   updateInboundRecord,
   updatePromiseRecord,
 } from "@/lib/promise-crm/storage";
+export {
+  getOperatorTaskQueue,
+  updateOperatorTaskStatus,
+  upsertOperatorTask,
+} from "@/lib/promise-crm/operator-tasks";
 export { getWeeklyOperatingCadenceSnapshot } from "@/lib/promise-crm/operating-cadence";
 export { getSystemsReadinessSnapshot } from "@/lib/promise-crm/system-readiness";

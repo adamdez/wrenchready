@@ -7,6 +7,42 @@ export type CustomerTimelineItem = {
   state: "complete" | "current" | "upcoming";
 };
 
+const INTERNAL_CUSTOMER_TEXT_PATTERNS = [
+  /\bAdam\/Dez\b/gi,
+  /\b(?:customer send|customer-send)\b/gi,
+  /\b(?:internal service plan|internal field note|operator task)\b/gi,
+  /\b(?:margin|cost basis|vendor cost)\b/gi,
+];
+
+const INTERNAL_SENTENCE_PATTERNS = [
+  /[^.!?]*(?:customer send|customer-send|Adam\/Dez|internal service plan|internal field note|operator task|margin|cost basis|vendor cost|not created for this draft|payment-link creation)[^.!?]*[.!?]?/gi,
+];
+
+export function customerSafeText(value?: string, fallback = "We will update this as soon as the next step is confirmed.") {
+  const original = value?.replace(/\s+/g, " ").trim();
+  if (!original) return fallback;
+
+  let clean = original;
+  for (const pattern of INTERNAL_SENTENCE_PATTERNS) {
+    clean = clean.replace(pattern, " ");
+  }
+  for (const pattern of INTERNAL_CUSTOMER_TEXT_PATTERNS) {
+    clean = clean.replace(pattern, "");
+  }
+
+  clean = clean.replace(/\s+/g, " ").replace(/\s+([,.!?])/g, "$1").trim();
+  return clean || fallback;
+}
+
+export function customerSafeScheduleLabel(value?: string) {
+  const label = value?.replace(/\s+/g, " ").trim();
+  if (!label) return "We are confirming the appointment window.";
+  if (/needs|office|review|pending|tbd|not captured|not selected|no timing/i.test(label)) {
+    return "We are confirming the appointment window.";
+  }
+  return label;
+}
+
 function getHeadline(promise: PromiseRecord) {
   if (promise.customerApproval.status === "awaiting-approval") {
     return "Your quote is ready for approval";
@@ -37,9 +73,9 @@ function getHeadline(promise: PromiseRecord) {
 
 function getSupportingMessage(promise: PromiseRecord) {
   if (promise.customerApproval.status === "awaiting-approval") {
-    return (
-      promise.customerApproval.summary ||
-      "Review the recommended work and let us know whether you want us to move ahead."
+    return customerSafeText(
+      promise.customerApproval.summary,
+      "Review the recommended work and let us know whether you want us to move ahead.",
     );
   }
 
@@ -50,27 +86,31 @@ function getSupportingMessage(promise: PromiseRecord) {
   if (promise.status === "follow-through-due") {
     const nextProbableVisit = getNextProbableVisit(promise);
     return (
-      promise.closeout?.customerConditionSummary ||
-      promise.closeout?.workPerformedSummary ||
-      promise.commercialOutcome?.outcomeSummary ||
-      nextProbableVisit?.reason ||
-      promise.nextAction ||
-      "We still need to close the loop with your recap, next service step, or follow-up recommendation."
+      customerSafeText(
+        promise.closeout?.customerConditionSummary ||
+          promise.closeout?.workPerformedSummary ||
+          promise.commercialOutcome?.outcomeSummary ||
+          nextProbableVisit?.reason ||
+          promise.nextAction,
+        "We still need to close the loop with your recap, next service step, or follow-up recommendation.",
+      )
     );
   }
 
   if (promise.status === "completed") {
     const nextProbableVisit = getNextProbableVisit(promise);
     return (
-      promise.closeout?.customerConditionSummary ||
-      promise.closeout?.workPerformedSummary ||
-      promise.commercialOutcome?.outcomeSummary ||
-      nextProbableVisit?.reason ||
-      "Your visit is complete. We keep this page updated so you can see what happened and what comes next."
+      customerSafeText(
+        promise.closeout?.customerConditionSummary ||
+          promise.closeout?.workPerformedSummary ||
+          promise.commercialOutcome?.outcomeSummary ||
+          nextProbableVisit?.reason,
+        "Your visit is complete. We keep this page updated so you can see what happened and what comes next.",
+      )
     );
   }
 
-  return promise.readinessSummary;
+  return customerSafeText(promise.readinessSummary);
 }
 
 export function getCustomerStatusTone(promise: PromiseRecord) {
@@ -105,30 +145,33 @@ export function buildCustomerTimeline(promise: PromiseRecord): CustomerTimelineI
       detail:
         promise.status === "tomorrow-at-risk"
           ? "We are still tightening the timing or readiness details before we lock the promise."
-          : `Current window: ${promise.scheduledWindow.label}.`,
+          : `Current window: ${customerSafeScheduleLabel(promise.scheduledWindow.label)}.`,
       state: promise.status === "tomorrow-at-risk" ? "current" : "complete",
     },
     {
       label: "Quote decision",
-      detail:
-        promise.customerApproval.summary ||
+      detail: customerSafeText(
+        promise.customerApproval.summary,
         "If additional work is needed, you will see it here and can approve or decline it.",
+      ),
       state: isApprovalActive ? "current" : isApprovalAnswered ? "complete" : "upcoming",
     },
     {
       label: "Visit complete",
-      detail:
+      detail: customerSafeText(
         promise.closeout?.workPerformedSummary ||
-        promise.commercialOutcome?.outcomeSummary ||
+          promise.commercialOutcome?.outcomeSummary,
         "We update this step when the visit is complete and the recap is ready.",
+      ),
       state: isVisitComplete ? "complete" : isApprovalActive ? "upcoming" : "current",
     },
     {
       label: "Next step",
-      detail:
+      detail: customerSafeText(
         nextProbableVisit?.reason ||
-        promise.nextAction ||
+          promise.nextAction,
         "If a follow-up, deferred repair, or maintenance reminder is needed, it will show here.",
+      ),
       state: hasFollowThrough ? "current" : isVisitComplete ? "upcoming" : "upcoming",
     },
   ];

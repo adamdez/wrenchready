@@ -6,6 +6,7 @@ const baseUrl = (process.argv[2] || "http://localhost:3000").replace(/\/$/, "");
 const secret = process.env.JEFF_FIELD_ASSISTANT_TOOL_SECRET;
 const appPin = process.env.JEFF_FIELD_APP_PIN || process.env.JEFF_FIELD_PHOTO_UPLOAD_PIN;
 const workspaceFile = path.join(process.cwd(), ".data", "jeff", "workspace.json");
+const promptFile = path.join(process.cwd(), "src", "lib", "jeff-field-assistant", "prompt.ts");
 
 function headers() {
   return {
@@ -79,6 +80,12 @@ assert(toolNames.includes("propose_core_memory_update"), "catalog should expose 
 assert(toolNames.includes("get_schedule_context"), "catalog should expose schedule context tool");
 assert(toolNames.includes("evaluate_booking_request"), "catalog should expose booking evaluation tool");
 
+const promptSource = readFileSync(promptFile, "utf8");
+assert(
+  /Banter is allowed/i.test(promptSource) && /take the opening/i.test(promptSource),
+  "Jeff prompt should explicitly allow Simon-facing banter instead of only warning against distraction.",
+);
+
 const booking = await request("/api/al/wrenchready/jeff/tools/evaluate-booking-request", {
   service: "customer says maybe starter, maybe alternator, maybe wiring",
   vehicle: "2016 Chrysler 200",
@@ -103,10 +110,12 @@ assert(
 );
 
 const memory = await request("/api/al/wrenchready/jeff/tools/propose-core-memory-update", {
-  jobId: "jeff-fixture-tammy-chrysler",
   category: "operator-preference",
   memory: "Simon prefers one physical test at a time when he is under a vehicle.",
   evidence: "Pilot call scenario verification.",
+  subjectType: "person",
+  subjectKey: "simon",
+  subjectLabel: "Simon",
 });
 assert(memory.success, "candidate memory should save for review");
 assert(
@@ -274,6 +283,39 @@ const sessionPhotos = await request("/api/al/wrenchready/jeff/tools/get-field-ph
 });
 assert(sessionPhotos.success, "session photo list should load without a job id");
 assert(sessionPhotos.data?.photos?.length >= 1, "session photo list should include the inbox photo");
+
+const selectedJobCoach = await appRequest("/api/al/wrenchready/jeff/messages", {
+  jobId: "jeff-fixture-tammy-chrysler",
+  jobLabel: "Tammy / 2010 Chrysler Town & Country",
+  text: "starter clicks but I have crank signal",
+});
+assert(selectedJobCoach.success, "Message Jeff should answer a selected-job diagnostic question");
+
+const selectedJobWorkspace = readJson(workspaceFile);
+const selectedJobConversation = selectedJobWorkspace.conversations?.find(
+  (conversation) => conversation.id === selectedJobCoach.conversationId,
+);
+assert(selectedJobConversation, "Message Jeff selected-job diagnostic conversation should persist");
+assert(
+  selectedJobConversation.jobId === "jeff-fixture-tammy-chrysler",
+  "selected-job diagnostic message should remain attached to the selected job",
+);
+assert(
+  selectedJobConversation.sourcePayload?.contextMode === "selected-job",
+  "selected-job diagnostic message should preserve selected-job context mode",
+);
+assert(
+  selectedJobConversation.sourcePayload?.fieldContextStatus === "loaded",
+  "selected-job diagnostic message should load the field context packet automatically",
+);
+assert(
+  /Tammy|Chrysler|Town/i.test(selectedJobConversation.sourcePayload?.fieldContextSummary || ""),
+  "selected-job field context summary should include the selected customer or vehicle",
+);
+assert(
+  selectedJobConversation.sourcePayload?.model !== "gpt-4.1-mini",
+  "Message Jeff should not use the old weak gpt-4.1-mini text fallback",
+);
 
 const appContextToken = `Astro follow-up scenario ${Date.now()}`;
 const appPartsSeed = await appRequest("/api/al/wrenchready/jeff/messages", {

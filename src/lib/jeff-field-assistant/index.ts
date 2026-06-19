@@ -24,6 +24,7 @@ export {
   recordFieldEvent,
   recordFieldNote,
   requestApprovalOrEscalation,
+  searchWrenchReadyKnowledge,
   sendSimonRecapEmail,
   setJeffCoreMemoryStatus,
   startCloseout,

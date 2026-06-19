@@ -172,7 +172,7 @@ export function SiteShell({ children }: SiteShellProps) {
   const isOpsPath = pathname.startsWith("/ops");
   const footerServices = getServicesInPriorityOrder(services).slice(0, 5);
 
-  if (pathname === "/ops-slate" || pathname.startsWith("/jeff")) {
+  if (pathname === "/ops-slate" || isOpsPath || pathname.startsWith("/jeff")) {
     return children;
   }
 

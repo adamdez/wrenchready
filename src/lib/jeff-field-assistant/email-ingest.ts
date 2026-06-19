@@ -3,6 +3,7 @@ import { getJeffEmailAddress, getJeffEmailDeliveryStatus, getJeffEmailFrom } fro
 import { readEnv } from "@/lib/env";
 import { persistJeffMediaItems } from "@/lib/jeff-field-assistant/media";
 import { persistJeffConversationWorkspace } from "@/lib/jeff-field-assistant/persistence";
+import { upsertOperatorTask } from "@/lib/promise-crm/operator-tasks";
 import type {
   JeffConversation,
   JeffConversationCallType,
@@ -326,6 +327,48 @@ function buildEmailAttachmentMedia(input: InboundEmailInput, conversationId: str
     }));
 }
 
+async function upsertOperatorTasksFromEmail(input: InboundEmailInput, params: {
+  conversation: JeffConversation;
+  summary: JeffConversationSummary;
+}) {
+  const hasAttachments = Boolean(input.attachments?.length);
+  const needsAction =
+    params.conversation.needsReview ||
+    params.summary.blockers.length > 0 ||
+    params.summary.nextActions.length > 0 ||
+    hasAttachments;
+
+  if (!needsAction) return;
+
+  await upsertOperatorTask({
+    id: `operator-task-jeff-email-${params.conversation.id}-review`,
+    title: `Review Jeff email: ${input.subject || params.conversation.subjectLabel || "inbound email"}`,
+    detail:
+      params.summary.nextActions[0] ||
+      params.summary.blockers[0] ||
+      params.summary.recommendationSummary ||
+      params.summary.summary,
+    type: hasAttachments ? "field-proof" : params.conversation.needsReview ? "jeff-review" : "customer-follow-up",
+    priority: params.summary.blockers.length > 0 || params.conversation.needsReview ? "high" : "normal",
+    owner: input.jobId ? "Adam" : "Ops",
+    promiseId: input.jobId,
+    customerName: input.jobLabel || input.from,
+    vehicleLabel: input.jobLabel,
+    sourceChannel: "email",
+    sourceKind: "jeff-inbound-email",
+    sourceId: params.conversation.id,
+    sourceUrl: input.jobId ? `/ops/promises/${input.jobId}` : "/ops/field-assistant#jeff-call-workspace",
+    blocker: params.summary.blockers[0],
+    metadata: {
+      provider: input.provider,
+      providerMessageId: input.providerMessageId,
+      from: input.from,
+      to: input.to,
+      attachmentCount: input.attachments?.length || 0,
+    },
+  });
+}
+
 export function getJeffInboundEmailSecret() {
   return readEnv("JEFF_INBOUND_EMAIL_SECRET");
 }
@@ -485,6 +528,7 @@ export async function ingestJeffInboundEmail(payload: unknown) {
   const storage = await persistJeffConversationWorkspace({ conversation, summary, snapshot });
   const media = buildEmailAttachmentMedia(input, conversationId, receivedAt);
   const mediaStorage = await persistJeffMediaItems(media);
+  await upsertOperatorTasksFromEmail(input, { conversation, summary });
 
   return {
     success: true,

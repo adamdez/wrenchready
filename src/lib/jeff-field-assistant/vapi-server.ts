@@ -25,6 +25,7 @@ import {
   recordFieldEvent,
   recordFieldNote,
   requestApprovalOrEscalation,
+  searchWrenchReadyKnowledge,
   sendSimonRecapEmail,
   startCloseout,
   syncJeffCalendar,
@@ -44,6 +45,7 @@ import {
   getJeffLiveSession,
   upsertJeffLiveSession,
 } from "@/lib/jeff-field-assistant/session";
+import { upsertOperatorTask } from "@/lib/promise-crm/operator-tasks";
 import type {
   JeffConversation,
   JeffConversationSummary,
@@ -110,6 +112,7 @@ const PILOT_REVIEW_STORE_FILE = getJeffLocalDataPath("pilot-reviews.json");
 const toolHandlers: Record<string, (payload: unknown) => Promise<unknown>> = {
   get_jeff_capabilities: getJeffCapabilities,
   get_jeff_operating_context: getJeffOperatingContext,
+  search_wrenchready_knowledge: searchWrenchReadyKnowledge,
   log_jeff_blocked_request: logJeffBlockedRequest,
   get_active_field_job: getActiveFieldJob,
   get_current_field_context: getCurrentFieldContext,
@@ -781,7 +784,7 @@ export function getJeffVapiPilotConfig(baseUrl = getAppBaseUrl()) {
     },
     model: {
       provider: "openai",
-      model: readEnv("VAPI_JEFF_OPENAI_MODEL") || "gpt-4o",
+      model: readEnv("VAPI_JEFF_OPENAI_MODEL") || "gpt-5.4-mini",
       messages: [
         {
           role: "system",
@@ -958,6 +961,30 @@ function isShortOrMissedCall(transcript: string) {
   return !hasUsableSimonRequest(transcript) && assistantOnlyGreeting(transcript);
 }
 
+function hasSimonInterruptOrCorrectionSignal(transcript: string) {
+  return transcript
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^(Simon|User|Customer):/i.test(line))
+    .some((line) => {
+      const text = line.replace(/^(Simon|User|Customer):\s*/i, "").toLowerCase();
+      return hasAny(text, [
+        "shut up",
+        "stop talking",
+        "stop for a second",
+        "listen",
+        "let me talk",
+        "hold on jeff",
+        "you are not listening",
+        "you're not listening",
+        "i already verified",
+        "i already have verified",
+        "i already sent",
+        "do i really need to send it again",
+      ]) || /\byes[,. ]+\s*yes[,. ]+\s*yes\b/i.test(text);
+    });
+}
+
 function callIdFromMessage(message: VapiServerMessage) {
   return message.call?.id;
 }
@@ -1020,6 +1047,77 @@ function sourcePayloadFromMessage(message: VapiServerMessage) {
     recordingUrl: message.artifact?.recordingUrl,
     summary: message.summary || message.artifact?.summary,
   };
+}
+
+async function upsertOperatorTasksFromVoiceCall(input: {
+  conversation: JeffConversation;
+  summary: JeffConversationSummary;
+  shortOrMissed: boolean;
+}) {
+  if (input.shortOrMissed) return;
+
+  const sourceUrl = input.conversation.jobId
+    ? `/ops/promises/${input.conversation.jobId}`
+    : "/ops/field-assistant#jeff-call-workspace";
+  const common = {
+    promiseId: input.conversation.jobId,
+    customerName: input.conversation.jobLabel || input.conversation.subjectLabel,
+    vehicleLabel: input.conversation.jobLabel,
+    sourceChannel: "voice" as const,
+    sourceKind: "jeff-voice-call",
+    sourceId: input.conversation.id,
+    sourceUrl,
+    metadata: {
+      callType: input.conversation.callType,
+      jobMatchStatus: input.conversation.jobMatchStatus,
+      callId: input.conversation.callId,
+      recordingUrl: input.conversation.recordingUrl,
+    },
+  };
+  const taskWrites: Array<Promise<unknown>> = [];
+
+  if (input.conversation.needsReview || input.conversation.jobMatchStatus === "unresolved") {
+    taskWrites.push(upsertOperatorTask({
+      id: `operator-task-jeff-call-${input.conversation.id}-review`,
+      title: `Review Jeff call: ${input.conversation.subjectLabel || input.conversation.jobLabel || "unmatched call"}`,
+      detail: input.conversation.reviewReason || input.summary.recommendationSummary || input.summary.summary,
+      type: "jeff-review",
+      priority: input.conversation.callType === "admin" || input.conversation.jobMatchStatus === "unresolved" ? "high" : "normal",
+      owner: "Adam",
+      blocker: input.conversation.jobMatchStatus === "unresolved" ? "Call is not attached to a confirmed CRM job." : undefined,
+      ...common,
+    }));
+  }
+
+  if (input.summary.emailRequested || input.summary.requestedFollowUps.length > 0) {
+    taskWrites.push(upsertOperatorTask({
+      id: `operator-task-jeff-call-${input.conversation.id}-follow-up`,
+      title: `Finish Jeff follow-up: ${input.conversation.subjectLabel || input.conversation.jobLabel || "call recap"}`,
+      detail: input.summary.requestedFollowUps[0] || input.summary.recommendationSummary || "Simon asked Jeff for a follow-up.",
+      type: "customer-follow-up",
+      priority: input.summary.emailStatus === "failed" || input.summary.emailStatus === "blocked" ? "high" : "normal",
+      owner: "Adam",
+      blocker: input.summary.emailStatus === "failed" || input.summary.emailStatus === "blocked"
+        ? `Email status is ${input.summary.emailStatus}.`
+        : undefined,
+      ...common,
+    }));
+  }
+
+  if (input.summary.blockers.length > 0) {
+    taskWrites.push(upsertOperatorTask({
+      id: `operator-task-jeff-call-${input.conversation.id}-blocker`,
+      title: `Clear Jeff blocker`,
+      detail: input.summary.blockers[0],
+      type: "system",
+      priority: "high",
+      owner: "Adam",
+      blocker: input.summary.blockers[0],
+      ...common,
+    }));
+  }
+
+  await Promise.all(taskWrites);
 }
 
 async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
@@ -1171,6 +1269,11 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
       }
     : undefined;
   const storage = await persistJeffConversationWorkspace({ conversation, summary, snapshot });
+  await upsertOperatorTasksFromVoiceCall({
+    conversation,
+    summary,
+    shortOrMissed,
+  });
 
   return {
     conversation,
@@ -1434,6 +1537,14 @@ export function reviewJeffTranscript(input: {
       severity: "fix-before-field",
       summary: "Jeff repeated internal context-check narration.",
       recommendedFix: "Keep lookups silent. If a tool is slow, say the useful work being done once, then continue helping from Simon's current facts.",
+    });
+  }
+
+  if (hasSimonInterruptOrCorrectionSignal(transcript)) {
+    issues.push({
+      severity: "fix-before-field",
+      summary: "Simon had to interrupt or correct Jeff because Jeff was talking past the actual request.",
+      recommendedFix: "Treat Simon interruption/correction phrases as an immediate stop command: stop the explanation, accept the correction, answer the actual question in one short pass, and leave room for Simon to respond.",
     });
   }
 

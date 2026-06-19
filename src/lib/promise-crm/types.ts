@@ -528,6 +528,70 @@ export type PromiseRecord = {
   followThroughHistory?: PromiseFollowThroughResolution[];
 };
 
+export type OperatorTaskOwner = RecordOwner | "Adam" | "Ops" | "Jeff";
+export type OperatorTaskStatus = "open" | "in-progress" | "blocked" | "done" | "dismissed";
+export type OperatorTaskPriority = "critical" | "high" | "normal" | "low";
+export type OperatorTaskType =
+  | "inbound-screening"
+  | "job-review"
+  | "quote-review"
+  | "schedule"
+  | "parts"
+  | "field-proof"
+  | "customer-follow-up"
+  | "payment"
+  | "jeff-review"
+  | "memory-review"
+  | "system"
+  | "other";
+export type OperatorTaskSourceChannel =
+  | "crm"
+  | "voice"
+  | "message"
+  | "email"
+  | "photo"
+  | "payment"
+  | "calendar"
+  | "system";
+
+export type OperatorTask = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  title: string;
+  detail: string;
+  type: OperatorTaskType;
+  status: OperatorTaskStatus;
+  priority: OperatorTaskPriority;
+  owner: OperatorTaskOwner;
+  dueAt?: string;
+  promiseId?: string;
+  inboundId?: string;
+  customerName?: string;
+  vehicleLabel?: string;
+  sourceChannel: OperatorTaskSourceChannel;
+  sourceKind: string;
+  sourceId?: string;
+  sourceUrl?: string;
+  blocker?: string;
+  completionSummary?: string;
+  metadata: Record<string, unknown>;
+};
+
+export type OperatorTaskQueueSnapshot = {
+  generatedAt: string;
+  tasks: OperatorTask[];
+  counts: {
+    open: number;
+    inProgress: number;
+    blocked: number;
+    dueNow: number;
+    critical: number;
+  };
+  warnings: string[];
+  storageStatus: "supabase" | "derived" | "local" | "failed";
+};
+
 export type PromiseBoardMetrics = {
   newInbound: number;
   promisesWaiting: number;

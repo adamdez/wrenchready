@@ -267,9 +267,10 @@ Brain rule:
 Configured model intent:
 
 - live voice: `JEFF_FIELD_REALTIME_MODEL`, default `gpt-realtime-2`
+- app text: `JEFF_FIELD_TEXT_MODEL`, default `gpt-5.5`
 - reasoning/tools: `JEFF_FIELD_REASONING_MODEL`, default `gpt-5.5`
 - photo/vision: `JEFF_FIELD_VISION_MODEL`, default `gpt-5.5`
-- Vapi-managed fallback model: `VAPI_JEFF_OPENAI_MODEL`, default `gpt-4o`
+- Vapi-managed fallback model: `VAPI_JEFF_OPENAI_MODEL`, default `gpt-5.4-mini`
 
 ## Non-Coder Setup Path
 

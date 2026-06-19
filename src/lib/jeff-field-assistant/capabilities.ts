@@ -77,6 +77,11 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
     getJeffLocalMirrorStatus(),
   ]);
   const openAiReady = envReady("OPENAI_API_KEY");
+  const textModel = readEnv("JEFF_FIELD_TEXT_MODEL", "JEFF_FIELD_REASONING_MODEL") || "gpt-5.5";
+  const textModelConfigured = envReady("JEFF_FIELD_TEXT_MODEL", "JEFF_FIELD_REASONING_MODEL");
+  const vapiModel = readEnv("VAPI_JEFF_OPENAI_MODEL") || "gpt-5.4-mini";
+  const vapiModelConfigured = envReady("VAPI_JEFF_OPENAI_MODEL");
+  const realtimeModelHint = readEnv("JEFF_FIELD_REALTIME_MODEL") || "gpt-realtime-2";
   const toolSecretReady = envReady("JEFF_FIELD_ASSISTANT_TOOL_SECRET");
   const vapiAssistantReady = envReady("VAPI_JEFF_ASSISTANT_ID", "VAPI_ASSISTANT_ID");
   const vapiPhoneReady = envReady("VAPI_JEFF_PHONE_NUMBER_ID", "VAPI_PHONE_NUMBER_ID");
@@ -94,8 +99,8 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
       area: "communication",
       state: stateFromReadyPartial(openAiReady && toolSecretReady && vapiAssistantReady && (vapiPhoneReady || fieldPhoneReady), openAiReady && toolSecretReady),
       reason: openAiReady && toolSecretReady && vapiAssistantReady && (vapiPhoneReady || fieldPhoneReady)
-        ? "Vapi/OpenAI voice path and protected tool callbacks are configured."
-        : "Voice is not fully production-ready until the Vapi assistant, Jeff phone number, OpenAI key, and tool secret are all present.",
+        ? `Vapi/OpenAI voice path and protected tool callbacks are configured. Vapi sync target model: ${vapiModel}${vapiModelConfigured ? "" : " (default fallback)"}. Realtime model hint: ${realtimeModelHint}.`
+        : `Voice is not fully production-ready until the Vapi assistant, Jeff phone number, OpenAI key, and tool secret are all present. Vapi sync target model: ${vapiModel}${vapiModelConfigured ? "" : " (default fallback)"}. Realtime model hint: ${realtimeModelHint}.`,
       whatJeffCanDo: "Talk Simon through field troubleshooting and call WrenchReady tools when Vapi sends tool calls.",
       whatJeffShouldSay: "Call me and tell me the customer or vehicle you are on.",
       operatorAction: "Confirm the Vapi assistant, phone number, OpenAI key, and JEFF_FIELD_ASSISTANT_TOOL_SECRET after each deploy.",
@@ -109,6 +114,9 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
         assistantConfigured: vapiAssistantReady,
         phoneConfigured: vapiPhoneReady || fieldPhoneReady,
         toolSecretConfigured: toolSecretReady,
+        vapiModel,
+        vapiModelConfigured,
+        realtimeModelHint,
       },
     }),
     capability({
@@ -117,13 +125,18 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
       area: "communication",
       state: openAiReady ? "ready" : "partial",
       reason: openAiReady
-        ? "The phone-style message UI can save messages and get live Jeff replies."
-        : "The message UI can save messages, but live text replies need OPENAI_API_KEY.",
-      whatJeffCanDo: "Receive typed or dictated field messages, attach them to job context, run obvious tools, and reply in the app.",
+        ? `The phone-style message UI can save messages, run obvious tools, and get live Jeff replies. Text model: ${textModel}${textModelConfigured ? "" : " (default fallback)"}. Selected-job field context: auto-loads before Jeff replies.`
+        : `The message UI can save messages and auto-load selected-job field context, but live text replies need OPENAI_API_KEY. Text model: ${textModel}${textModelConfigured ? "" : " (default fallback)"}. Selected-job field context: auto-loads before Jeff replies.`,
+      whatJeffCanDo: "Receive typed or dictated field messages, attach them to job context, load the current field packet for selected jobs, run obvious tools, and reply in the app.",
       whatJeffShouldSay: "Send it here if calling is awkward. I can keep it with the job file.",
       operatorAction: appPinReady ? undefined : "Set JEFF_FIELD_APP_PIN for tighter field app access control.",
       missing: unique([missingIf(openAiReady, "OPENAI_API_KEY")]),
-      details: { appPinConfigured: appPinReady },
+      details: {
+        appPinConfigured: appPinReady,
+        textModel,
+        textModelConfigured,
+        selectedJobContext: "auto-loads field brief when a job is selected",
+      },
     }),
     capability({
       id: "photo-file-upload",

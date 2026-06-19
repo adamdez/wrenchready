@@ -499,6 +499,26 @@ assert(
   "Repeated context narration should create a fix-before-field issue.",
 );
 
+const talkPastSimonTranscript = await requestJson("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "end-of-call-report",
+    call: {
+      id: "red-team-talk-past-simon",
+      assistantId: "assistant-test",
+      customer: { number: "+15095550102" },
+    },
+    artifact: {
+      transcript:
+        "User: Jeff, what do you think about quoting a battery disconnect as the cheap workaround?\nAI: That is a band aid, not a repair. Let me explain the full parasitic draw diagnostic path and why the customer may still have the same underlying fault.\nUser: Yeah. Yes. Yes. Yes. Hey Jeff, shut up for a second. I already verified the draw. I need install time and quote cost.",
+    },
+  },
+});
+assert(talkPastSimonTranscript.review?.passed === false, "Jeff talking past a Simon interruption should fail review.");
+assert(
+  talkPastSimonTranscript.review?.issues?.some((issue) => /interrupt or correct/i.test(issue.summary)),
+  "Simon interruption/correction should create a fix-before-field issue.",
+);
+
 const wrongJobDragTranscript = await requestJson("/api/al/wrenchready/jeff/vapi/server", {
   message: {
     type: "end-of-call-report",
@@ -585,6 +605,8 @@ assert(/Send recap/.test(opsHtml), "Ops Jeff page should expose a first-screen s
 assert(/Mark reviewed/.test(opsHtml), "Ops Jeff page should expose a persistent mark-reviewed action.");
 assert(/Show proof here/.test(opsHtml), "Ops Jeff page should expose inline proof instead of forcing transcript hunting.");
 assert(/System readiness and blocked capability log/.test(opsHtml), "Ops Jeff page should keep capability details available but secondary.");
+assert(/Text model:/i.test(opsHtml), "Ops Jeff page should show the Message Jeff text model target.");
+assert(/selected-job field context|load selected-job field context/i.test(opsHtml), "Ops Jeff page should show that selected-job context is loaded for Message Jeff.");
 assert(!/red-team test asks Jeff to buy a starter/i.test(opsHtml), "Ops Jeff page should not leak red-team blocked request fixtures.");
 
 console.log("Jeff red-team verification passed.");

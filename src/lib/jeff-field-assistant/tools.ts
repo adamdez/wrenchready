@@ -13,6 +13,7 @@ import {
   ingestJeffInboundEmail,
 } from "@/lib/jeff-field-assistant/email-ingest";
 import { getJeffCapabilityReport } from "@/lib/jeff-field-assistant/capabilities";
+import { searchWrenchReadyKnowledgeFiles } from "@/lib/jeff-field-assistant/knowledge";
 import { getJeffOperatingContextPacket } from "@/lib/jeff-field-assistant/operating-context";
 import { getPromiseRecords, updatePromiseRecord, upsertPromiseQuoteDraftForReview } from "@/lib/promise-crm/server";
 import { buildPromiseQuotePacket } from "@/lib/promise-crm/quote-packet";
@@ -2338,10 +2339,17 @@ export async function getJeffFieldFile(jobId: string) {
 export async function getJeffFieldFiles() {
   const { jobs, warnings } = await getAllJobs();
   const allowFixtures = jeffFixturesEnabled();
+  const selectableJobs = jobs
+    .filter((job) => job.owner === "Simon" || job.source === "promise-crm")
+    .filter((job) => isJeffFieldSelectableJob(job, allowFixtures));
+  const orderedJobs = allowFixtures
+    ? [
+        ...selectableJobs.filter((job) => job.source === "jeff-fixture"),
+        ...selectableJobs.filter((job) => job.source !== "jeff-fixture"),
+      ]
+    : selectableJobs;
   const fieldFiles = await Promise.all(
-    jobs
-      .filter((job) => job.owner === "Simon" || job.source === "promise-crm")
-      .filter((job) => isJeffFieldSelectableJob(job, allowFixtures))
+    orderedJobs
       .slice(0, 30)
       .map(buildJeffFieldFile),
   );
@@ -2529,6 +2537,37 @@ export async function getJeffOperatingContext(payload: unknown = {}) {
     "get_jeff_operating_context",
     `WrenchReady operating context is loaded.${focusNote} Use it silently and answer like a practical field assistant.`,
     { context, focus },
+  );
+}
+
+export async function searchWrenchReadyKnowledge(payload: unknown = {}) {
+  const input = isObject(payload) ? payload : {};
+  const query =
+    optionalString(input.query) ||
+    optionalString(input.question) ||
+    optionalString(input.request) ||
+    optionalString(input.focus);
+
+  if (!query) {
+    return blocked(
+      "search_wrenchready_knowledge",
+      "I need a question, topic, or search phrase before I can search WrenchReady knowledge.",
+      { matches: [] },
+    );
+  }
+
+  const search = searchWrenchReadyKnowledgeFiles({
+    query,
+    limit: typeof input.limit === "number" ? input.limit : 5,
+  });
+
+  return result(
+    "search_wrenchready_knowledge",
+    search.matches.length
+      ? `I found ${search.matches.length} WrenchReady knowledge match${search.matches.length === 1 ? "" : "es"}. Use the matches silently and answer in normal field language.`
+      : "I searched WrenchReady knowledge and did not find a strong match.",
+    search,
+    search.warnings,
   );
 }
 
@@ -5163,6 +5202,21 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
         properties: {
           focus: { type: "string" },
         },
+      },
+    },
+    {
+      name: "search_wrenchready_knowledge",
+      description: "Search WrenchReady's repo docs, SOPs, playbooks, and available legacy assistant markdown for relevant quote, pricing, parts, customer communication, and field workflow guidance.",
+      endpoint: `${BASE_ROUTE}/search-wrenchready-knowledge`,
+      method: "POST",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string" },
+          focus: { type: "string" },
+          limit: { type: "number" },
+        },
+        required: ["query"],
       },
     },
     {
