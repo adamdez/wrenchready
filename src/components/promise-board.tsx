@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CalendarClock,
   CheckCircle2,
+  FileText,
   Mail,
   MessageSquareText,
   Phone,
@@ -11,6 +12,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { QuickDispatchForm } from "@/components/quick-dispatch-form";
+import { isQuoteScheduleReview, promiseBoardStatusLabel } from "@/lib/promise-crm/display-state";
 import type {
   InboundRecord,
   PromiseBoardMetrics,
@@ -280,10 +282,10 @@ function PromiseQueueItem({
   tone,
 }: {
   record: PromiseRecord;
-  tone: "waiting" | "risk" | "follow";
+  tone: "review" | "waiting" | "risk" | "follow";
 }) {
-  const label =
-    tone === "risk" ? "At risk" : tone === "follow" ? "Follow-up due" : "Promised";
+  const label = promiseBoardStatusLabel(record);
+  const reviewDraft = tone === "review";
 
   return (
     <article className="rounded-2xl border border-border bg-card/50 p-4">
@@ -297,7 +299,9 @@ function PromiseQueueItem({
                   ? "border-red-500/30 bg-red-500/10 text-red-200"
                   : tone === "follow"
                     ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
-                    : "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+                    : tone === "review"
+                      ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
+                      : "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
               }`}
             >
               {label}
@@ -336,12 +340,24 @@ function PromiseQueueItem({
         ) : null}
       </div>
 
+      {reviewDraft ? (
+        <div className="mt-4 rounded-2xl border border-[--wr-gold]/25 bg-[--wr-gold]/10 p-3 text-sm leading-relaxed text-[--wr-gold-soft]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+            Not a scheduled job
+          </p>
+          <p className="mt-2">
+            Review scope, price, caveats, customer send, payment link, and calendar before anyone
+            treats this as a promised appointment.
+          </p>
+        </div>
+      ) : null}
+
       <div className="mt-4 flex justify-end">
         <Link
           className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-all hover:bg-secondary"
           href={`/ops/promises/${record.id}`}
         >
-          Open promise
+          {reviewDraft ? "Open review" : "Open promise"}
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -350,7 +366,12 @@ function PromiseQueueItem({
 }
 
 export function PromiseBoard(props: PromiseBoardProps) {
-  const promisedJobs = [...props.tomorrowAtRisk, ...props.promisesWaiting];
+  const openPromiseRecords = [...props.tomorrowAtRisk, ...props.promisesWaiting];
+  const quoteReviewJobs = openPromiseRecords.filter(isQuoteScheduleReview);
+  const promisedJobs = openPromiseRecords.filter((record) => !isQuoteScheduleReview(record));
+  const promisedAtRiskCount = promisedJobs.filter(
+    (record) => record.status === "tomorrow-at-risk",
+  ).length;
 
   return (
     <div className="space-y-8">
@@ -379,16 +400,20 @@ export function PromiseBoard(props: PromiseBoardProps) {
           <QuickDispatchForm />
         </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-border bg-card/50 p-4">
             <p className="text-3xl font-bold text-foreground">{props.metrics.newInbound}</p>
             <p className="mt-1 text-sm text-muted-foreground">new requests</p>
           </div>
+          <div className="rounded-2xl border border-[--wr-gold]/25 bg-[--wr-gold]/10 p-4">
+            <p className="text-3xl font-bold text-[--wr-gold-soft]">{quoteReviewJobs.length}</p>
+            <p className="mt-1 text-sm text-[--wr-gold-soft]">quote reviews</p>
+          </div>
           <div className="rounded-2xl border border-border bg-card/50 p-4">
             <p className="text-3xl font-bold text-foreground">
-              {props.metrics.promisesWaiting + props.metrics.tomorrowAtRisk}
+              {promisedJobs.length}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">promised jobs</p>
+            <p className="mt-1 text-sm text-muted-foreground">real promises</p>
           </div>
           <div className="rounded-2xl border border-border bg-card/50 p-4">
             <p className="text-3xl font-bold text-foreground">{props.metrics.followThroughDue}</p>
@@ -397,7 +422,7 @@ export function PromiseBoard(props: PromiseBoardProps) {
         </div>
       </header>
 
-      <section className="grid gap-8 xl:grid-cols-[1.1fr_1fr_1fr]">
+      <section className="grid gap-8 xl:grid-cols-4">
         <div className="space-y-4">
           <QueueHeader title="New Requests" count={props.inbound.length} icon={<Phone className="h-5 w-5" />}>
             Contact these first. Nothing here has a real appointment promise yet.
@@ -406,6 +431,23 @@ export function PromiseBoard(props: PromiseBoardProps) {
             props.inbound.map((record) => <InboundQueueItem key={record.id} record={record} />)
           ) : (
             <EmptyState>No new requests need qualification.</EmptyState>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <QueueHeader
+            title="Quote / Schedule Review"
+            count={quoteReviewJobs.length}
+            icon={<FileText className="h-5 w-5" />}
+          >
+            Jeff drafts and schedule holds that still need Adam/Dez approval before customer send.
+          </QueueHeader>
+          {quoteReviewJobs.length ? (
+            quoteReviewJobs.map((record) => (
+              <PromiseQueueItem key={record.id} record={record} tone="review" />
+            ))
+          ) : (
+            <EmptyState>No quote or schedule drafts are waiting for review.</EmptyState>
           )}
         </div>
 
@@ -448,13 +490,13 @@ export function PromiseBoard(props: PromiseBoardProps) {
         </div>
       </section>
 
-      {props.metrics.tomorrowAtRisk > 0 ? (
+      {promisedAtRiskCount > 0 ? (
         <section className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm leading-relaxed text-red-100">
           <div className="flex gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
             <p>
-              {props.metrics.tomorrowAtRisk} promised job
-              {props.metrics.tomorrowAtRisk === 1 ? "" : "s"} need risk reduction before the
+              {promisedAtRiskCount} promised job
+              {promisedAtRiskCount === 1 ? "" : "s"} need risk reduction before the
               route starts.
             </p>
           </div>

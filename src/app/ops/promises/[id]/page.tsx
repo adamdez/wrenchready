@@ -27,6 +27,7 @@ import { OutboundResultForm } from "@/components/outbound-result-form";
 import { PromiseStatusForm } from "@/components/promise-status-form";
 import { QuickCloseoutForm } from "@/components/quick-closeout-form";
 import { getNextProbableVisit } from "@/lib/promise-crm/closeout-recapture";
+import { isQuoteScheduleReview, promiseBoardStatusLabel } from "@/lib/promise-crm/display-state";
 import { computePromiseEconomics } from "@/lib/promise-crm/economics";
 import { getPromiseOutboundSnapshot } from "@/lib/promise-crm/outbound-drafts";
 import { getPlaybookRecommendation } from "@/lib/promise-crm/playbooks";
@@ -139,7 +140,7 @@ function followThroughResolutionLabel(value?: FollowThroughResolutionAction) {
 
 function jobStageLabel(value?: string) {
   if (value === "triage-needed") return "Triage needed";
-  if (value === "quoted") return "Quoted";
+  if (value === "quoted") return "Quote draft";
   if (value === "scheduled") return "Scheduled";
   if (value === "confirmed") return "Confirmed";
   if (value === "en-route") return "En route";
@@ -238,6 +239,19 @@ function quoteAmount(promise: PromiseDetailRecord) {
     promise.economics?.quotedAmount ??
     promise.economics?.finalInvoiceAmount
   );
+}
+
+function customerSendLabel(value?: string) {
+  if (value === "ready-after-review") return "Ready after review";
+  if (value === "sent") return "Sent";
+  return "Not sent";
+}
+
+function paymentLinkLabel(value?: string) {
+  if (value === "pending-review") return "Pending review";
+  if (value === "ready") return "Ready";
+  if (value === "blocked") return "Blocked";
+  return "Not created";
 }
 
 function riskClasses(risk: PromiseDetailRecord["readinessRisk"]) {
@@ -713,6 +727,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
       promise.paymentCollection.balanceDueAmount > 0 &&
       promise.paymentCollection.status !== "paid",
   );
+  const quoteReview = isQuoteScheduleReview(promise);
 
   return (
     <div className="bg-background pb-12">
@@ -731,8 +746,14 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <StatusPill className="border-primary/25 bg-primary/10 text-primary">
-                  CRM Record
+                <StatusPill
+                  className={
+                    quoteReview
+                      ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
+                      : "border-primary/25 bg-primary/10 text-primary"
+                  }
+                >
+                  {quoteReview ? "Quote / schedule review" : "CRM Record"}
                 </StatusPill>
                 <StatusPill>{jobStageLabel(promise.jobStage)}</StatusPill>
                 <StatusPill className={riskClasses(promise.readinessRisk)}>
@@ -798,6 +819,35 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
       </header>
 
       <main className="shell py-6 sm:py-8">
+        {quoteReview ? (
+          <section className="mb-6 rounded-xl border border-[--wr-gold]/30 bg-[--wr-gold]/10 p-4 text-[--wr-gold-soft]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <CircleAlert className="h-4 w-4 shrink-0" />
+                  Not a scheduled customer promise
+                </div>
+                <p className="mt-2 text-sm leading-relaxed">
+                  Jeff prepared this as a quote or schedule review draft. Adam/Dez still needs to
+                  approve scope, price, caveats, customer send, payment link, and calendar before
+                  this becomes a customer-facing appointment.
+                </p>
+              </div>
+              <div className="grid min-w-0 gap-2 text-xs sm:grid-cols-3 lg:w-[32rem]">
+                <StatusPill className="border-[--wr-gold]/30 bg-background/40 text-[--wr-gold-soft]">
+                  Customer: {customerSendLabel(promise.quotePacket?.customerSendStatus)}
+                </StatusPill>
+                <StatusPill className="border-[--wr-gold]/30 bg-background/40 text-[--wr-gold-soft]">
+                  Payment: {paymentLinkLabel(promise.quotePacket?.paymentLinkStatus)}
+                </StatusPill>
+                <StatusPill className="border-[--wr-gold]/30 bg-background/40 text-[--wr-gold-soft]">
+                  Approval: {customerApprovalLabel(promise.customerApproval.status)}
+                </StatusPill>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="min-w-0 space-y-8">
             <Section id="overview" eyebrow="Command center" title="Overview">
@@ -821,9 +871,13 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                   value={promise.location.label}
                 />
                 <MetricTile
-                  detail={`Quote ${formatCurrency(quoteTotal)} / ${paymentStatusLabel(promise.paymentCollection?.status)}`}
+                  detail={
+                    quoteReview
+                      ? `Draft ${formatCurrency(quoteTotal)} / payment ${paymentLinkLabel(promise.quotePacket?.paymentLinkStatus)}`
+                      : `Quote ${formatCurrency(quoteTotal)} / ${paymentStatusLabel(promise.paymentCollection?.status)}`
+                  }
                   icon={<CalendarClock className="h-3.5 w-3.5" />}
-                  label="Schedule"
+                  label={quoteReview ? "Review window" : "Schedule"}
                   value={promise.scheduledWindow.label}
                 />
               </div>
@@ -841,7 +895,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
 
                 <div className="rounded-xl border border-border bg-background/55 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-                    Approval and customer view
+                    {quoteReview ? "Review state" : "Approval and customer view"}
                   </p>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {customerApprovalLabel(promise.customerApproval.status)} / {formatCurrency(promise.customerApproval.requestedAmount)}
@@ -855,7 +909,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Open customer status page
+                    {quoteReview ? "Open customer status preview" : "Open customer status page"}
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 </div>
@@ -900,10 +954,10 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               {promise.quotePacket ? (
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-4">
-                    <MetricTile label="Packet status" value={quotePacketStatusLabel(promise.quotePacket.status)} detail={`Send: ${promise.quotePacket.customerSendStatus.replace(/-/g, " ")}`} />
+                    <MetricTile label="Packet status" value={quotePacketStatusLabel(promise.quotePacket.status)} detail={`Send: ${customerSendLabel(promise.quotePacket.customerSendStatus)}`} />
                     <MetricTile label="Review owner" value={promise.quotePacket.reviewOwner} detail={`Generated by ${promise.quotePacket.generatedBy}`} />
                     <MetricTile label="QA" value={`${qaPassCount}/${qaChecks.length} pass`} detail={qaBlockedCount ? `${qaBlockedCount} blocked` : "No hard blockers"} />
-                    <MetricTile label="Payment link" value={promise.quotePacket.paymentLinkStatus.replace(/-/g, " ")} detail={formatCurrency(quoteTotal)} />
+                    <MetricTile label="Payment link" value={paymentLinkLabel(promise.quotePacket.paymentLinkStatus)} detail={formatCurrency(quoteTotal)} />
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -969,6 +1023,13 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
             </Section>
 
             <Section id="schedule" eyebrow="Dispatch readiness" title="Schedule">
+              {quoteReview ? (
+                <div className="mb-4 rounded-xl border border-[--wr-gold]/25 bg-[--wr-gold]/10 p-4 text-sm leading-relaxed text-[--wr-gold-soft]">
+                  This is a requested or draft window, not a booked appointment. Confirm route,
+                  duration, parts/worksite readiness, customer approval, and customer send before
+                  calling it scheduled.
+                </div>
+              ) : null}
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="rounded-xl border border-border bg-background/55 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
@@ -1432,7 +1493,15 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 Status
               </p>
               <div className="mt-3 grid gap-2">
-                <StatusPill>{promise.status.replace(/-/g, " ")}</StatusPill>
+                <StatusPill
+                  className={
+                    quoteReview
+                      ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
+                      : undefined
+                  }
+                >
+                  {promiseBoardStatusLabel(promise)}
+                </StatusPill>
                 <StatusPill>{jobStageLabel(promise.jobStage)}</StatusPill>
                 <StatusPill>{quotePacketStatusLabel(promise.quotePacket?.status)}</StatusPill>
                 <StatusPill>{paymentStatusLabel(promise.paymentCollection?.status)}</StatusPill>

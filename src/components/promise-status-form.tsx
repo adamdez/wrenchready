@@ -739,6 +739,11 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
             <option value="follow-through-due">Follow-through due</option>
             <option value="completed">Completed</option>
           </select>
+          <span className="block text-xs leading-relaxed text-muted-foreground">
+            Quote drafts may still use this internal status, but the board treats quoted,
+            unapproved, unsent records as review items until they are customer-approved and
+            scheduled.
+          </span>
         </label>
 
         <label className="block space-y-2">
