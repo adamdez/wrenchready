@@ -35,10 +35,10 @@ export function ContactPageClient() {
       </section>
 
       <section className="shell pb-20" id="launch-request">
-        <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <FadeIn>
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-border bg-card/50 p-8">
+        <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+          <FadeIn className="min-w-0">
+            <div className="min-w-0 space-y-6">
+              <div className="min-w-0 rounded-2xl border border-border bg-card/50 p-5 sm:p-8">
                 <SectionHeading
                   eyebrow="Contact Info"
                   title="Call, text, or fill out the form."
@@ -47,44 +47,44 @@ export function ContactPageClient() {
                 <div className="mt-8 space-y-5">
                   <a
                     href={siteConfig.contact.phoneHref}
-                    className="flex items-center gap-4 rounded-xl border border-border bg-background/50 p-4 transition-all hover:border-primary/20"
+                    className="flex min-w-0 items-center gap-4 rounded-xl border border-border bg-background/50 p-4 transition-all hover:border-primary/20"
                   >
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <Phone className="h-5 w-5" />
                     </span>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground">{siteConfig.contact.phoneDisplay}</p>
                       <p className="text-xs text-muted-foreground">Call or text directly</p>
                     </div>
-                    <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
+                    <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
                   </a>
                   <a
                     href={`mailto:${siteConfig.contact.email}`}
-                    className="flex items-center gap-4 rounded-xl border border-border bg-background/50 p-4 transition-all hover:border-primary/20"
+                    className="flex min-w-0 items-center gap-4 rounded-xl border border-border bg-background/50 p-4 transition-all hover:border-primary/20"
                   >
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <Mail className="h-5 w-5" />
                     </span>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{siteConfig.contact.email}</p>
+                    <div className="min-w-0">
+                      <p className="break-all text-sm font-semibold text-foreground">{siteConfig.contact.email}</p>
                       <p className="text-xs text-muted-foreground">Email us</p>
                     </div>
-                    <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
+                    <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
                   </a>
-                  <div className="flex items-center gap-4 rounded-xl border border-border bg-background/50 p-4">
+                  <div className="flex min-w-0 items-center gap-4 rounded-xl border border-border bg-background/50 p-4">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <Clock className="h-5 w-5" />
                     </span>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground">Scheduling</p>
                       <p className="text-xs text-muted-foreground">Screened appointments by request</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 rounded-xl border border-border bg-background/50 p-4">
+                  <div className="flex min-w-0 items-center gap-4 rounded-xl border border-border bg-background/50 p-4">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <MapPin className="h-5 w-5" />
                     </span>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground">Spokane metro, WA</p>
                       <p className="text-xs text-muted-foreground">Spokane, Spokane Valley, Liberty Lake, South Hill</p>
                     </div>
@@ -92,7 +92,7 @@ export function ContactPageClient() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card/50 p-8">
+              <div className="min-w-0 rounded-2xl border border-border bg-card/50 p-5 sm:p-8">
                 <p className="eyebrow">Launch Wedges</p>
                 <div className="mt-4 space-y-3">
                   {launchWedges.map((wedge) => (
@@ -106,7 +106,7 @@ export function ContactPageClient() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card/50 p-8">
+              <div className="min-w-0 rounded-2xl border border-border bg-card/50 p-5 sm:p-8">
                 <p className="eyebrow">What to Include</p>
                 <ul className="mt-4 space-y-3">
                   {[
@@ -125,7 +125,7 @@ export function ContactPageClient() {
             </div>
           </FadeIn>
 
-          <FadeIn delay={0.2}>
+          <FadeIn className="min-w-0" delay={0.2}>
             <LaunchRequestForm />
           </FadeIn>
         </div>
