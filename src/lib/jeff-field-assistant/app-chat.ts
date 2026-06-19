@@ -34,6 +34,7 @@ import {
   fieldSafeJeffNotice,
   isJeffFieldThreadConversation,
 } from "@/lib/jeff-field-assistant/conversation-filters";
+import { buildQuoteDraftPayloadFromText } from "@/lib/jeff-field-assistant/quote-intake";
 import type {
   JeffConversation,
   JeffConversationSummary,
@@ -529,13 +530,6 @@ function likelyWantsCalendarSync(text: string) {
   return /\b(sync|mirror|update|push)\b.{0,35}\b(calendar|schedule)\b/i.test(text);
 }
 
-function likelyWantsQuoteDraft(text: string) {
-  return (
-    /\b(quote|estimate|bid)\b/i.test(text) &&
-    /\b(build|create|make|prep|prepare|draft|write|put together|send to dez|send to adam|for customer|for monday|schedule)\b/i.test(text)
-  ) || /\b(schedule)\b.{0,80}\b(quote|estimate|diagnostic block)\b/i.test(text);
-}
-
 function likelyWantsPhotoAnalysis(text: string, attachments: JeffAppAttachment[] = []) {
   return attachments.some(isImageAttachment) && /\b(photo|picture|image|look|see|analy[sz]e|what is this|what do you see)\b/i.test(text);
 }
@@ -604,70 +598,6 @@ function extractVehicleFromText(text: string) {
   if (astro) return "Chevy Astro";
 
   return undefined;
-}
-
-function extractMoneyFromText(text: string) {
-  const match = text.replace(/,/g, "").match(/\$\s*(\d+(?:\.\d{1,2})?)|\b(\d+(?:\.\d{1,2})?)\s*(?:dollars|bucks)\b/i);
-  if (!match) return undefined;
-  const value = Number(match[1] || match[2]);
-  return Number.isFinite(value) ? value : undefined;
-}
-
-function extractHoursFromText(text: string) {
-  const numeric = text.match(/\b(\d+(?:\.\d+)?)\s*(?:hour|hr)s?\b/i)?.[1];
-  if (numeric) {
-    const value = Number(numeric);
-    if (Number.isFinite(value)) return value;
-  }
-  if (/\btwo[-\s]?hour/i.test(text)) return 2;
-  if (/\bone[-\s]?hour/i.test(text)) return 1;
-  if (/\bthree[-\s]?hour/i.test(text)) return 3;
-  return undefined;
-}
-
-function extractRequestedWindowFromText(text: string) {
-  const normalized = text.replace(/\s+/g, " ");
-  const day = normalized.match(/\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i)?.[1];
-  const time = normalized.match(/\b(?:at|around|about)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i)?.[1];
-  if (day && time) return `${day} ${time}`;
-  return day;
-}
-
-function titleCaseName(value: string) {
-  return value
-    .split(/\s+/)
-    .map((part) => part ? `${part[0].toUpperCase()}${part.slice(1).toLowerCase()}` : "")
-    .join(" ")
-    .trim();
-}
-
-function extractQuoteCustomerName(text: string) {
-  const match = text.match(
-    /\b(?:customer|client|for)\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})(?=\s+(?:with|on|about|needs?|for|monday|tuesday|wednesday|thursday|friday|saturday|sunday|a|an|the|\d{4}|$))/i,
-  )?.[1];
-  if (!match) return undefined;
-  const cleaned = match.replace(/\b(a|an|the|quote|estimate|job|customer|client)\b/gi, "").replace(/\s+/g, " ").trim();
-  return cleaned ? titleCaseName(cleaned) : undefined;
-}
-
-function extractQuoteScope(text: string) {
-  const explicit = text.match(
-    /\b((?:(?:one|two|three|four|\d+(?:\.\d+)?)\s*[- ]?\s*hours?\s+)?[a-z0-9 -]{0,80}?(?:diagnostic|diag|diagnosis|repair|replacement|service|follow[- ]?up|inspection|test|block|labor|install|no-start|parasitic draw|battery|starter|brake|oil change)[a-z0-9 -]{0,120})\b/i,
-  )?.[1];
-  const block = explicit || text.match(/\b(?:quote|estimate|scope)\s+(?:for\s+)?(.{8,160})$/i)?.[1];
-  if (!block) return undefined;
-  const cleaned = block
-    .replace(/\b(?:for\s+)?(?:customer|client)\s+[a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2}\b/gi, "")
-    .replace(/\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 220);
-
-  if (!/\b(diagnostic|diag|diagnosis|repair|replacement|service|follow[- ]?up|inspection|test|block|labor|install|no-start|parasitic draw|battery|starter|brake|oil change)\b/i.test(cleaned)) {
-    return undefined;
-  }
-
-  return cleaned || undefined;
 }
 
 function selectedJobAppearsDifferent(jobLabel: string | undefined, vehicle: string | undefined) {
@@ -809,18 +739,16 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
     }), "sync_jeff_calendar"));
   }
 
-  if (likelyWantsQuoteDraft(text)) {
+  const quoteDraftPayload = buildQuoteDraftPayloadFromText({
+    text,
+    jobId: input.jobId,
+    jobLabel: input.jobLabel || input.inferredVehicle,
+    sourceLabel: "Message Jeff",
+    sourceReference: "message-jeff",
+  });
+  if (quoteDraftPayload) {
     actions.push(messageActionFromResult(await prepareQuoteDraftForReview({
-      jobId: input.jobId,
-      customerName: extractQuoteCustomerName(text),
-      vehicle: extractVehicleFromText(text) || input.inferredVehicle || input.jobLabel,
-      serviceScope: extractQuoteScope(text),
-      requestedWindow: extractRequestedWindowFromText(text),
-      quoteAmount: extractMoneyFromText(text),
-      laborHours: extractHoursFromText(text),
-      customerMessage: text,
-      sourceLabel: "Message Jeff",
-      sourceReference: "message-jeff",
+      ...quoteDraftPayload,
     }), "prepare_quote_draft_for_review"));
   }
 

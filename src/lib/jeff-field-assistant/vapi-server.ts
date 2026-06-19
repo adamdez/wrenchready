@@ -33,6 +33,10 @@ import {
 import { findNearbyPartsStoresForSimon } from "@/lib/jeff-field-assistant/location";
 import { jeffFieldAssistantSystemPrompt } from "@/lib/jeff-field-assistant/prompt";
 import {
+  buildQuoteDraftPayloadFromText,
+  summarizeQuoteDraftAction,
+} from "@/lib/jeff-field-assistant/quote-intake";
+import {
   listPersistedJeffJobWorkspace,
   persistJeffConversationWorkspace,
 } from "@/lib/jeff-field-assistant/persistence";
@@ -1646,13 +1650,32 @@ export async function handleJeffVapiServerPayload(payload: unknown) {
       upsertLiveSessionFromMessage(message);
       if (shouldReviewTranscript(message)) {
         const workspace = await persistWorkspaceFromEndOfCall(message);
+        const transcript = transcriptFromMessage(message);
+        const quoteDraftPayload =
+          workspace.conversation.callType !== "test" &&
+          workspace.conversation.sourcePayload.shortOrMissed !== true
+            ? buildQuoteDraftPayloadFromText({
+                text: transcript,
+                jobId: workspace.conversation.jobId,
+                jobLabel: workspace.conversation.jobLabel || workspace.conversation.subjectLabel,
+                sourceLabel: "Jeff phone call",
+                sourceReference: workspace.conversation.id,
+              })
+            : null;
+        const quoteDraftAction = quoteDraftPayload
+          ? await prepareQuoteDraftForReview(quoteDraftPayload).catch((error) => ({
+              success: false,
+              assistantSay: "Jeff captured a quote request from the call, but the quote builder failed before creating a review packet.",
+              error: error instanceof Error ? error.message : "Unknown quote trigger failure.",
+            }))
+          : undefined;
         const review = workspace.conversation.sourcePayload.shortOrMissed === true
           ? undefined
           : reviewJeffTranscript({
             callId: callIdFromMessage(message),
             customerNumber: customerNumberFromMessage(message),
             assistantId: assistantIdFromMessage(message),
-            transcript: transcriptFromMessage(message),
+            transcript,
             scenario: message.summary || message.artifact?.summary,
             callType: workspace.conversation.callType,
           });
@@ -1682,6 +1705,7 @@ export async function handleJeffVapiServerPayload(payload: unknown) {
             },
             storageStatus: workspace.storage.status,
             warning: workspace.storage.warning,
+            quoteDraftAction: summarizeQuoteDraftAction(quoteDraftAction),
           },
         };
       }

@@ -5,6 +5,11 @@ import {
   getJeffInboundEmailSecret,
   ingestJeffInboundEmail,
 } from "@/lib/jeff-field-assistant/email-ingest";
+import {
+  buildQuoteDraftPayloadFromText,
+  summarizeQuoteDraftAction,
+} from "@/lib/jeff-field-assistant/quote-intake";
+import { prepareQuoteDraftForReview } from "@/lib/jeff-field-assistant/tools";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +102,25 @@ export async function POST(request: Request) {
     ...payload,
     provider: typeof payload.provider === "string" ? payload.provider : provider || undefined,
   });
+  const quoteDraftPayload = buildQuoteDraftPayloadFromText({
+    text: [
+      result.conversation.subjectLabel,
+      result.conversation.transcript,
+      result.summary.summary,
+      ...result.summary.knownFacts,
+    ].filter(Boolean).join("\n"),
+    jobId: result.conversation.jobId,
+    jobLabel: result.conversation.jobLabel || result.conversation.subjectLabel,
+    sourceLabel: "Jeff inbound email",
+    sourceReference: result.conversation.id,
+  });
+  const quoteDraftAction = quoteDraftPayload
+    ? await prepareQuoteDraftForReview(quoteDraftPayload).catch((error) => ({
+        success: false,
+        assistantSay: "Jeff captured a quote request from inbound email, but the quote builder failed before creating a review packet.",
+        error: error instanceof Error ? error.message : "Unknown quote trigger failure.",
+      }))
+    : undefined;
 
   return NextResponse.json({
     success: true,
@@ -107,5 +131,6 @@ export async function POST(request: Request) {
     needsReview: result.conversation.needsReview,
     storageStatus: result.storage.status,
     warning: result.storage.warning,
+    quoteDraftAction: summarizeQuoteDraftAction(quoteDraftAction),
   });
 }
