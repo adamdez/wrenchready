@@ -53,6 +53,26 @@ async function requestJson(path, body, secretValue = secret) {
   return json;
 }
 
+async function requestOpsJson(path) {
+  const response = await rawRequest(path, {
+    headers: opsAuthHeaders(),
+  });
+
+  const text = await response.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error(`${path} returned non-JSON: ${text.slice(0, 200)}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`${path} failed: ${response.status} ${JSON.stringify(json)}`);
+  }
+
+  return json;
+}
+
 assert(secret, "JEFF_FIELD_ASSISTANT_TOOL_SECRET must be configured before red-team verification.");
 
 const unauthTools = await rawRequest("/api/al/wrenchready/jeff/tools");
@@ -60,6 +80,9 @@ assert(unauthTools.status === 401, "Jeff tool catalog should reject unauthentica
 
 const unauthSync = await rawRequest("/api/al/wrenchready/jeff/sync");
 assert(unauthSync.status === 401, "Jeff sync route should reject unauthenticated requests.");
+
+const unauthPromises = await rawRequest("/api/al/wrenchready/promises");
+assert(unauthPromises.status === 401, "Promise CRM API should reject unauthenticated requests.");
 
 const toolCatalog = await requestJson("/api/al/wrenchready/jeff/tools");
 const toolNames = toolCatalog.assistant?.tools?.map((tool) => tool.name) || [];
@@ -251,7 +274,7 @@ assert(
   quotePhotoDropHtml.includes(quoteDraftCustomer),
   "Photo Drop deep link should pin the requested CRM job into the upload picker.",
 );
-const redTeamQueueSnapshot = await requestJson("/api/al/wrenchready/promises");
+const redTeamQueueSnapshot = await requestOpsJson("/api/al/wrenchready/promises");
 assert(
   !JSON.stringify(redTeamQueueSnapshot).includes(quoteDraftCustomer),
   "Red-team verification quote records should stay out of the live operator queue.",

@@ -27,7 +27,20 @@ function basicCredentials(authorization: string | null) {
   }
 }
 
-function unauthorized() {
+function unauthorized(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json(
+      { success: false, error: "Authentication required." },
+      {
+        status: 401,
+        headers: {
+          "WWW-Authenticate": `Basic realm="${OPS_AUTH_REALM}", charset="UTF-8"`,
+          "Cache-Control": "no-store",
+        },
+      },
+    );
+  }
+
   return new NextResponse("Authentication required.", {
     status: 401,
     headers: {
@@ -41,14 +54,14 @@ export function proxy(request: NextRequest) {
   const passwords = opsPasswordCandidates();
   const credentials = basicCredentials(request.headers.get("authorization"));
 
-  if (passwords.length === 0) return unauthorized();
+  if (passwords.length === 0) return unauthorized(request);
   if (credentials && passwords.includes(credentials.password)) {
     return NextResponse.next();
   }
 
-  return unauthorized();
+  return unauthorized(request);
 }
 
 export const config = {
-  matcher: ["/ops", "/ops/:path*"],
+  matcher: ["/ops", "/ops/:path*", "/api/al/wrenchready/promises", "/api/al/wrenchready/promises/:path*"],
 };
