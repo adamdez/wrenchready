@@ -56,10 +56,10 @@ type TimelineItem = {
 };
 
 const commandButtonClass =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-background/70 px-3.5 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-secondary";
+  "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-border bg-background/70 px-2.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary sm:min-h-11 sm:gap-2 sm:rounded-xl sm:px-3.5 sm:text-sm";
 
 const primaryCommandButtonClass =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110";
+  "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 py-2 text-xs font-semibold text-primary-foreground transition-all hover:brightness-110 sm:min-h-11 sm:gap-2 sm:rounded-xl sm:px-3.5 sm:text-sm";
 
 const navItems = [
   ["#overview", "Overview"],
@@ -421,7 +421,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-28 border-t border-border pt-6">
+    <section id={id} className="scroll-mt-6 border-t border-border pt-6 lg:scroll-mt-32">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
@@ -488,7 +488,7 @@ function CommandLink({
 }) {
   if (!href) {
     return (
-      <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-background/30 px-3.5 py-2 text-sm font-semibold text-muted-foreground opacity-70">
+      <span className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-border bg-background/30 px-2.5 py-2 text-xs font-semibold text-muted-foreground opacity-70 sm:min-h-11 sm:gap-2 sm:rounded-xl sm:px-3.5 sm:text-sm">
         {icon}
         {children}
       </span>
@@ -627,7 +627,7 @@ function QuoteDocument({
           </span>
         </div>
       </summary>
-      <pre className="mx-4 mb-4 max-h-[460px] overflow-auto whitespace-pre-wrap break-words rounded-xl border border-border bg-card/70 p-4 text-xs leading-relaxed text-muted-foreground">
+      <pre className="mx-4 mb-4 max-h-none overflow-visible whitespace-pre-wrap break-words rounded-xl border border-border bg-card/70 p-4 text-xs leading-relaxed text-muted-foreground sm:max-h-[460px] sm:overflow-auto">
         {markdown}
       </pre>
     </details>
@@ -741,7 +741,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
         </Link>
       </div>
 
-      <header className="sticky top-0 z-30 mt-4 border-y border-border bg-background/95 backdrop-blur">
+      <header className="relative z-30 mt-4 border-y border-border bg-background/95 backdrop-blur lg:sticky lg:top-0">
         <div className="shell py-3">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
@@ -764,7 +764,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 </StatusPill>
               </div>
               <div className="mt-2 flex min-w-0 flex-col gap-1 lg:flex-row lg:items-baseline lg:gap-3">
-                <h1 className="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                <h1 className="truncate text-xl font-bold tracking-tight text-foreground sm:text-3xl">
                   {promise.customer.name}
                 </h1>
                 <p className="truncate text-sm text-muted-foreground sm:text-base">
@@ -773,7 +773,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap xl:justify-end">
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap xl:justify-end">
               <CommandLink href={callCustomerHref} icon={<Phone className="h-4 w-4" />} primary>
                 Call
               </CommandLink>
