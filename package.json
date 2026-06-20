@@ -15,10 +15,14 @@
     "verify:jeff:production-workspace": "node scripts/verify-jeff-production-workspace.mjs",
     "verify:field-live": "node scripts/verify-diagnostic-tree-live.mjs",
     "verify:security": "node scripts/verify-wrenchready-api-security.mjs",
+    "verify:twilio": "node scripts/verify-twilio-webhooks.mjs",
+    "verify:brand-tokens": "node scripts/verify-tailwind-brand-tokens.mjs",
+    "verify:live-ui": "node scripts/verify-live-ui-remediation.mjs",
     "google:oauth:jeff": "node scripts/google-workspace-oauth.mjs",
     "sync:jeff": "node scripts/sync-jeff-local-mirror.mjs",
     "sync:jeff:vapi": "node scripts/sync-jeff-vapi-assistant.mjs",
-    "call:jeff:orientation": "node scripts/call-jeff-orientation.mjs"
+    "call:jeff:orientation": "node scripts/call-jeff-orientation.mjs",
+    "ui:shots": "node scripts/ui-shots.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -44,6 +48,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "playwright": "^1.61.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
