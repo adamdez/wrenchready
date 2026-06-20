@@ -65,16 +65,16 @@ function formatDateTime(value?: string) {
 }
 
 function timelineStateClasses(state: "complete" | "current" | "upcoming") {
-  if (state === "complete") return "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  if (state === "complete") return "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
   if (state === "current") return "border-primary/20 bg-primary/10 text-primary";
   return "border-border bg-background/60 text-muted-foreground";
 }
 
 function toneClasses(tone: ReturnType<typeof buildCustomerStatusView>["tone"]) {
   if (tone === "risk") return "border-red-500/20 bg-red-500/10 text-red-200";
-  if (tone === "attention") return "border-[--wr-gold]/20 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  if (tone === "attention") return "border-[var(--wr-gold)]/20 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
   if (tone === "follow-through") return "border-primary/20 bg-primary/10 text-primary";
-  if (tone === "complete") return "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  if (tone === "complete") return "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
   return "border-primary/20 bg-primary/10 text-primary";
 }
 
@@ -186,8 +186,8 @@ export default async function CustomerStatusPage({
             <div
               className={`rounded-3xl border p-5 text-sm ${
                 (depositState || balanceState) === "success"
-                  ? "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
-                  : "border-[--wr-gold]/20 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
+                  ? "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]"
+                  : "border-[var(--wr-gold)]/20 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]"
               }`}
             >
               {depositState === "success"
@@ -237,6 +237,28 @@ export default async function CustomerStatusPage({
               ))}
             </div>
           </div>
+
+          {promise.quotePacket?.customerSendStatus === "sent" ? (
+            <div className="rounded-3xl border border-border bg-card/50 p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                    Your quote
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold text-foreground">
+                    {promise.quotePacket.externalCustomerQuote.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {promise.quotePacket.externalCustomerQuote.summary}
+                  </p>
+                </div>
+                <Wrench className="h-6 w-6 shrink-0 text-primary" />
+              </div>
+              <div className="mt-5 whitespace-pre-wrap rounded-2xl border border-border bg-background/60 p-5 text-sm leading-relaxed text-foreground">
+                {promise.quotePacket.externalCustomerQuote.markdown}
+              </div>
+            </div>
+          ) : null}
 
           <CustomerPromiseApproval token={token} approval={promise.customerApproval} />
           <CustomerDepositCheckout

@@ -18,7 +18,8 @@ import { getJeffOperatingContextPacket } from "@/lib/jeff-field-assistant/operat
 import { buildDiagnosticTreeSummary } from "@/lib/promise-crm/diagnostic-tree";
 import { getPromiseRecords, updatePromiseRecord, upsertPromiseQuoteDraftForReview } from "@/lib/promise-crm/server";
 import { buildPromiseQuotePacket } from "@/lib/promise-crm/quote-packet";
-import type { PromiseFieldExecutionPacket, PromisePartItem, PromisePaymentCollection, PromiseRecord } from "@/lib/promise-crm/types";
+import { upsertOperatorTask } from "@/lib/promise-crm/operator-tasks";
+import type { OperatorTaskSourceChannel, PromiseFieldExecutionPacket, PromisePartItem, PromisePaymentCollection, PromiseRecord } from "@/lib/promise-crm/types";
 import { checkStripePaymentReferences, isStripeSecretConfigured, type StripePaymentStatusCheck } from "@/lib/stripe";
 import schedulingEngine from "@/lib/scheduling/engine";
 import type { AvailabilityRequest } from "@/lib/scheduling/types";
@@ -3619,11 +3620,28 @@ export async function recordFieldPhotoUpload(payload: unknown) {
     });
   }
 
+  // Close the loop: analyze each freshly attached photo now so the finding exists
+  // immediately, instead of waiting for someone to remember to ask Jeff to look.
+  const autoAnalysis: Array<{ photoId: string; ok: boolean; summary: string }> = [];
+  for (const uploadedPhoto of photosWithEvent.slice(0, 4)) {
+    try {
+      const analysis = await analyzeFieldPhoto({ jobId: job.id, photoId: uploadedPhoto.id });
+      autoAnalysis.push({
+        photoId: uploadedPhoto.id,
+        ok: analysis.success,
+        summary: analysis.assistantSay,
+      });
+    } catch {
+      // Best-effort: the photo is attached; analysis can be retried from /ops.
+    }
+  }
+
   return result(
     "record_field_photo_upload",
     `I attached ${photos.length} photo${photos.length === 1 ? "" : "s"} to ${job.customer.name}'s ${vehicleLabel(job)}. I can use them in the field context now.`,
     {
       event,
+      autoAnalysis,
       job: {
         jobId: job.id,
         customerName: job.customer.name,
@@ -3949,6 +3967,57 @@ export async function recordFieldNote(payload: unknown) {
     },
     job,
   );
+
+  // Close the loop: a saved field note must surface as a real next action on the
+  // operator board the office already watches, not just sit as a field-event row.
+  const noteVehicleLabel = [job.vehicle.year || undefined, job.vehicle.make, job.vehicle.model]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const noteCustomerName = job.customer.name || noteVehicleLabel || "field note";
+  const noteHasDiagnosticSignal = Boolean(
+    event.extractedFacts.suspectedCause ||
+      (event.extractedFacts.readings && event.extractedFacts.readings.length > 0),
+  );
+  const noteTaskChannel: OperatorTaskSourceChannel = (
+    ["voice", "message", "email", "photo"] as OperatorTaskSourceChannel[]
+  ).includes(event.channel as OperatorTaskSourceChannel)
+    ? (event.channel as OperatorTaskSourceChannel)
+    : "voice";
+  const noteTaskDetail = [
+    event.summary,
+    event.extractedFacts.suspectedCause ? `Suspected cause: ${event.extractedFacts.suspectedCause}` : "",
+    event.extractedFacts.readings && event.extractedFacts.readings.length > 0
+      ? `Readings: ${event.extractedFacts.readings.join(", ")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" — ");
+  const noteIsCrmJob = job.source === "promise-crm";
+  try {
+    await upsertOperatorTask({
+      id: `operator-task-field-note-${event.id}`,
+      title: `Review field note: ${noteCustomerName}`,
+      detail: noteTaskDetail,
+      type: "jeff-review",
+      priority: noteHasDiagnosticSignal ? "high" : "normal",
+      owner: "Adam",
+      promiseId: noteIsCrmJob ? jobId : undefined,
+      customerName: noteCustomerName,
+      vehicleLabel: noteVehicleLabel || undefined,
+      sourceChannel: noteTaskChannel,
+      sourceKind: "jeff-field-note",
+      sourceId: event.id,
+      sourceUrl: noteIsCrmJob ? `/ops/promises/${jobId}` : "/ops/jeff",
+      metadata: {
+        eventType: event.type,
+        sender: event.sender,
+        confidence: event.confidence,
+      },
+    });
+  } catch {
+    // Best-effort: the field note is already persisted as a structured field event.
+  }
 
   const storedContext = await buildStoredContextPacket(job);
   const nextAction = optionalString(input.nextAction) || storedContext.context.safeNextActions[0];
@@ -4479,6 +4548,41 @@ export async function startCloseout(payload: unknown) {
     job,
   );
 
+  // Close the loop: persist STRUCTURED closeout state so the follow-through engine
+  // turns a completed visit into a review ask + next probable visit. Without this,
+  // a field closeout was only an event note that never surfaced or led to action.
+  const closeoutComplete = missing.length === 0;
+  let closeoutPersistStatus:
+    | "persisted"
+    | "skipped-fixture"
+    | "skipped-no-summary"
+    | "failed" = "skipped-no-summary";
+  if (job.source !== "promise-crm") {
+    closeoutPersistStatus = "skipped-fixture";
+  } else if (workCompleted) {
+    try {
+      await updatePromiseRecord(jobId, {
+        closeout: {
+          completedAt: nowIso(),
+          workPerformedSummary: workCompleted,
+          customerConditionSummary: workCompleted,
+          ...(closeoutComplete
+            ? {
+                reviewRequest: {
+                  status: "ready" as const,
+                  channel: "text" as const,
+                  summary: `Send ${job.customer.name} a review request now that the ${job.serviceScope} is complete.`,
+                },
+              }
+            : {}),
+        },
+      });
+      closeoutPersistStatus = "persisted";
+    } catch {
+      closeoutPersistStatus = "failed";
+    }
+  }
+
   return result(
     "start_closeout",
     missing.length
@@ -4500,6 +4604,7 @@ export async function startCloseout(payload: unknown) {
       },
       event,
       jobRecordUpdateStatus: noteStatus,
+      closeoutPersistStatus,
     },
     warnings,
   );

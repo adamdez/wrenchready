@@ -24,6 +24,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { OpsPaymentLinkForm } from "@/components/ops-payment-link-form";
+import { QuoteSendActionForm } from "@/components/quote-send-action-form";
 import { OutboundResultForm } from "@/components/outbound-result-form";
 import { PromiseLiveStatus } from "@/components/promise-live-status";
 import { PromiseStatusForm } from "@/components/promise-status-form";
@@ -267,32 +268,32 @@ function paymentLinkLabel(value?: string) {
 function riskClasses(risk: PromiseDetailRecord["readinessRisk"]) {
   if (risk === "high") return "border-red-500/30 bg-red-500/10 text-red-200";
   if (risk === "medium") {
-    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+    return "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
   }
-  return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  return "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
 }
 
 function qaStatusClasses(value?: string) {
-  if (value === "pass") return "border-[--wr-teal]/25 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  if (value === "pass") return "border-[var(--wr-teal)]/25 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
   if (value === "blocked") return "border-red-500/25 bg-red-500/10 text-red-200";
-  return "border-[--wr-gold]/25 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  return "border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
 }
 
 function diagnosticSourceClasses(value: PromiseDiagnosticSourceStatus) {
   if (value === "do-not-advise") return "border-red-500/30 bg-red-500/10 text-red-100";
   if (value === "licensed-source-required") {
-    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+    return "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
   }
   if (value === "wrenchready-verified") {
-    return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+    return "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
   }
   if (value === "public-source") return "border-primary/25 bg-primary/10 text-primary";
   return "border-border bg-background/70 text-muted-foreground";
 }
 
 function timelineToneClasses(tone: TimelineItem["tone"] = "default") {
-  if (tone === "success") return "border-[--wr-teal]/40 bg-[--wr-teal]/15 text-[--wr-teal-soft]";
-  if (tone === "warning") return "border-[--wr-gold]/40 bg-[--wr-gold]/15 text-[--wr-gold-soft]";
+  if (tone === "success") return "border-[var(--wr-teal)]/40 bg-[var(--wr-teal)]/15 text-[var(--wr-teal-soft)]";
+  if (tone === "warning") return "border-[var(--wr-gold)]/40 bg-[var(--wr-gold)]/15 text-[var(--wr-gold-soft)]";
   if (tone === "danger") return "border-red-500/40 bg-red-500/15 text-red-200";
   return "border-primary/30 bg-primary/10 text-primary";
 }
@@ -581,7 +582,7 @@ function BooleanChecklist({
             <span
               className={`inline-flex h-5 w-5 items-center justify-center rounded-full border ${
                 checked
-                  ? "border-[--wr-teal]/40 bg-[--wr-teal]/15 text-[--wr-teal-soft]"
+                  ? "border-[var(--wr-teal)]/40 bg-[var(--wr-teal)]/15 text-[var(--wr-teal-soft)]"
                   : "border-border bg-card text-muted-foreground"
               }`}
             >
@@ -646,7 +647,7 @@ function DiagnosticStepCard({
               {sourceMeta.shortLabel}
             </StatusPill>
             {step.customerApprovalRequired ? (
-              <StatusPill className="border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]">
+              <StatusPill className="border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]">
                 Approval gate
               </StatusPill>
             ) : null}
@@ -698,7 +699,7 @@ function DiagnosticStepCard({
       ) : null}
 
       {step.stopPoint ? (
-        <p className="mt-3 rounded-lg border border-[--wr-gold]/25 bg-[--wr-gold]/10 p-2 text-sm text-[--wr-gold-soft]">
+        <p className="mt-3 rounded-lg border border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10 p-2 text-sm text-[var(--wr-gold-soft)]">
           Stop: {step.stopPoint}
         </p>
       ) : null}
@@ -812,7 +813,7 @@ type FunnelStep = {
 };
 
 function funnelStepClasses(state: FunnelStepState) {
-  if (state === "done") return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  if (state === "done") return "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
   if (state === "current") return "border-primary/35 bg-primary/12 text-primary";
   if (state === "blocked") return "border-red-500/30 bg-red-500/10 text-red-100";
   return "border-border bg-background/50 text-muted-foreground";
@@ -938,9 +939,9 @@ function ActionPanel({
   const toneClass = tone === "danger"
     ? "border-red-500/25 bg-red-500/10"
     : tone === "warning"
-      ? "border-[--wr-gold]/25 bg-[--wr-gold]/10"
+      ? "border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10"
       : tone === "success"
-        ? "border-[--wr-teal]/25 bg-[--wr-teal]/10"
+        ? "border-[var(--wr-teal)]/25 bg-[var(--wr-teal)]/10"
         : "border-border bg-background/55";
 
   return (
@@ -954,7 +955,7 @@ function ActionPanel({
 
 function taskPriorityClasses(priority: OperatorTask["priority"]) {
   if (priority === "critical") return "border-red-500/30 bg-red-500/10 text-red-100";
-  if (priority === "high") return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  if (priority === "high") return "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
   if (priority === "low") return "border-border bg-background/60 text-muted-foreground";
   return "border-primary/20 bg-primary/10 text-primary";
 }
@@ -1038,7 +1039,7 @@ function OperatorTaskCard({ task, promiseId }: { task: OperatorTask; promiseId: 
             <input name="promiseId" type="hidden" value={promiseId} />
             <input name="status" type="hidden" value="done" />
             <button
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-[--wr-teal]/25 bg-[--wr-teal]/10 px-2.5 text-xs font-semibold text-[--wr-teal-soft] transition-colors hover:bg-[--wr-teal]/15"
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-[var(--wr-teal)]/25 bg-[var(--wr-teal)]/10 px-2.5 text-xs font-semibold text-[var(--wr-teal-soft)] transition-colors hover:bg-[var(--wr-teal)]/15"
               type="submit"
             >
               Done
@@ -1134,7 +1135,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 <StatusPill
                   className={
                     quoteReview
-                      ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
+                      ? "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]"
                       : "border-primary/25 bg-primary/10 text-primary"
                   }
                 >
@@ -1215,7 +1216,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
 
       <main className="shell py-6 sm:py-8">
         {quoteReview ? (
-          <section className="mb-4 rounded-xl border border-[--wr-gold]/30 bg-[--wr-gold]/10 p-3 text-[--wr-gold-soft] sm:mb-6 sm:p-4">
+          <section className="mb-4 rounded-xl border border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 p-3 text-[var(--wr-gold-soft)] sm:mb-6 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
                 <div className="flex items-center gap-2 text-sm font-semibold">
@@ -1227,13 +1228,13 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 </p>
               </div>
               <div className="flex min-w-0 gap-2 overflow-x-auto pb-1 text-xs sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 lg:w-[32rem]">
-                <StatusPill className="border-[--wr-gold]/30 bg-background/40 text-[--wr-gold-soft]">
+                <StatusPill className="border-[var(--wr-gold)]/30 bg-background/40 text-[var(--wr-gold-soft)]">
                   Customer: {customerSendLabel(promise.quotePacket?.customerSendStatus)}
                 </StatusPill>
-                <StatusPill className="border-[--wr-gold]/30 bg-background/40 text-[--wr-gold-soft]">
+                <StatusPill className="border-[var(--wr-gold)]/30 bg-background/40 text-[var(--wr-gold-soft)]">
                   Payment: {paymentLinkLabel(promise.quotePacket?.paymentLinkStatus)}
                 </StatusPill>
-                <StatusPill className="border-[--wr-gold]/30 bg-background/40 text-[--wr-gold-soft]">
+                <StatusPill className="border-[var(--wr-gold)]/30 bg-background/40 text-[var(--wr-gold-soft)]">
                   Approval: {customerApprovalLabel(promise.customerApproval.status)}
                 </StatusPill>
               </div>
@@ -1274,7 +1275,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <StatusPill className={taskQueue.warnings.length ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]" : "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]"}>
+                    <StatusPill className={taskQueue.warnings.length ? "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]" : "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]"}>
                       tasks: {taskQueue.storageStatus}
                     </StatusPill>
                     <CommandLink href="/ops/field-assistant#jeff-open-tasks" icon={<ClipboardCheck className="h-4 w-4" />}>
@@ -1297,7 +1298,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                   </p>
                 ) : null}
                 {taskQueue.warnings.length ? (
-                  <p className="mt-3 text-xs text-[--wr-gold-soft]">{taskQueue.warnings[0]}</p>
+                  <p className="mt-3 text-xs text-[var(--wr-gold-soft)]">{taskQueue.warnings[0]}</p>
                 ) : null}
               </div>
 
@@ -1425,8 +1426,8 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               <StatusPill
                 className={
                   diagnosticTree.missingFactoryData
-                    ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
-                    : "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+                    ? "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]"
+                    : "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]"
                 }
               >
                 {diagnosticTree.missingFactoryData ? "source gates open" : "source gates clear"}
@@ -1495,7 +1496,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                   <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                     {diagnosticTree.sourceGates.slice(0, 6).map((gate) => (
                       <li className="flex min-w-0 gap-2" key={gate}>
-                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[--wr-gold-soft]" />
+                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--wr-gold-soft)]" />
                         <span className="break-words">{gate}</span>
                       </li>
                     ))}
@@ -1684,6 +1685,15 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                     />
                   </div>
 
+                  <QuoteSendActionForm
+                    promiseId={promise.id}
+                    alreadySent={promise.quotePacket.customerSendStatus === "sent"}
+                    hasBlockers={
+                      promise.quotePacket.blockers.length > 0 ||
+                      promise.quotePacket.status === "blocked"
+                    }
+                  />
+
                   <div className="rounded-xl border border-border bg-background/55 p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
                       Next quote action
@@ -1701,7 +1711,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
 
             <Section id="schedule" eyebrow="Dispatch readiness" title="Schedule">
               {quoteReview ? (
-                <div className="mb-4 rounded-xl border border-[--wr-gold]/25 bg-[--wr-gold]/10 p-4 text-sm leading-relaxed text-[--wr-gold-soft]">
+                <div className="mb-4 rounded-xl border border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10 p-4 text-sm leading-relaxed text-[var(--wr-gold-soft)]">
                   This is a requested or draft window, not a booked appointment. Confirm route,
                   duration, parts/worksite readiness, customer approval, and customer send before
                   calling it scheduled.
@@ -2116,7 +2126,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                   {closeoutGapLabels.length > 0 ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {closeoutGapLabels.map((gap) => (
-                        <StatusPill className="border-[--wr-gold]/25 bg-[--wr-gold]/10 text-[--wr-gold-soft]" key={gap}>
+                        <StatusPill className="border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]" key={gap}>
                           {gap}
                         </StatusPill>
                       ))}
@@ -2173,7 +2183,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 <StatusPill
                   className={
                     quoteReview
-                      ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
+                      ? "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]"
                       : undefined
                   }
                 >
@@ -2194,7 +2204,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                   {promise.topRisks.slice(0, 5).map((risk) => (
                     <li className="flex gap-2" key={risk}>
-                      <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-[--wr-gold]" />
+                      <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--wr-gold)]" />
                       <span>{risk}</span>
                     </li>
                   ))}

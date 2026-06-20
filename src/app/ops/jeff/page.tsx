@@ -417,7 +417,7 @@ function OperatorTaskQueueSection({ queue }: { queue: OperatorTaskQueue }) {
         </div>
       </div>
       <div className="mt-5 grid gap-3 xl:grid-cols-2">
-        {queue.tasks.length > 0 ? queue.tasks.slice(0, 4).map((task) => (
+        {queue.tasks.length > 0 ? queue.tasks.map((task) => (
           <OperatorTaskWorkbenchCard key={task.id} task={task} />
         )) : (
           <p className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">
@@ -425,9 +425,9 @@ function OperatorTaskQueueSection({ queue }: { queue: OperatorTaskQueue }) {
           </p>
         )}
       </div>
-      {queue.tasks.length > 4 ? (
+      {queue.tasks.length > 0 ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          Showing 4 of {queue.tasks.length} active tasks. Complete or dismiss reviewed items to keep Jeff moving fast.
+          {queue.tasks.length} active task{queue.tasks.length === 1 ? "" : "s"}. Complete or dismiss reviewed items to keep Jeff moving fast.
         </p>
       ) : null}
     </section>
@@ -1361,7 +1361,7 @@ export default async function JeffFieldFilesPage({
               <div className="rounded-2xl border border-border bg-background/60 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Latest Jeff Events</p>
                 <div className="mt-3 space-y-3">
-                  {file.fieldEvents.slice(0, 4).map((event) => (
+                  {file.fieldEvents.slice(0, 8).map((event) => (
                     <div key={event.id} className="text-sm text-muted-foreground">
                       <p className="font-medium text-foreground">{event.type}</p>
                       <p>{event.summary}</p>
@@ -1376,7 +1376,7 @@ export default async function JeffFieldFilesPage({
               <div className="rounded-2xl border border-border bg-background/60 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Media & Uploads</p>
                 <div className="mt-3 space-y-3">
-                  {file.media.slice(0, 4).map((item) => (
+                  {file.media.slice(0, 8).map((item) => (
                     <div key={item.id} className="text-sm text-muted-foreground">
                       <p className="font-medium text-foreground">{item.fileName}</p>
                       <p>
