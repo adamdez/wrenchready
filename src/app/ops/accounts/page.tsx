@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Building2, Clock3 } from "lucide-react";
+import { Building2, Clock3 } from "lucide-react";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { RecurringAccountActionForm } from "@/components/recurring-account-action-form";
 import { getRecurringAccountStarterSnapshot } from "@/lib/promise-crm/server";
 
@@ -73,29 +74,13 @@ export default async function RecurringAccountsPage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      <OpsPageHeader
+        eyebrow="Recurring Accounts"
+        icon={Building2}
+        title="Turn the starter lane into real recurring revenue motion."
+        description="The goal is not to build a full fleet platform. The goal is to run one accountable lane: identify the account, pitch a believable recurring offer, track the next touch, and move real teams into trial and active cadence."
       >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <Building2 className="h-3.5 w-3.5" />
-          Recurring Accounts
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Turn the starter lane into real recurring revenue motion.
-        </h1>
-        <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          The goal is not to build a full fleet platform. The goal is to run one accountable lane:
-          identify the account, pitch a believable recurring offer, track the next touch, and move
-          real teams into trial and active cadence.
-        </p>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-4 xl:grid-cols-6">
+        <div className="grid gap-4 md:grid-cols-4 xl:grid-cols-6">
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
               Tracked
@@ -354,7 +339,7 @@ export default async function RecurringAccountsPage() {
             </div>
           </div>
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 grid gap-5 lg:grid-cols-2">
         <div className="rounded-3xl border border-border bg-card/50 p-6">

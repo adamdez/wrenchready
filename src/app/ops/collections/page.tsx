@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, CreditCard } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { CollectionActionForm } from "@/components/collection-action-form";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { OpsPaymentLinkForm } from "@/components/ops-payment-link-form";
 import { getCollectionSnapshot } from "@/lib/promise-crm/server";
 
@@ -22,20 +23,12 @@ export default async function CollectionsPage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link href="/ops/promises" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <CreditCard className="h-3.5 w-3.5" />
-          Collections
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Make sure completed work actually becomes collected revenue.
-        </h1>
-        <div className="mt-8 grid gap-4 md:grid-cols-5">
+      <OpsPageHeader
+        eyebrow="Collections"
+        icon={CreditCard}
+        title="Make sure completed work actually becomes collected revenue."
+      >
+        <div className="grid gap-4 md:grid-cols-5">
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Open</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.totalOpen}</p></div>
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Awaiting payment</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.awaitingPayment}</p></div>
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Partial</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.partial}</p></div>
@@ -52,7 +45,7 @@ export default async function CollectionsPage() {
             <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.readyForBalanceCheckout}</p>
           </div>
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <h2 className="text-xl font-bold text-foreground">Collection queue</h2>

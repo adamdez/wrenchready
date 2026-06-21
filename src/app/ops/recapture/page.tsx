@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CalendarSync } from "lucide-react";
+import { ArrowRight, CalendarSync } from "lucide-react";
 import { CloseoutQualityActionForm } from "@/components/closeout-quality-action-form";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { getWeeklyRecaptureScorecard } from "@/lib/promise-crm/server";
 
 export const metadata: Metadata = {
@@ -37,28 +38,13 @@ export default async function RecapturePage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      <OpsPageHeader
+        eyebrow="Weekly Recapture"
+        icon={CalendarSync}
+        title="Measure whether finished visits are earning the next visit."
+        description="This is the management layer for closeout, review, reminder, and next-visit discipline. If the machine is working, these numbers should tighten every week."
       >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <CalendarSync className="h-3.5 w-3.5" />
-          Weekly Recapture
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Measure whether finished visits are earning the next visit.
-        </h1>
-        <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          This is the management layer for closeout, review, reminder, and next-visit discipline.
-          If the machine is working, these numbers should tighten every week.
-        </p>
-
-        <div className="mt-6 rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
           Window: {scorecard.windowLabel}
         </div>
 
@@ -121,7 +107,7 @@ export default async function RecapturePage() {
             </p>
           </div>
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <h2 className="text-xl font-bold text-foreground">Priority reads</h2>

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CircleAlert, Clock3, HandCoins, Wrench } from "lucide-react";
+import { ArrowRight, CircleAlert, Clock3, HandCoins, Wrench } from "lucide-react";
 import { FollowThroughActionForm } from "@/components/follow-through-action-form";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { getFollowThroughWorklist } from "@/lib/promise-crm/server";
 import type { FollowThroughTask } from "@/lib/promise-crm/types";
 
@@ -174,35 +175,18 @@ export default async function FollowThroughPage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              <HandCoins className="h-3.5 w-3.5" />
-              Follow-through Worklist
-            </span>
-            <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-              Close the value after the visit, not just the visit itself.
-            </h1>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              This queue turns approved next steps, deferred work, and diagnostic recap tasks into owned work instead of quiet leakage.
-            </p>
-          </div>
-
+      <OpsPageHeader
+        eyebrow="Follow-through Worklist"
+        icon={HandCoins}
+        title="Close the value after the visit, not just the visit itself."
+        description="This queue turns approved next steps, deferred work, and diagnostic recap tasks into owned work instead of quiet leakage."
+        actions={
           <div className="rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
             Snapshot generated {formatBoardTime(snapshot.generatedAt)}
           </div>
-        </div>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label="Open follow-through"
             value={snapshot.summary.total}
@@ -261,7 +245,7 @@ export default async function FollowThroughPage() {
         <div className="mt-4 rounded-2xl border border-border bg-background/60 p-4 text-sm text-muted-foreground">
           What this page is for: make sure value does not die between &ldquo;we found it&rdquo; and &ldquo;we closed it.&rdquo;
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 grid gap-5 xl:grid-cols-2">
         {[

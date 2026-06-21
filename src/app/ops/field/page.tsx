@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ClipboardList } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import { FieldPacketActionForm } from "@/components/field-packet-action-form";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { getFieldExecutionSnapshot } from "@/lib/promise-crm/server";
 
 export const metadata: Metadata = {
@@ -16,20 +17,12 @@ export default async function FieldExecutionPage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link href="/ops/promises" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <ClipboardList className="h-3.5 w-3.5" />
-          Field Execution
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Give the day one clean packet instead of scattered texts.
-        </h1>
-        <div className="mt-8 grid gap-4 md:grid-cols-4">
+      <OpsPageHeader
+        eyebrow="Field Execution"
+        icon={ClipboardList}
+        title="Give the day one clean packet instead of scattered texts."
+      >
+        <div className="grid gap-4 md:grid-cols-4">
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Active promises</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.total}</p></div>
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Need packet</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.needsPacket}</p></div>
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Packet ready</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.packetReady}</p></div>
@@ -38,7 +31,7 @@ export default async function FieldExecutionPage() {
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Comeback weak</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.comebackPreventionWeak}</p></div>
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Closeout at risk</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.closeoutAtRisk}</p></div>
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <h2 className="text-xl font-bold text-foreground">Execution worklist</h2>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, MessageSquareReply, MessageSquareShare, Send, TimerReset } from "lucide-react";
+import { MessageSquareReply, MessageSquareShare, Send, TimerReset } from "lucide-react";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { OutboundActionForm } from "@/components/outbound-action-form";
 import { OutboundResultForm } from "@/components/outbound-result-form";
 import { getOutboundQueueSnapshot } from "@/lib/promise-crm/server";
@@ -98,27 +99,13 @@ export default async function OutboundQueuePage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      <OpsPageHeader
+        eyebrow="Outbound Queue"
+        icon={Send}
+        title="Turn recap, reviews, and reminders into owned outbound work."
+        description="This queue is the send layer on top of closeout. It keeps the next message visible instead of assuming someone will remember it."
       >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <Send className="h-3.5 w-3.5" />
-          Outbound Queue
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Turn recap, reviews, and reminders into owned outbound work.
-        </h1>
-        <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          This queue is the send layer on top of closeout. It keeps the next message visible instead of assuming someone will remember it.
-        </p>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Total queued</p>
             <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.total}</p>
@@ -163,7 +150,7 @@ export default async function OutboundQueuePage() {
             <p className="mt-2 text-xl font-semibold text-foreground">{snapshot.summary.converted}</p>
           </div>
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 grid gap-5 xl:grid-cols-2">
         <section className="rounded-3xl border border-border bg-card/50 p-5">

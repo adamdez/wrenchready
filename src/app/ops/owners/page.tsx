@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, ShieldAlert, TimerReset, UserRound, Wrench } from "lucide-react";
+import { ArrowRight, ShieldAlert, TimerReset, UserRound, Wrench } from "lucide-react";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { getOwnerExecutionOverview } from "@/lib/promise-crm/server";
 
 export const metadata: Metadata = {
@@ -26,26 +27,12 @@ export default async function OwnerCockpitIndexPage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <UserRound className="h-3.5 w-3.5" />
-          Owner Cockpits
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Give each owner a daily machine, not just a shared board.
-        </h1>
-        <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          These owner views compress the shared ops system into something Dez or Simon can run from directly: their inbound, their risk, their follow-through, and their money in view.
-        </p>
-      </section>
+      <OpsPageHeader
+        eyebrow="Owner Cockpits"
+        icon={UserRound}
+        title="Give each owner a daily machine, not just a shared board."
+        description="These owner views compress the shared ops system into something Dez or Simon can run from directly: their inbound, their risk, their follow-through, and their money in view."
+      />
 
       <section className="mt-6 grid gap-5 lg:grid-cols-2">
         {snapshots.map((snapshot) => (

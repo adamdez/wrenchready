@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, PackageSearch } from "lucide-react";
+import { PackageSearch } from "lucide-react";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { PartsPlannerActionForm } from "@/components/parts-planner-action-form";
 import { getPartsPlanningSnapshot } from "@/lib/promise-crm/server";
 
@@ -27,23 +28,12 @@ export default async function PartsPlanningPage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      <OpsPageHeader
+        eyebrow="Parts Planning"
+        icon={PackageSearch}
+        title="Find the right part once, stage one clean pickup, and keep the field day moving."
       >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <PackageSearch className="h-3.5 w-3.5" />
-          Parts Planning
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Find the right part once, stage one clean pickup, and keep the field day moving.
-        </h1>
-        <div className="mt-8 grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-5">
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Active jobs</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.total}</p></div>
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Researching</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.researching}</p></div>
           <div className="rounded-2xl border border-border bg-background/60 p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Ordered / quoted</p><p className="mt-2 text-2xl font-bold text-foreground">{snapshot.ordered}</p></div>
@@ -54,7 +44,7 @@ export default async function PartsPlanningPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Estimated parts cost in view</p>
           <p className="mt-2 text-2xl font-bold text-foreground">{formatCurrency(snapshot.estimatedPartsCost)}</p>
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <h2 className="text-xl font-bold text-foreground">Parts run worklist</h2>

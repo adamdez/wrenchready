@@ -6,7 +6,6 @@ import {
   Activity,
   Archive,
   AlertTriangle,
-  ArrowLeft,
   ArrowRight,
   Bot,
   CalendarDays,
@@ -591,11 +590,6 @@ export default async function JeffFieldFilesPage({
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link href="/ops" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Ops
-      </Link>
-
       {notice ? (
         <div className={`mt-6 rounded-2xl border p-4 text-sm ${
           notice.success

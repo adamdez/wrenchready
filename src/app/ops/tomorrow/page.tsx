@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowLeft,
   CalendarClock,
   CircleCheckBig,
   ShieldAlert,
 } from "lucide-react";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { getTomorrowReadinessSnapshot } from "@/lib/promise-crm/server";
 
 export const metadata: Metadata = {
@@ -60,35 +60,18 @@ export default async function TomorrowReadinessPage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              <CalendarClock className="h-3.5 w-3.5" />
-              Tomorrow Readiness
-            </span>
-            <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-              Make tomorrow true before tomorrow gets here.
-            </h1>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              This is the keep-the-promise view: customer certainty plus route and job readiness in one place.
-            </p>
-          </div>
-
+      <OpsPageHeader
+        eyebrow="Tomorrow Readiness"
+        icon={CalendarClock}
+        title="Make tomorrow true before tomorrow gets here."
+        description="This is the keep-the-promise view: customer certainty plus route and job readiness in one place."
+        actions={
           <div className="rounded-2xl border border-border bg-background/60 px-4 py-3 text-sm text-muted-foreground">
             {snapshot.total} active promises in tomorrow view
           </div>
-        </div>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label="Average readiness"
             value={`${snapshot.averageReadinessScore}%`}
@@ -115,7 +98,7 @@ export default async function TomorrowReadinessPage() {
             description="Live pull from the current promise records."
           />
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 space-y-5">
         {hiddenPromiseCount > 0 ? (

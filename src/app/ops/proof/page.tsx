@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Camera } from "lucide-react";
+import { Camera } from "lucide-react";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { getProofDisciplineSnapshot } from "@/lib/promise-crm/server";
 
 export const metadata: Metadata = {
@@ -18,28 +19,13 @@ export default async function ProofDisciplinePage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      <OpsPageHeader
+        eyebrow="Proof Discipline"
+        icon={Camera}
+        title="Keep the trust assets, not just the invoice."
+        description="This is the proof-quality layer on top of closeout. It highlights which completed visits still need usable recap language, permission-safe proof, or a cleaner trust asset."
       >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <Camera className="h-3.5 w-3.5" />
-          Proof Discipline
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Keep the trust assets, not just the invoice.
-        </h1>
-        <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          This is the proof-quality layer on top of closeout. It highlights which completed visits
-          still need usable recap language, permission-safe proof, or a cleaner trust asset.
-        </p>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Completed visits</p>
             <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.completedVisits}</p>
@@ -57,7 +43,7 @@ export default async function ProofDisciplinePage() {
             <p className="mt-2 text-2xl font-bold text-foreground">{snapshot.summary.permissionSafeAssets}</p>
           </div>
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 space-y-4">
         {snapshot.tasks.length > 0 ? (

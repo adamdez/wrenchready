@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, BarChart3 } from "lucide-react";
+import { ArrowRight, BarChart3 } from "lucide-react";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import {
   getCloseoutRecaptureSnapshot,
   getMarketingOfferPerformance,
@@ -98,28 +99,13 @@ export default async function OfferPerformancePage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      <OpsPageHeader
+        eyebrow="Offer Performance"
+        icon={BarChart3}
+        title="What we market vs what actually creates net profit"
+        description="This is the first decision layer for demand shaping. It helps us separate good demand capture from good dispatch and from good money."
       >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <BarChart3 className="h-3.5 w-3.5" />
-          Offer Performance
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          What we market vs what actually creates net profit
-        </h1>
-        <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          This is the first decision layer for demand shaping. It helps us separate good demand
-          capture from good dispatch and from good money.
-        </p>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-border bg-background/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
               Offers tracked
@@ -324,7 +310,7 @@ export default async function OfferPerformancePage() {
             <p className="mt-1 text-sm text-muted-foreground">Touches that already turned into real response or next revenue.</p>
           </div>
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <h2 className="text-2xl font-bold text-foreground">Closeout and recapture read</h2>

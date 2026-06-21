@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CheckCircle2, Compass, Target } from "lucide-react";
+import { ArrowRight, CheckCircle2, Compass, Target } from "lucide-react";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { getWeeklyOperatingCadenceSnapshot } from "@/lib/promise-crm/operating-cadence";
 
 export const metadata: Metadata = {
@@ -31,28 +32,13 @@ export default async function OperatingCadencePage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <Link
-        href="/ops/promises"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      <OpsPageHeader
+        eyebrow="Operating Cadence"
+        icon={Compass}
+        title="Keep the week pointed at promise quality, trust, and repeat revenue."
+        description="This is the weekly reset: what the company is trying to become, what this build is for, and what the team should do first instead of drifting into random work."
       >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Promise Board
-      </Link>
-
-      <section className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/60 p-6 backdrop-blur-sm sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <Compass className="h-3.5 w-3.5" />
-          Operating Cadence
-        </span>
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Keep the week pointed at promise quality, trust, and repeat revenue.
-        </h1>
-        <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          This is the weekly reset: what the company is trying to become, what this build is for,
-          and what the team should do first instead of drifting into random work.
-        </p>
-
-        <div className="mt-8 grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-3xl border border-border bg-background/60 p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Company goal</p>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{snapshot.companyGoal}</p>
@@ -67,7 +53,7 @@ export default async function OperatingCadencePage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Why</p>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{snapshot.why}</p>
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <h2 className="text-xl font-bold text-foreground">Weekly signal</h2>

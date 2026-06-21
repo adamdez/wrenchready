@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Inbox, ShieldAlert } from "lucide-react";
+import { OpsPageHeader } from "@/components/ops-page-header";
 import { getInboundRecords } from "@/lib/promise-crm/server";
 
 export const metadata: Metadata = {
@@ -33,36 +34,27 @@ export default async function OpsInboundPage() {
 
   return (
     <div className="shell py-10 sm:py-14">
-      <section className="rounded-[2rem] border border-border bg-card/60 p-6 sm:p-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <Inbox className="h-3.5 w-3.5" />
-          Inbound Queue
-        </span>
-        <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-              Screen requests before they become promises.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Showing active inbound records that still need qualification, owner assignment, or promotion.
-            </p>
+      <OpsPageHeader
+        eyebrow="Inbound Queue"
+        icon={Inbox}
+        title="Screen requests before they become promises."
+        description="Showing active inbound records that still need qualification, owner assignment, or promotion."
+      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Active</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{active.length}</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-background/60 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Active</p>
-              <p className="mt-2 text-2xl font-bold text-foreground">{active.length}</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-background/60 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">High risk</p>
-              <p className="mt-2 text-2xl font-bold text-foreground">{highRiskCount}</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-background/60 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Promoted</p>
-              <p className="mt-2 text-2xl font-bold text-foreground">{inbound.length - active.length}</p>
-            </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">High risk</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{highRiskCount}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Promoted</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{inbound.length - active.length}</p>
           </div>
         </div>
-      </section>
+      </OpsPageHeader>
 
       <section className="mt-6 space-y-3">
         {hiddenCount > 0 ? (
