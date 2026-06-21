@@ -48,8 +48,8 @@ function formatCurrency(value: number) {
 
 function riskClasses(risk: InboundRecord["readinessRisk"] | PromiseRecord["readinessRisk"]) {
   if (risk === "high") return "border-red-500/20 bg-red-500/10 text-red-200";
-  if (risk === "medium") return "border-[--wr-gold]/20 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
-  return "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  if (risk === "medium") return "border-[var(--wr-gold)]/20 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
+  return "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
 }
 
 function vehicleLabel(vehicle: InboundRecord["vehicle"] | PromiseRecord["vehicle"]) {
@@ -58,9 +58,9 @@ function vehicleLabel(vehicle: InboundRecord["vehicle"] | PromiseRecord["vehicle
 
 function priorityToneClasses(tone: OwnerDailyPriority["tone"]) {
   if (tone === "risk") return "border-red-500/20 bg-red-500/10 text-red-200";
-  if (tone === "follow-through") return "border-[--wr-gold]/20 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  if (tone === "follow-through") return "border-[var(--wr-gold)]/20 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
   if (tone === "inbound") return "border-primary/20 bg-primary/10 text-primary";
-  if (tone === "execution") return "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  if (tone === "execution") return "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
   return "border-border bg-background/70 text-muted-foreground";
 }
 
@@ -274,7 +274,7 @@ export default async function OwnerCockpitPage({ params }: OwnerPageProps) {
         <section className="rounded-3xl border border-border bg-card/50 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[--wr-gold]/10 text-[--wr-gold]">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--wr-gold)]/10 text-[var(--wr-gold)]">
                 <ShieldAlert className="h-5 w-5" />
               </div>
               <h2 className="mt-4 text-xl font-bold text-foreground">Tomorrow at risk</h2>

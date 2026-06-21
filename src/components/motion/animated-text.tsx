@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 type AnimatedHeadingProps = {
   text: string;
@@ -15,7 +15,12 @@ export function AnimatedHeading({
   gradient = false,
   delay = 0,
 }: AnimatedHeadingProps) {
+  const reduceMotion = useReducedMotion();
   const words = text.split(" ");
+
+  if (reduceMotion) {
+    return <h1 className={`${gradient ? "gradient-text" : ""} ${className}`}>{text}</h1>;
+  }
 
   return (
     <motion.h1
@@ -60,8 +65,13 @@ export function CountUp({
   prefix = "",
   suffix = "",
   className,
-  duration = 2,
 }: CountUpProps) {
+  const reduceMotion = useReducedMotion();
+
+  if (reduceMotion) {
+    return <span className={className}>{prefix}{target}{suffix}</span>;
+  }
+
   return (
     <motion.span
       className={className}

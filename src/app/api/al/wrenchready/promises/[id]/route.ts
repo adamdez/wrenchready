@@ -88,6 +88,8 @@ type UpdatePromisePayload = {
   jobStage?: PromiseJobStage;
   serviceScope?: string;
   scheduledWindowLabel?: string;
+  scheduledWindowStartIso?: string | null;
+  scheduledWindowEndIso?: string | null;
   readinessSummary?: string;
   nextAction?: string;
   topRisks?: string[];
@@ -659,6 +661,12 @@ function isUpdatePromisePayload(value: unknown): value is UpdatePromisePayload {
     (candidate.serviceScope === undefined || typeof candidate.serviceScope === "string") &&
     (candidate.scheduledWindowLabel === undefined ||
       typeof candidate.scheduledWindowLabel === "string") &&
+    (candidate.scheduledWindowStartIso === undefined ||
+      candidate.scheduledWindowStartIso === null ||
+      typeof candidate.scheduledWindowStartIso === "string") &&
+    (candidate.scheduledWindowEndIso === undefined ||
+      candidate.scheduledWindowEndIso === null ||
+      typeof candidate.scheduledWindowEndIso === "string") &&
     (candidate.readinessSummary === undefined ||
       typeof candidate.readinessSummary === "string") &&
     (candidate.nextAction === undefined || typeof candidate.nextAction === "string") &&

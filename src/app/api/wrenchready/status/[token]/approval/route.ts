@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPromiseRecordByCustomerToken, updatePromiseRecord } from "@/lib/promise-crm/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import type { CustomerApprovalStatus } from "@/lib/promise-crm/types";
 import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
 
@@ -36,6 +37,15 @@ function getDecisionSummary(status: CustomerApprovalStatus) {
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { token } = await context.params;
+    const rateLimit = await enforceRateLimit(request, {
+      keyPrefix: "public:status-approval",
+      limit: 6,
+      windowMs: 60_000,
+      subject: token,
+    });
+
+    if (rateLimit) return rateLimit;
+
     const body = await request.json();
 
     if (!isApprovalDecisionPayload(body)) {

@@ -490,6 +490,7 @@ export type PromiseCustomerApproval = {
 export type InboundRecord = {
   id: string;
   createdAt: string;
+  updatedAt?: string;
   source: IntakeSource;
   customer: CustomerContact;
   vehicle: VehicleSummary;

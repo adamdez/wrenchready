@@ -72,7 +72,7 @@ export function LinkButton({
     ghost:
       "inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-medium text-muted-foreground transition-all hover:text-foreground hover:bg-secondary",
     gold:
-      "btn-shimmer inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[--wr-gold] to-[--wr-gold-soft] px-7 py-3.5 text-sm font-bold text-[--wr-surface] transition-all hover:shadow-lg hover:shadow-[--wr-gold]/20 hover:scale-[1.02]",
+      "btn-shimmer inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--wr-gold)] to-[var(--wr-gold-soft)] px-7 py-3.5 text-sm font-bold text-[var(--wr-surface)] transition-all hover:shadow-lg hover:shadow-[var(--wr-gold)]/20 hover:scale-[1.02]",
   };
 
   const isExternalAction =
@@ -106,9 +106,9 @@ export function LinkButton({
 
 export function SectionHeading({ eyebrow, title, copy, tint = "blue" }: SectionHeadingProps) {
   const tintColors = {
-    blue: "from-[--wr-blue] to-[--wr-blue-soft]",
-    teal: "from-[--wr-teal] to-[--wr-blue-soft]",
-    gold: "from-[--wr-gold] to-[--wr-gold-soft]",
+    blue: "from-[var(--wr-blue)] to-[var(--wr-blue-soft)]",
+    teal: "from-[var(--wr-teal)] to-[var(--wr-blue-soft)]",
+    gold: "from-[var(--wr-gold)] to-[var(--wr-gold-soft)]",
   };
 
   return (
@@ -143,23 +143,23 @@ export function PageHero({
       <HeroGradientBg />
 
       <div className="absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-1/2 h-[1px] w-[800px] -translate-x-1/2 -translate-y-1/2 -rotate-12 bg-gradient-to-r from-transparent via-[--wr-blue]/20 to-transparent" />
-        <div className="absolute left-1/3 top-1/3 h-[1px] w-[500px] -translate-x-1/2 rotate-[20deg] bg-gradient-to-r from-transparent via-[--wr-teal]/10 to-transparent" />
+        <div className="absolute left-1/2 top-1/2 h-[1px] w-[800px] -translate-x-1/2 -translate-y-1/2 -rotate-12 bg-gradient-to-r from-transparent via-[var(--wr-blue)]/20 to-transparent" />
+        <div className="absolute left-1/3 top-1/3 h-[1px] w-[500px] -translate-x-1/2 rotate-[20deg] bg-gradient-to-r from-transparent via-[var(--wr-teal)]/10 to-transparent" />
       </div>
 
       <div className="shell pt-20 pb-24 sm:pt-28 sm:pb-32 lg:pt-36 lg:pb-40">
         <div className="mx-auto max-w-4xl text-center">
           <FadeIn>
             <motion.span
-              className="inline-flex items-center gap-2 rounded-full border border-[--wr-teal]/20 bg-[--wr-teal]/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest"
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest"
               style={{ color: "var(--wr-teal)" }}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[--wr-teal] opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[--wr-teal]" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--wr-teal)] opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--wr-teal)]" />
               </span>
               {eyebrow}
             </motion.span>
@@ -246,7 +246,7 @@ export function CtaBand({ title, copy }: CtaBandProps) {
   return (
     <section className="shell section-space">
       <motion.div
-        className="relative overflow-hidden rounded-3xl border border-[--wr-gold]/15 p-8 sm:p-12 lg:p-16"
+        className="relative overflow-hidden rounded-3xl border border-[var(--wr-gold)]/15 p-8 sm:p-12 lg:p-16"
         style={{
           background: `
             radial-gradient(ellipse 60% 50% at 20% 80%, oklch(0.78 0.14 85 / 8%) 0%, transparent 70%),
@@ -261,8 +261,8 @@ export function CtaBand({ title, copy }: CtaBandProps) {
       >
         <SectionOrbs variant="gold" />
 
-        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[--wr-gold]/10 blur-3xl pulse-glow" />
-        <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-[--wr-blue]/8 blur-3xl pulse-glow" style={{ animationDelay: "2s" }} />
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[var(--wr-gold)]/10 blur-3xl pulse-glow" />
+        <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-[var(--wr-blue)]/8 blur-3xl pulse-glow" style={{ animationDelay: "2s" }} />
 
         <div className="relative z-10 grid gap-8 lg:grid-cols-2 lg:items-center">
           <div>

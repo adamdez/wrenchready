@@ -853,14 +853,36 @@ async function handleToolCalls(message: VapiServerMessage) {
       continue;
     }
 
-    const toolResult = await handler(withLiveSessionParameters(call.parameters || {}, message));
-    updateLiveSessionFromToolResult(message, toolResult);
+    try {
+      const toolResult = await handler(withLiveSessionParameters(call.parameters || {}, message));
+      updateLiveSessionFromToolResult(message, toolResult);
 
-    results.push({
-      name: call.name,
-      toolCallId,
-      result: JSON.stringify(toolResult),
-    });
+      results.push({
+        name: call.name,
+        toolCallId,
+        result: JSON.stringify(toolResult),
+      });
+    } catch (error) {
+      const messageText =
+        error instanceof Error ? error.message : "Jeff tool failed unexpectedly.";
+
+      console.error(`[jeff-vapi] Tool ${call.name} failed`, error);
+
+      results.push({
+        name: call.name,
+        toolCallId,
+        result: JSON.stringify({
+          success: false,
+          tool: call.name,
+          error: messageText,
+          assistantSay:
+            "That Jeff tool failed. Keep helping from the visible job context and ask Simon to retry the action if it still matters.",
+          warnings: [
+            "One tool failed, but the rest of the Vapi tool turn stayed isolated.",
+          ],
+        }),
+      });
+    }
   }
 
   return { results };

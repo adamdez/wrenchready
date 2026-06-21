@@ -415,7 +415,7 @@ export function SiteShell({ children }: SiteShellProps) {
             <div className="flex flex-wrap items-center gap-4">
               <p>&copy; 2026 {siteConfig.name} LLC — Spokane, WA. All rights reserved.</p>
               <span className="hidden h-3 w-px bg-border sm:block" />
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[--wr-teal]/15 bg-[--wr-teal]/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[--wr-teal]">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--wr-teal)]/15 bg-[var(--wr-teal)]/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--wr-teal)]">
                 <Shield className="h-3 w-3" />
                 Licensed • Insured • RCW 46.71 Compliant
               </span>
@@ -447,13 +447,13 @@ export function SiteShell({ children }: SiteShellProps) {
               <Phone className="h-4 w-4" />
               Call
             </a>
-            <Link
-              href="/contact"
+            <a
+              href={siteConfig.contact.smsHref}
               className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border py-3 text-sm font-medium text-foreground"
             >
               <MessageSquare className="h-4 w-4" />
-              Request
-            </Link>
+              Text
+            </a>
             <Link
               className="inline-flex items-center justify-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 py-3 text-sm font-medium text-primary"
               href="/contact"

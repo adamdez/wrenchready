@@ -35,8 +35,8 @@ function formatBoardTime(value: string) {
 
 function urgencyClasses(value: FollowThroughTask["urgency"]) {
   if (value === "overdue") return "border-red-500/20 bg-red-500/10 text-red-200";
-  if (value === "due-now") return "border-[--wr-gold]/20 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
-  return "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  if (value === "due-now") return "border-[var(--wr-gold)]/20 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
+  return "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
 }
 
 function urgencyLabel(value: FollowThroughTask["urgency"]) {

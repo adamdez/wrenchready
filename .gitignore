@@ -73,3 +73,8 @@ fal-*-tasks.json
 fal-*-task.json
 
 .env*.local
+
+# Evaluation screenshots — large binaries, kept on disk, out of git to avoid repo bloat
+docs/evaluation/screenshots/
+# Throwaway tailwind test fixtures
+_twtest_*

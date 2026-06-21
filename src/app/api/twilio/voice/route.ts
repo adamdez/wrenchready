@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { readEnv } from "@/lib/env";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { validateTwilioWebhook } from "@/lib/twilio-webhook";
 import {
   buildUnavailableTwiml,
   getSecondsEnv,
@@ -35,7 +37,21 @@ function buildForwardingResponse(forwardTo: string, callerId: string, timeout: n
 </Response>`;
 }
 
-function handleVoiceWebhook() {
+async function handleVoiceWebhook(request: NextRequest) {
+  const validation = await validateTwilioWebhook(request, { readFormData: true });
+  if (!validation.ok) return validation.response;
+  const from = validation.formData?.get("From");
+
+  const rateLimit = await enforceRateLimit(request, {
+    keyPrefix: "twilio:voice",
+    limit: 40,
+    windowMs: 60_000,
+    subject: typeof from === "string" ? from : request.nextUrl.searchParams.get("From") || undefined,
+    responseKind: "twiml",
+  });
+
+  if (rateLimit) return rateLimit;
+
   const forwardTo = normalizePhone(readEnv("TWILIO_FORWARD_TO_PHONE"));
   const callerId = getTwilioCallerId();
 
@@ -55,10 +71,10 @@ function handleVoiceWebhook() {
   );
 }
 
-export function GET() {
-  return handleVoiceWebhook();
+export function GET(request: NextRequest) {
+  return handleVoiceWebhook(request);
 }
 
-export function POST() {
-  return handleVoiceWebhook();
+export function POST(request: NextRequest) {
+  return handleVoiceWebhook(request);
 }

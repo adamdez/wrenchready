@@ -73,9 +73,9 @@ function isMissingTiming(label?: string) {
 function riskClasses(record: InboundDetailRecord) {
   if (record.readinessRisk === "high") return "border-red-500/30 bg-red-500/10 text-red-200";
   if (record.readinessRisk === "medium") {
-    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+    return "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
   }
-  return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  return "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
 }
 
 function sourceLabel(source: InboundDetailRecord["source"]) {
@@ -89,7 +89,7 @@ function sourceLabel(source: InboundDetailRecord["source"]) {
 function sourceClasses(source: InboundDetailRecord["source"]) {
   if (source === "voicemail") return "border-red-500/30 bg-red-500/10 text-red-200";
   if (source === "phone") {
-    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+    return "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
   }
   if (source === "text") return "border-primary/25 bg-primary/10 text-primary";
   return "border-border bg-background text-muted-foreground";
@@ -231,7 +231,7 @@ export default async function InboundDetailPage({ params }: InboundDetailPagePro
               <span
                 className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
                   promised
-                    ? "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+                    ? "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]"
                     : "border-red-500/30 bg-red-500/10 text-red-200"
                 }`}
               >

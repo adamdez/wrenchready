@@ -82,7 +82,7 @@ export default async function ProofDisciplinePage() {
 
               <p className="mt-4 text-sm text-muted-foreground">{task.nextStep}</p>
               {task.needsPermission ? (
-                <p className="mt-2 text-sm text-[--wr-gold-soft]">
+                <p className="mt-2 text-sm text-[var(--wr-gold-soft)]">
                   Existing asset is not yet marked customer-approved for reuse.
                 </p>
               ) : null}

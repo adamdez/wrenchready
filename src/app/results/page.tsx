@@ -26,7 +26,7 @@ export default async function ResultsPage() {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-border bg-card/50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[--wr-gold]">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--wr-gold)]">
               Public stories
             </p>
             <p className="mt-2 text-3xl font-bold text-foreground">
@@ -34,7 +34,7 @@ export default async function ResultsPage() {
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[--wr-gold]">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--wr-gold)]">
               Permission-safe assets
             </p>
             <p className="mt-2 text-3xl font-bold text-foreground">
@@ -42,7 +42,7 @@ export default async function ResultsPage() {
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[--wr-gold]">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--wr-gold)]">
               Completed visits reviewed
             </p>
             <p className="mt-2 text-3xl font-bold text-foreground">
@@ -58,7 +58,7 @@ export default async function ResultsPage() {
                 key={story.promiseId}
                 className="rounded-3xl border border-border bg-card/50 p-7"
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[--wr-gold]">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--wr-gold)]">
                   {story.promiseThatMatteredMost}
                 </p>
                 <h2 className="mt-3 text-xl font-bold text-foreground">{story.headline}</h2>

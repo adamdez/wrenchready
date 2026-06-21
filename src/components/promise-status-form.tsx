@@ -136,6 +136,12 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
   const [scheduledWindowLabel, setScheduledWindowLabel] = useState(
     promise.scheduledWindow.label,
   );
+  const [scheduledWindowStartIso, setScheduledWindowStartIso] = useState(
+    promise.scheduledWindow.startIso || "",
+  );
+  const [scheduledWindowEndIso, setScheduledWindowEndIso] = useState(
+    promise.scheduledWindow.endIso || "",
+  );
   const [readinessSummary, setReadinessSummary] = useState(promise.readinessSummary);
   const [nextAction, setNextAction] = useState(promise.nextAction);
   const [topRisks, setTopRisks] = useState(formatRiskList(promise.topRisks));
@@ -510,6 +516,8 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
           jobStage,
           readinessRisk,
           scheduledWindowLabel,
+          scheduledWindowStartIso: scheduledWindowStartIso || null,
+          scheduledWindowEndIso: scheduledWindowEndIso || null,
           readinessSummary,
           nextAction,
           topRisks: topRisks
@@ -697,7 +705,7 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
         <div
           className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
             status === "success"
-              ? "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+              ? "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]"
               : "border-red-500/20 bg-red-500/10 text-red-200"
           }`}
         >
@@ -783,16 +791,43 @@ export function PromiseStatusForm({ promise }: PromiseStatusFormProps) {
           </select>
         </label>
 
-        <label className="block space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-            Scheduled window
-          </span>
-          <input
-            className="form-input"
-            onChange={(event) => setScheduledWindowLabel(event.target.value)}
-            value={scheduledWindowLabel}
-          />
-        </label>
+        <div className="space-y-3 rounded-2xl border border-border bg-card/40 p-4">
+          <label className="block space-y-2">
+            <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+              Scheduled window
+            </span>
+            <input
+              className="form-input"
+              onChange={(event) => setScheduledWindowLabel(event.target.value)}
+              value={scheduledWindowLabel}
+            />
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Start ISO
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setScheduledWindowStartIso(event.target.value)}
+                placeholder="2026-06-20T16:00:00.000Z"
+                value={scheduledWindowStartIso}
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                End ISO
+              </span>
+              <input
+                className="form-input"
+                onChange={(event) => setScheduledWindowEndIso(event.target.value)}
+                placeholder="2026-06-20T18:00:00.000Z"
+                value={scheduledWindowEndIso}
+              />
+            </label>
+          </div>
+        </div>
 
         <label className="block space-y-2">
           <span className="text-xs font-semibold uppercase tracking-widest text-primary">

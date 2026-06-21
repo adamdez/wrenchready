@@ -33,7 +33,7 @@ export function CustomerBalanceCheckout({
 
   if (status === "paid") {
     return (
-      <div className="rounded-3xl border border-[--wr-teal]/20 bg-[--wr-teal]/10 p-6">
+      <div className="rounded-3xl border border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 p-6">
         <h2 className="text-2xl font-bold text-foreground">Visit paid in full</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           The remaining balance has been cleared. This visit is financially closed in the system.

@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+const PARTS_TASK_DISPLAY_LIMIT = 10;
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -21,6 +22,8 @@ function formatCurrency(value: number) {
 
 export default async function PartsPlanningPage() {
   const snapshot = await getPartsPlanningSnapshot();
+  const visibleTasks = snapshot.tasks.slice(0, PARTS_TASK_DISPLAY_LIMIT);
+  const hiddenTaskCount = Math.max(0, snapshot.tasks.length - visibleTasks.length);
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -55,8 +58,13 @@ export default async function PartsPlanningPage() {
 
       <section className="mt-6 rounded-3xl border border-border bg-card/50 p-6">
         <h2 className="text-xl font-bold text-foreground">Parts run worklist</h2>
+        {hiddenTaskCount > 0 ? (
+          <p className="mt-2 rounded-2xl border border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10 px-4 py-3 text-sm text-[var(--wr-gold-soft)]">
+            Showing {visibleTasks.length} of {snapshot.tasks.length}. Open the promise board or owner view for the full list.
+          </p>
+        ) : null}
         <div className="mt-4 space-y-4">
-          {snapshot.tasks.length > 0 ? snapshot.tasks.map((task) => (
+          {visibleTasks.length > 0 ? visibleTasks.map((task) => (
             <div key={task.promiseId} className="rounded-2xl border border-border bg-background/60 p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -111,11 +119,16 @@ export default async function PartsPlanningPage() {
                 </div>
               ) : null}
 
-              <PartsPlannerActionForm
-                fieldExecution={task.fieldExecution}
-                owner={task.owner}
-                promiseId={task.promiseId}
-              />
+              <details className="mt-4 rounded-2xl border border-border bg-card/50 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-foreground">
+                  Update parts plan
+                </summary>
+                <PartsPlannerActionForm
+                  fieldExecution={task.fieldExecution}
+                  owner={task.owner}
+                  promiseId={task.promiseId}
+                />
+              </details>
             </div>
           )) : (
             <div className="rounded-2xl border border-dashed border-border bg-background/40 p-4 text-sm text-muted-foreground">

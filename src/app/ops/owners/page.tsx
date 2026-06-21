@@ -101,7 +101,7 @@ export default async function OwnerCockpitIndexPage() {
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-border bg-background/60 p-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <ShieldAlert className="h-4 w-4 text-[--wr-gold]" />
+                  <ShieldAlert className="h-4 w-4 text-[var(--wr-gold)]" />
                   Risk + execution
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground">

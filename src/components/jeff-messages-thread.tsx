@@ -103,6 +103,8 @@ const MAX_ATTACHMENTS = 4;
 const MIN_COMPOSER_HEIGHT = 96;
 const MAX_COMPOSER_HEIGHT = 220;
 const MAX_ATTACHMENT_BYTES = 2_500_000;
+const MAX_IMAGE_EDGE_PX = 1600;
+const IMAGE_JPEG_QUALITY = 0.78;
 const URL_PATTERN = /(https?:\/\/[^\s<>()]+[^\s<>().,!?;:])/g;
 
 function formatTime(value: string) {
@@ -146,22 +148,78 @@ function renderLinkedText(text: string, isSimon: boolean) {
   });
 }
 
+function loadBrowserImage(url: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not prepare that image."));
+    image.src = url;
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Could not compress that image."));
+      },
+      "image/jpeg",
+      IMAGE_JPEG_QUALITY,
+    );
+  });
+}
+
+async function resizeImageAttachment(file: File) {
+  if (!file.type.startsWith("image/")) return file;
+
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadBrowserImage(objectUrl);
+    const longestEdge = Math.max(image.naturalWidth, image.naturalHeight);
+    const scale = longestEdge > MAX_IMAGE_EDGE_PX ? MAX_IMAGE_EDGE_PX / longestEdge : 1;
+
+    if (scale === 1 && file.size <= MAX_ATTACHMENT_BYTES) return file;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not resize that image.");
+
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await canvasToBlob(canvas);
+    const nextName = file.name.replace(/\.[^.]+$/, "") || "jeff-photo";
+
+    return new File([blob], `${nextName}.jpg`, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 async function fileToAttachment(file: File): Promise<JeffMessageAttachment> {
-  if (file.size > MAX_ATTACHMENT_BYTES) {
+  const uploadFile = await resizeImageAttachment(file);
+
+  if (uploadFile.size > MAX_ATTACHMENT_BYTES) {
     throw new Error(`${file.name} is too large for Jeff message upload v1.`);
   }
 
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
-    reader.readAsDataURL(file);
+    reader.onerror = () => reject(new Error(`Could not read ${uploadFile.name}.`));
+    reader.readAsDataURL(uploadFile);
   });
 
   return {
-    fileName: file.name,
-    contentType: file.type || "application/octet-stream",
-    sizeBytes: file.size,
+    fileName: uploadFile.name,
+    contentType: uploadFile.type || "application/octet-stream",
+    sizeBytes: uploadFile.size,
     url: dataUrl,
   };
 }
@@ -186,6 +244,7 @@ export function JeffMessagesThread({
   const [pinUnlocked, setPinUnlocked] = useState(!pinRequired);
   const [loadingThread, setLoadingThread] = useState(false);
   const [notice, setNotice] = useState(initialWarning || "");
+  const [sendFailed, setSendFailed] = useState(false);
   const [listening, setListening] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -363,6 +422,7 @@ export function JeffMessagesThread({
     setAttachments([]);
     setSending(true);
     setNotice("");
+    setSendFailed(false);
 
     try {
       const response = await fetch("/api/al/wrenchready/jeff/messages", {
@@ -385,11 +445,13 @@ export function JeffMessagesThread({
         ...(data.message || []),
       ]);
       if (data.warning || data.warnings?.length) setNotice(data.warning || data.warnings?.[0] || "");
+      setSendFailed(false);
     } catch (error) {
       setMessages((current) => current.filter((message) => message.id !== optimistic.id));
       setText(pendingText);
       setAttachments(pendingAttachments);
       setNotice(error instanceof Error ? error.message : "Jeff message failed.");
+      setSendFailed(true);
     } finally {
       setSending(false);
     }
@@ -402,7 +464,7 @@ export function JeffMessagesThread({
           <div className="flex items-center justify-between gap-3">
             <a
               aria-label="Back to Jeff"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#1677ff]"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#1677ff]"
               href="/jeff"
               title="Back to Jeff"
             >
@@ -414,7 +476,7 @@ export function JeffMessagesThread({
             </div>
             <a
               aria-label="Call Jeff"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#1677ff]"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[#1677ff]"
               href={phoneHref}
               title="Call Jeff"
             >
@@ -424,7 +486,7 @@ export function JeffMessagesThread({
           <div className="mt-3 grid gap-2">
             <select
               aria-label="Jeff job file"
-              className="h-10 rounded-xl border border-black/10 bg-white px-3 text-sm outline-none"
+              className="h-11 rounded-xl border border-black/10 bg-white px-3 text-base outline-none"
               onChange={(event) => setSelectedJobId(event.target.value)}
               value={selectedJobId}
             >
@@ -565,8 +627,18 @@ export function JeffMessagesThread({
         </section>
 
         {displayNotice ? (
-          <div className="border-t border-black/10 bg-amber-50 px-4 py-2 text-xs text-amber-800">
-            {displayNotice}
+          <div className="flex items-center justify-between gap-3 border-t border-black/10 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+            <span>{displayNotice}</span>
+            {sendFailed ? (
+              <button
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-amber-900 px-3 text-xs font-semibold text-white disabled:opacity-50"
+                disabled={!canSend || sending}
+                onClick={() => void sendMessage()}
+                type="button"
+              >
+                Retry
+              </button>
+            ) : null}
           </div>
         ) : null}
 
@@ -581,7 +653,7 @@ export function JeffMessagesThread({
                   <UploadCloud className="h-3.5 w-3.5" />
                   <span className="truncate">{attachment.fileName}</span>
                   <button
-                    className="text-black/45"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full text-black/45"
                     onClick={() => setAttachments((current) => current.filter((entry) => entry.fileName !== attachment.fileName))}
                     type="button"
                   >
@@ -597,7 +669,7 @@ export function JeffMessagesThread({
           <div className="flex items-end gap-2">
             <button
               aria-label="Attach photo or file"
-              className="mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/5 text-[#1677ff]"
+              className="mb-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/5 text-[#1677ff]"
               onClick={() => fileInputRef.current?.click()}
               title="Attach photo or file"
               type="button"
@@ -615,7 +687,7 @@ export function JeffMessagesThread({
             />
             <button
               aria-label={listening ? "Stop dictation" : "Start dictation"}
-              className={`mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+              className={`mb-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
                 listening ? "bg-red-500 text-white" : "bg-black/5 text-[#1677ff]"
               }`}
               onClick={toggleDictation}
@@ -625,7 +697,7 @@ export function JeffMessagesThread({
               {listening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </button>
             <textarea
-              className="max-h-56 min-h-24 flex-1 resize-none overflow-y-auto rounded-[1.25rem] border border-black/10 bg-[#f7f7fa] px-4 py-3 text-sm leading-5 outline-none [field-sizing:content]"
+              className="max-h-56 min-h-24 flex-1 resize-none overflow-y-auto rounded-[1.25rem] border border-black/10 bg-[#f7f7fa] px-4 py-3 text-base leading-5 outline-none [field-sizing:content]"
               onChange={(event) => {
                 setText(event.target.value);
                 resizeComposer(event.target);
@@ -645,7 +717,7 @@ export function JeffMessagesThread({
             />
             <button
               aria-label="Send message"
-              className="mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1677ff] text-white disabled:bg-black/15"
+              className="mb-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1677ff] text-white disabled:bg-black/15"
               disabled={!canSend}
               onClick={sendMessage}
               title="Send message"

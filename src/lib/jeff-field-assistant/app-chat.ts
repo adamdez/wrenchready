@@ -515,6 +515,26 @@ function messageActionFromResult(result: unknown, fallbackTool = "jeff_tool"): M
   };
 }
 
+async function runMessageTool(
+  tool: string,
+  action: () => Promise<unknown>,
+): Promise<MessageToolAction> {
+  try {
+    return messageActionFromResult(await action(), tool);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Message Jeff tool failed.";
+    console.error(`[jeff-message] Tool ${tool} failed`, error);
+
+    return {
+      tool,
+      success: false,
+      assistantSay:
+        "That Jeff action failed. I can still help from the message and visible context, but retry the action if it matters.",
+      warning: message,
+    };
+  }
+}
+
 function hasAny(text: string, patterns: string[]) {
   const normalized = text.toLowerCase();
   return patterns.some((pattern) => normalized.includes(pattern));
@@ -729,7 +749,7 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
   const actions: MessageToolAction[] = [];
 
   if (likelyWantsKnowledgeSearch(text)) {
-    actions.push(messageActionFromResult(await searchWrenchReadyKnowledge({
+    actions.push(await runMessageTool("search_wrenchready_knowledge", () => searchWrenchReadyKnowledge({
       query: [
         input.jobLabel ? `Job: ${input.jobLabel}` : undefined,
         input.inferredVehicle ? `Vehicle: ${input.inferredVehicle}` : undefined,
@@ -738,37 +758,37 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
       ].filter(Boolean).join("\n"),
       focus: input.contextMode,
       limit: 5,
-    }), "search_wrenchready_knowledge"));
+    })));
   }
 
   if (likelyWantsFieldNote(text) && input.jobId) {
-    actions.push(messageActionFromResult(await recordFieldNote({
+    actions.push(await runMessageTool("record_field_note", () => recordFieldNote({
       jobId: input.jobId,
       note: text,
       channel: input.attachments?.length ? "mms" : "sms",
       sender: input.sender || "Simon",
-    }), "record_field_note"));
+    })));
   }
 
   if (likelyWantsPhotoAnalysis(text, input.attachments) && input.jobId) {
-    actions.push(messageActionFromResult(await analyzeFieldPhoto({
+    actions.push(await runMessageTool("analyze_field_photo", () => analyzeFieldPhoto({
       jobId: input.jobId,
       question: text,
-    }), "analyze_field_photo"));
+    })));
   }
 
   if (likelyWantsGmailSync(text)) {
-    actions.push(messageActionFromResult(await syncJeffGmailInbox({
+    actions.push(await runMessageTool("sync_jeff_gmail_inbox", () => syncJeffGmailInbox({
       jobId: input.jobId,
       jobLabel: input.jobLabel,
       maxResults: 10,
-    }), "sync_jeff_gmail_inbox"));
+    })));
   }
 
   if (likelyWantsCalendarSync(text)) {
-    actions.push(messageActionFromResult(await syncJeffCalendar({
+    actions.push(await runMessageTool("sync_jeff_calendar", () => syncJeffCalendar({
       limit: 25,
-    }), "sync_jeff_calendar"));
+    })));
   }
 
   const quoteDraftPayload = buildQuoteDraftPayloadFromText({
@@ -779,9 +799,9 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
     sourceReference: "message-jeff",
   });
   if (quoteDraftPayload) {
-    actions.push(messageActionFromResult(await prepareQuoteDraftForReview({
+    actions.push(await runMessageTool("prepare_quote_draft_for_review", () => prepareQuoteDraftForReview({
       ...quoteDraftPayload,
-    }), "prepare_quote_draft_for_review"));
+    })));
   }
 
   const wantsPartsStore =
@@ -792,53 +812,53 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
     const partName = input.inferredPartName || extractPartName(text);
     const vehicle = input.inferredVehicle || input.jobLabel;
     if (likelyWantsPartsCartPrep(text)) {
-      actions.push(messageActionFromResult(await preparePartsCartForSimon({
+      actions.push(await runMessageTool("prepare_parts_cart", () => preparePartsCartForSimon({
         jobId: input.jobId,
         partName,
         vehicle,
         preferredVendor: "O'Reilly Auto Parts",
         sourceChannel: input.attachments?.length ? "mms" : "sms",
         spokenRequest: text,
-      }), "prepare_parts_cart"));
+      })));
     } else {
-      actions.push(messageActionFromResult(await findNearbyPartsStoresForSimon({
+      actions.push(await runMessageTool("find_nearby_parts_stores", () => findNearbyPartsStoresForSimon({
         partName,
         vehicle,
         preferredVendor: "O'Reilly Auto Parts",
-      }), "find_nearby_parts_stores"));
+      })));
     }
   }
 
   if (likelyWantsPurchaseBlocked(text) && !likelyWantsPartsCartPrep(text)) {
-    actions.push(messageActionFromResult(await purchaseOrReservePartBlocked({
+    actions.push(await runMessageTool("purchase_or_reserve_part", () => purchaseOrReservePartBlocked({
       jobId: input.jobId,
       requestedPart: extractPartName(text),
       spokenRequest: text,
-    }), "purchase_or_reserve_part"));
+    })));
   }
 
   if (likelyWantsCloseout(text) && input.jobId) {
-    actions.push(messageActionFromResult(await startCloseout({
+    actions.push(await runMessageTool("start_closeout", () => startCloseout({
       jobId: input.jobId,
       workCompleted: text,
-    }), "start_closeout"));
+    })));
   }
 
   if (likelyWantsMemory(text)) {
-    actions.push(messageActionFromResult(await proposeCoreMemoryUpdate({
+    actions.push(await runMessageTool("propose_core_memory_update", () => proposeCoreMemoryUpdate({
       jobId: input.jobId,
       memory: text,
       evidence: "Simon sent this in Message Jeff.",
       sourceChannel: input.attachments?.length ? "mms" : "sms",
-    }), "propose_core_memory_update"));
+    })));
   }
 
   if (likelyWantsEmail(text)) {
-    actions.push(messageActionFromResult(await sendSimonRecapEmail({
+    actions.push(await runMessageTool("send_simon_recap_email", () => sendSimonRecapEmail({
       subject: input.jobLabel ? `Jeff recap: ${input.jobLabel}` : "Jeff recap from Message Jeff",
       body: text,
       sendNow: true,
-    }), "send_simon_recap_email"));
+    })));
   }
 
   return actions;

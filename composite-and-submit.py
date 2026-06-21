@@ -1,4 +1,4 @@
-import sys, io, json, base64, requests
+import os, sys, io, json, base64, requests
 from PIL import Image, ImageDraw, ImageFilter
 import numpy as np
 
@@ -41,7 +41,9 @@ zoomed.save(ASSETS + r"\rv4_logo_check.png")
 print("Saved zoomed logo check")
 
 # Now submit to fal.ai
-FAL_KEY = "2def44b9-e57c-4600-8370-ebf9d948787a:1f3138a0e84bcff05ca5e8c56ab2571d"
+FAL_KEY = os.environ.get("FAL_KEY")
+if not FAL_KEY:
+    raise SystemExit("FAL_KEY is required. Set it in your shell or secret manager before submitting to fal.ai.")
 headers = {
     "Authorization": "Key " + FAL_KEY,
     "Content-Type": "application/json",

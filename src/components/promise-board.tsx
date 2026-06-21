@@ -32,9 +32,9 @@ type PromiseBoardProps = {
 function riskClasses(risk: ReadinessRisk) {
   if (risk === "high") return "border-red-500/30 bg-red-500/10 text-red-200";
   if (risk === "medium") {
-    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+    return "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
   }
-  return "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+  return "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
 }
 
 function vehicleLabel(vehicle: InboundRecord["vehicle"] | PromiseRecord["vehicle"]) {
@@ -81,7 +81,7 @@ function sourceLabel(source: InboundRecord["source"]) {
 function sourceClasses(source: InboundRecord["source"]) {
   if (source === "voicemail") return "border-red-500/30 bg-red-500/10 text-red-200";
   if (source === "phone") {
-    return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+    return "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
   }
   if (source === "text") return "border-primary/25 bg-primary/10 text-primary";
   return "border-border bg-background text-muted-foreground";
@@ -298,10 +298,10 @@ function PromiseQueueItem({
                 tone === "risk"
                   ? "border-red-500/30 bg-red-500/10 text-red-200"
                   : tone === "follow"
-                    ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
+                    ? "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]"
                     : tone === "review"
-                      ? "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]"
-                      : "border-[--wr-teal]/30 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+                      ? "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]"
+                      : "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]"
               }`}
             >
               {label}
@@ -341,7 +341,7 @@ function PromiseQueueItem({
       </div>
 
       {reviewDraft ? (
-        <div className="mt-4 rounded-2xl border border-[--wr-gold]/25 bg-[--wr-gold]/10 p-3 text-sm leading-relaxed text-[--wr-gold-soft]">
+        <div className="mt-4 rounded-2xl border border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10 p-3 text-sm leading-relaxed text-[var(--wr-gold-soft)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">
             Not a scheduled job
           </p>
@@ -405,9 +405,9 @@ export function PromiseBoard(props: PromiseBoardProps) {
             <p className="text-3xl font-bold text-foreground">{props.metrics.newInbound}</p>
             <p className="mt-1 text-sm text-muted-foreground">new requests</p>
           </div>
-          <div className="rounded-2xl border border-[--wr-gold]/25 bg-[--wr-gold]/10 p-4">
-            <p className="text-3xl font-bold text-[--wr-gold-soft]">{quoteReviewJobs.length}</p>
-            <p className="mt-1 text-sm text-[--wr-gold-soft]">quote reviews</p>
+          <div className="rounded-2xl border border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10 p-4">
+            <p className="text-3xl font-bold text-[var(--wr-gold-soft)]">{quoteReviewJobs.length}</p>
+            <p className="mt-1 text-sm text-[var(--wr-gold-soft)]">quote reviews</p>
           </div>
           <div className="rounded-2xl border border-border bg-card/50 p-4">
             <p className="text-3xl font-bold text-foreground">
@@ -502,7 +502,7 @@ export function PromiseBoard(props: PromiseBoardProps) {
           </div>
         </section>
       ) : (
-        <section className="rounded-2xl border border-[--wr-teal]/20 bg-[--wr-teal]/10 p-4 text-sm leading-relaxed text-[--wr-teal-soft]">
+        <section className="rounded-2xl border border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 p-4 text-sm leading-relaxed text-[var(--wr-teal-soft)]">
           <div className="flex gap-3">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
             <p>No tomorrow-at-risk promises are currently flagged.</p>

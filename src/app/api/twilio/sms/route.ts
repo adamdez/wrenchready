@@ -3,12 +3,14 @@ import { sendHighRiskInboundAlert } from "@/lib/promise-crm/alerts";
 import { createInboundRecord } from "@/lib/promise-crm/server";
 import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
 import { readEnv } from "@/lib/env";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { getOpsNotifyPhones, normalizePhone, sendTwilioSms } from "@/lib/twilio";
+import { validateTwilioWebhook } from "@/lib/twilio-webhook";
 
 const XML_HEADERS = {
   "Content-Type": "text/xml; charset=utf-8",
 } as const;
-const REPLY_COMMAND = /^(?:reply|r)\s+(\+?1?\d{10,11})[\s,:-]+([\s\S]+)/i;
+const REPLY_COMMAND_WITH_PIN = /^(?:reply|r)\s+(\S+)\s+(\+?1?\d{10,15})[\s,:-]+([\s\S]+)/i;
 
 function xmlEscape(value: string) {
   return value
@@ -51,21 +53,33 @@ function formatRelayMessage(profileName: string, from: string, body: string) {
     body || "(empty message)",
     "",
     "Reply format:",
-    `reply ${from} Your message`,
+    `reply PIN ${from} Your message`,
   ].join("\n");
 }
 
 async function handleOwnerReply(from: string, body: string) {
-  const match = body.match(REPLY_COMMAND);
+  const relayPin = readEnv("TWILIO_OWNER_RELAY_PIN", "WR_OWNER_RELAY_PIN");
 
-  if (!match) {
+  if (!relayPin) {
     return buildResponse(
-      "Reply format: reply 5095550123 Your message. Send the customer's number first so WrenchReady can relay it from the business line.",
+      "Owner SMS relay is disabled until TWILIO_OWNER_RELAY_PIN is configured.",
     );
   }
 
-  const targetPhone = normalizePhone(match[1]);
-  const outboundBody = match[2].trim();
+  const match = body.match(REPLY_COMMAND_WITH_PIN);
+
+  if (!match) {
+    return buildResponse(
+      "Reply format: reply PIN 5095550123 Your message. The relay PIN is required before WrenchReady will send to a customer.",
+    );
+  }
+
+  if (match[1] !== relayPin) {
+    return buildResponse("Owner relay PIN was not accepted. Message was not sent.");
+  }
+
+  const targetPhone = normalizePhone(match[2]);
+  const outboundBody = match[3].trim();
 
   if (!targetPhone || !outboundBody) {
     return buildResponse(
@@ -89,11 +103,23 @@ async function handleOwnerReply(from: string, body: string) {
 }
 
 async function handler(request: NextRequest) {
-  const formData = await request.formData();
+  const validation = await validateTwilioWebhook(request, { readFormData: true });
+  if (!validation.ok) return validation.response;
+
+  const formData = validation.formData ?? new FormData();
   const from = normalizePhone((formData.get("From") as string | null) || "") || "";
   const body = (formData.get("Body") as string | null) || "";
   const profileName = (formData.get("ProfileName") as string | null) || "Text lead";
   const relayPhones = getRelayPhones();
+  const rateLimit = await enforceRateLimit(request, {
+    keyPrefix: "twilio:sms",
+    limit: 30,
+    windowMs: 60_000,
+    subject: from || undefined,
+    responseKind: "twiml",
+  });
+
+  if (rateLimit) return rateLimit;
 
   if (relayPhones.has(from)) {
     return handleOwnerReply(from, body);

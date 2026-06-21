@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 type OrbConfig = {
   color: string;
@@ -42,21 +42,31 @@ const heroOrbs: OrbConfig[] = [
 ];
 
 function Orb({ color, size, position, delay, duration }: OrbConfig) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <motion.div
       className={`absolute ${size} ${position} rounded-full blur-[100px]`}
       style={{ background: color }}
-      animate={{
-        x: [0, 30, -20, 10, 0],
-        y: [0, -25, 15, -10, 0],
-        scale: [1, 1.08, 0.95, 1.03, 1],
-      }}
-      transition={{
-        duration,
-        delay,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
+      animate={
+        reduceMotion
+          ? undefined
+          : {
+              x: [0, 30, -20, 10, 0],
+              y: [0, -25, 15, -10, 0],
+              scale: [1, 1.08, 0.95, 1.03, 1],
+            }
+      }
+      transition={
+        reduceMotion
+          ? undefined
+          : {
+              duration,
+              delay,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }
+      }
     />
   );
 }

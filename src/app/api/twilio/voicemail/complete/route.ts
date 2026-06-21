@@ -4,6 +4,8 @@ import { readEnv } from "@/lib/env";
 import { sendHighRiskInboundAlert } from "@/lib/promise-crm/alerts";
 import { createInboundRecord } from "@/lib/promise-crm/server";
 import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { validateTwilioWebhook } from "@/lib/twilio-webhook";
 
 const XML_HEADERS = {
   "Content-Type": "text/xml; charset=utf-8",
@@ -67,10 +69,22 @@ async function sendSms(to: string, body: string) {
  * Sends an SMS with the recording URL to all configured notify phones.
  */
 async function handler(req: NextRequest) {
-  const formData = await req.formData();
+  const validation = await validateTwilioWebhook(req, { readFormData: true });
+  if (!validation.ok) return validation.response;
+
+  const formData = validation.formData ?? new FormData();
   const recordingUrl = formData.get("RecordingUrl") as string | null;
   const callerNumber = (formData.get("From") as string) ?? "Unknown";
   const duration = formData.get("RecordingDuration") as string | null;
+  const rateLimit = await enforceRateLimit(req, {
+    keyPrefix: "twilio:voicemail-complete",
+    limit: 25,
+    windowMs: 60_000,
+    subject: callerNumber,
+    responseKind: "twiml",
+  });
+
+  if (rateLimit) return rateLimit;
 
   const notifyPhones = getNotifyPhones();
 

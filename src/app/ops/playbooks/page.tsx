@@ -104,7 +104,7 @@ export default function OpsPlaybooksPage() {
                     <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
                       {rule.useWhen.map((item) => (
                         <li key={item} className="flex gap-2">
-                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[--wr-teal]" />
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--wr-teal)]" />
                           {item}
                         </li>
                       ))}
@@ -117,7 +117,7 @@ export default function OpsPlaybooksPage() {
                     <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
                       {rule.avoidWhen.map((item) => (
                         <li key={item} className="flex gap-2">
-                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[--wr-gold]" />
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--wr-gold)]" />
                           {item}
                         </li>
                       ))}
@@ -189,7 +189,7 @@ export default function OpsPlaybooksPage() {
                     <ul className="mt-1 space-y-2">
                       {script.doNotSay.map((item) => (
                         <li key={item} className="flex gap-2">
-                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[--wr-gold]" />
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--wr-gold)]" />
                           {item}
                         </li>
                       ))}

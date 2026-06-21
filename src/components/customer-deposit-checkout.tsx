@@ -35,7 +35,7 @@ export function CustomerDepositCheckout({
 
   if (status === "paid" || (alreadyCollected !== undefined && alreadyCollected >= amount)) {
     return (
-      <div className="rounded-3xl border border-[--wr-teal]/20 bg-[--wr-teal]/10 p-6">
+      <div className="rounded-3xl border border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 p-6">
         <h2 className="text-2xl font-bold text-foreground">Deposit received</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           WrenchReady has your deposit recorded. The visit is now financially locked in the system.

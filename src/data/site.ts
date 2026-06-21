@@ -55,6 +55,7 @@ export const siteConfig = {
     email: "admin@wrenchreadymobile.com",
     phoneDisplay: "(509) 309-0617",
     phoneHref: "tel:+15093090617",
+    smsHref: "sms:+15093090617",
     schedule: "Spokane metro mobile service",
   },
   profiles: {

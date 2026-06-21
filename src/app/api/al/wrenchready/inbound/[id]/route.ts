@@ -27,6 +27,8 @@ type UpdateInboundPayload = {
   readinessRisk?: "low" | "medium" | "high";
   nextAction?: string;
   preferredWindowLabel?: string;
+  preferredWindowStartIso?: string | null;
+  preferredWindowEndIso?: string | null;
   noteToAdd?: string;
 };
 
@@ -42,6 +44,12 @@ function isUpdateInboundPayload(value: unknown): value is UpdateInboundPayload {
     (candidate.nextAction === undefined || typeof candidate.nextAction === "string") &&
     (candidate.preferredWindowLabel === undefined ||
       typeof candidate.preferredWindowLabel === "string") &&
+    (candidate.preferredWindowStartIso === undefined ||
+      candidate.preferredWindowStartIso === null ||
+      typeof candidate.preferredWindowStartIso === "string") &&
+    (candidate.preferredWindowEndIso === undefined ||
+      candidate.preferredWindowEndIso === null ||
+      typeof candidate.preferredWindowEndIso === "string") &&
     (candidate.noteToAdd === undefined || typeof candidate.noteToAdd === "string")
   );
 }

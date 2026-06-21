@@ -43,6 +43,9 @@
   --wr-teal-soft: oklch(0.80 0.08 195);
   --wr-gold: oklch(0.78 0.14 85);
   --wr-gold-soft: oklch(0.85 0.08 85);
+  --wr-amber: oklch(0.78 0.14 85);
+  --wr-green: oklch(0.72 0.14 150);
+  --wr-red: oklch(0.62 0.22 25);
   --wr-purple: oklch(0.55 0.16 290);
   --wr-surface: oklch(0.12 0.02 255);
   --wr-surface-raised: oklch(0.15 0.025 255);
@@ -375,5 +378,20 @@ p, li {
 @media (max-width: 767px) {
   body {
     padding-bottom: 5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
   }
 }

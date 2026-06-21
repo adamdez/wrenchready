@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 type FadeInProps = {
   children: ReactNode;
@@ -20,6 +20,7 @@ export function FadeIn({
   direction = "up",
   distance = 30,
 }: FadeInProps) {
+  const reduceMotion = useReducedMotion();
   const directionMap = {
     up: { y: distance },
     down: { y: -distance },
@@ -31,10 +32,10 @@ export function FadeIn({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, ...directionMap[direction] }}
-      whileInView={{ opacity: 1, x: 0, y: 0 }}
+      initial={reduceMotion ? false : { opacity: 0, ...directionMap[direction] }}
+      whileInView={reduceMotion ? undefined : { opacity: 1, x: 0, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration, delay, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={reduceMotion ? undefined : { duration, delay, ease: [0.25, 0.1, 0.25, 1] }}
     >
       {children}
     </motion.div>
@@ -48,13 +49,15 @@ type StaggerProps = {
 };
 
 export function Stagger({ children, className, staggerDelay = 0.1 }: StaggerProps) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <motion.div
       className={className}
-      initial="hidden"
-      whileInView="visible"
+      initial={reduceMotion ? false : "hidden"}
+      whileInView={reduceMotion ? undefined : "visible"}
       viewport={{ once: true, margin: "-60px" }}
-      transition={{ staggerChildren: staggerDelay }}
+      transition={reduceMotion ? undefined : { staggerChildren: staggerDelay }}
     >
       {children}
     </motion.div>
@@ -68,13 +71,19 @@ export function StaggerItem({
   children: ReactNode;
   className?: string;
 }) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <motion.div
       className={className}
-      variants={{
-        hidden: { opacity: 0, y: 24 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] } },
-      }}
+      variants={
+        reduceMotion
+          ? undefined
+          : {
+              hidden: { opacity: 0, y: 24 },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] } },
+            }
+      }
     >
       {children}
     </motion.div>

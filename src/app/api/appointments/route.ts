@@ -5,6 +5,7 @@ import { sendPromiseOutboundEmail } from "@/lib/email";
 import { sendHighRiskInboundAlert, sendNewAppointmentAlert } from "@/lib/promise-crm/alerts";
 import { createInboundFromAppointment } from "@/lib/promise-crm/server";
 import { evaluateIntake } from "@/lib/promise-crm/intake";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
 import schedulingEngine from "@/lib/scheduling/engine";
 import { siteConfig } from "@/data/site";
@@ -247,6 +248,14 @@ async function sendCustomerConfirmationEmail(
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimit = await enforceRateLimit(request, {
+      keyPrefix: "public:appointments",
+      limit: 8,
+      windowMs: 60_000,
+    });
+
+    if (rateLimit) return rateLimit;
+
     const body = await request.json();
 
     if (!validatePayload(body)) {

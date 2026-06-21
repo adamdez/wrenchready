@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useRef, useState, type FormEvent } from "react";
 
 const APPOINTMENT_REQUEST_SEND_TO = "AW-18052940746/Ku9vCIGEjKEcEMqHqKBD";
@@ -108,22 +108,22 @@ const coreServices = [
 
 const colorMap = {
   teal: {
-    bg: "bg-[--wr-teal]/10",
-    text: "text-[--wr-teal]",
-    border: "border-[--wr-teal]/20",
-    glow: "group-hover:shadow-[--wr-teal]/10",
+    bg: "bg-[var(--wr-teal)]/10",
+    text: "text-[var(--wr-teal)]",
+    border: "border-[var(--wr-teal)]/20",
+    glow: "group-hover:shadow-[var(--wr-teal)]/10",
   },
   blue: {
-    bg: "bg-[--wr-blue]/10",
-    text: "text-[--wr-blue-soft]",
-    border: "border-[--wr-blue]/20",
-    glow: "group-hover:shadow-[--wr-blue]/10",
+    bg: "bg-[var(--wr-blue)]/10",
+    text: "text-[var(--wr-blue-soft)]",
+    border: "border-[var(--wr-blue)]/20",
+    glow: "group-hover:shadow-[var(--wr-blue)]/10",
   },
   gold: {
-    bg: "bg-[--wr-gold]/10",
-    text: "text-[--wr-gold]",
-    border: "border-[--wr-gold]/20",
-    glow: "group-hover:shadow-[--wr-gold]/10",
+    bg: "bg-[var(--wr-gold)]/10",
+    text: "text-[var(--wr-gold)]",
+    border: "border-[var(--wr-gold)]/20",
+    glow: "group-hover:shadow-[var(--wr-gold)]/10",
   },
 };
 
@@ -183,12 +183,14 @@ const primaryServiceAreas = locations.filter((location) => !location.parentSlug)
 /* ───────────────────────── Intake Form ───────────────────────── */
 
 function IntakeForm() {
+  const reduceMotion = useReducedMotion();
   const formRef = useRef<HTMLFormElement>(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [serviceChoice, setServiceChoice] = useState("");
+  const [smsConsent, setSmsConsent] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<Array<{
     startIso: string;
     endIso: string;
@@ -350,6 +352,7 @@ function IntakeForm() {
           address,
           timing: selectedSlot?.label || "",
           notes: String(data.get("problem") ?? "").trim(),
+          smsConsent,
           requestedSlotStartIso: selectedSlot?.startIso,
           requestedSlotEndIso: selectedSlot?.endIso,
           requestedSlotLabel: selectedSlot?.label,
@@ -381,6 +384,7 @@ function IntakeForm() {
       setConfirmationEmailSent(Boolean(payload?.confirmationEmailSent));
       setSubmitted(true);
       setServiceChoice("");
+      setSmsConsent(false);
       resetSlotSelection();
       form.reset();
     } catch (err) {
@@ -393,12 +397,12 @@ function IntakeForm() {
   if (submitted) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="rounded-2xl border border-[--wr-teal]/20 bg-[--wr-teal]/5 p-8"
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.95 }}
+        animate={reduceMotion ? undefined : { opacity: 1, scale: 1 }}
+        className="rounded-2xl border border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/5 p-8"
       >
         <div className="space-y-5 text-center">
-          <CheckCircle2 className="mx-auto h-12 w-12 text-[--wr-teal]" />
+          <CheckCircle2 className="mx-auto h-12 w-12 text-[var(--wr-teal)]" />
           <div>
             <h3 className="text-xl font-bold text-foreground">Request received.</h3>
             <p className="mt-2 text-base leading-relaxed text-muted-foreground">
@@ -417,7 +421,7 @@ function IntakeForm() {
             </p>
           </div>
           {confirmationEmailSent ? (
-            <div className="rounded-2xl border border-[--wr-teal]/20 bg-background/70 p-4 text-sm leading-relaxed text-foreground">
+            <div className="rounded-2xl border border-[var(--wr-teal)]/20 bg-background/70 p-4 text-sm leading-relaxed text-foreground">
               A confirmation email was sent so the next step is visible in writing too.
             </div>
           ) : (
@@ -461,11 +465,11 @@ function IntakeForm() {
           ) : null}
           <div className="flex flex-wrap justify-center gap-3">
             <a
-              href={siteConfig.contact.phoneHref}
+              href={siteConfig.contact.smsHref}
               className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110"
             >
-              <Phone className="h-4 w-4" />
-              Call or Text {siteConfig.contact.phoneDisplay}
+              <MessageSquare className="h-4 w-4" />
+              Text {siteConfig.contact.phoneDisplay}
             </a>
             <button
               type="button"
@@ -519,46 +523,66 @@ function IntakeForm() {
         </div>
       </div>
       {errorMessage && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}
         </div>
       )}
       <div className="grid gap-3 sm:grid-cols-3">
-        <input type="text" name="year" placeholder="Year" className="form-input" required />
-        <input type="text" name="make" placeholder="Make" className="form-input" required />
-        <input type="text" name="model" placeholder="Model" className="form-input" required />
+        <label className="block">
+          <span className="sr-only">Vehicle year</span>
+          <input id="intake-year" type="text" name="year" placeholder="Year" className="form-input" required />
+        </label>
+        <label className="block">
+          <span className="sr-only">Vehicle make</span>
+          <input id="intake-make" type="text" name="make" placeholder="Make" className="form-input" required />
+        </label>
+        <label className="block">
+          <span className="sr-only">Vehicle model</span>
+          <input id="intake-model" type="text" name="model" placeholder="Model" className="form-input" required />
+        </label>
       </div>
-      <select
-        name="service"
-        className="form-input"
-        required
-        value={serviceChoice}
-        onChange={(event) => {
-          setServiceChoice(event.target.value);
-          resetSlotSelection();
-        }}
-      >
-        <option value="" disabled>What do you need?</option>
-        <option value="battery-replacement">Dead battery / no-start</option>
-        <option value="brake-repair">Brake noise or problem</option>
-        <option value="check-engine-diagnostics">Check engine / warning light</option>
-        <option value="pre-purchase-inspection">Pre-purchase inspection</option>
-        <option value="oil-change">Oil change / routine maintenance</option>
-        <option value="other">Other / not sure</option>
-      </select>
-      <textarea
-        name="problem"
-        placeholder={problemPlaceholder}
-        className="form-textarea"
-        rows={3}
-      />
+      <label className="block">
+        <span className="sr-only">Service needed</span>
+        <select
+          id="intake-service"
+          name="service"
+          className="form-input"
+          required
+          value={serviceChoice}
+          onChange={(event) => {
+            setServiceChoice(event.target.value);
+            resetSlotSelection();
+          }}
+        >
+          <option value="" disabled>What do you need?</option>
+          <option value="battery-replacement">Dead battery / no-start</option>
+          <option value="brake-repair">Brake noise or problem</option>
+          <option value="check-engine-diagnostics">Check engine / warning light</option>
+          <option value="pre-purchase-inspection">Pre-purchase inspection</option>
+          <option value="oil-change">Oil change / routine maintenance</option>
+          <option value="other">Other / not sure</option>
+        </select>
+      </label>
+      <label className="block">
+        <span className="sr-only">Problem description</span>
+        <textarea
+          id="intake-problem"
+          name="problem"
+          placeholder={problemPlaceholder}
+          className="form-textarea"
+          rows={3}
+        />
+      </label>
       {selectedWedge ? (
         <div className="rounded-xl border border-border bg-card/50 px-4 py-3 text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">{selectedWedge.shortLabel}:</span>{" "}
           {selectedWedge.whyNow}
         </div>
       ) : null}
-      <input type="text" name="address" placeholder="Where is the vehicle? (address or ZIP)" className="form-input" required />
+      <label className="block">
+        <span className="sr-only">Vehicle location</span>
+        <input id="intake-address" type="text" name="address" placeholder="Where is the vehicle? (address or ZIP)" className="form-input" required />
+      </label>
       <div className="rounded-2xl border border-border bg-background/60 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -612,10 +636,32 @@ function IntakeForm() {
         ) : null}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <input type="text" name="name" placeholder="Your name" className="form-input" required />
-        <input type="tel" name="phone" placeholder="Phone number" className="form-input" required />
+        <label className="block">
+          <span className="sr-only">Your name</span>
+          <input id="intake-name" type="text" name="name" placeholder="Your name" className="form-input" required />
+        </label>
+        <label className="block">
+          <span className="sr-only">Phone number</span>
+          <input id="intake-phone" type="tel" name="phone" placeholder="Phone number" className="form-input" required />
+        </label>
       </div>
-      <input type="email" name="email" placeholder="Email for written confirmation" className="form-input" />
+      <label className="block">
+        <span className="sr-only">Email for written confirmation</span>
+        <input id="intake-email" type="email" name="email" placeholder="Email for written confirmation" className="form-input" />
+      </label>
+      <label className="flex gap-3 rounded-2xl border border-border bg-background/60 p-4 text-sm leading-relaxed text-muted-foreground">
+        <input
+          checked={smsConsent}
+          className="mt-1 h-5 w-5 shrink-0 accent-primary"
+          name="smsConsent"
+          onChange={(event) => setSmsConsent(event.target.checked)}
+          required
+          type="checkbox"
+        />
+        <span>
+          I agree to receive service-related texts from WrenchReady at the phone number provided. Message and data rates may apply. Reply STOP to opt out.
+        </span>
+      </label>
       <button
         type="submit"
         disabled={submitting}
@@ -726,7 +772,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-7 py-3.5 text-base font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:scale-[1.02] sm:py-4"
                 >
                   <Phone className="h-5 w-5" />
-                  Call or Text {siteConfig.contact.phoneDisplay}
+                  Call {siteConfig.contact.phoneDisplay}
                 </a>
               </div>
             </FadeIn>
@@ -735,7 +781,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 sm:gap-x-5 sm:pt-2">
                 {trustChips.map((item) => (
                   <span key={item.label} className="flex items-center gap-1.5 text-xs font-medium text-white/70 sm:gap-2 sm:text-sm">
-                    <span className="text-[--wr-teal]">{item.icon}</span>
+                    <span className="text-[var(--wr-teal)]">{item.icon}</span>
                     {item.label}
                   </span>
                 ))}
@@ -747,12 +793,12 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
 
       {/* ── TRUST STRIP ── */}
       <section className="relative border-y border-border">
-        <div className="absolute inset-0 bg-gradient-to-r from-[--wr-blue]/3 via-[--wr-teal]/3 to-[--wr-gold]/3" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--wr-blue)]/3 via-[var(--wr-teal)]/3 to-[var(--wr-gold)]/3" />
         <div className="relative overflow-hidden">
           <div className="shell flex items-center gap-6 overflow-x-auto py-4 scrollbar-none sm:flex-wrap sm:justify-center sm:gap-x-8 sm:gap-y-3 sm:overflow-x-visible sm:py-5">
             {trustStrip.map((item) => (
               <span key={item.text} className="flex shrink-0 items-center gap-2 text-xs font-medium text-muted-foreground sm:gap-2.5 sm:text-sm">
-                <span className="text-[--wr-teal]">{item.icon}</span>
+                <span className="text-[var(--wr-teal)]">{item.icon}</span>
                 {item.text}
               </span>
             ))}
@@ -780,7 +826,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
             ].map((item) => (
               <StaggerItem key={item.label}>
                 <div className="flex items-center gap-3 rounded-xl border border-border bg-card/50 p-4 backdrop-blur-sm">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[--wr-teal]/10 text-[--wr-teal]">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--wr-teal)]/10 text-[var(--wr-teal)]">
                     {item.icon}
                   </span>
                   <span className="text-sm font-medium text-foreground">{item.label}</span>
@@ -823,14 +869,14 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                           className="object-cover transition-transform duration-500 group-hover:scale-105"
                           sizes="(max-width: 768px) 100vw, 50vw"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[--wr-surface] via-[--wr-surface]/40 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[var(--wr-surface)] via-[var(--wr-surface)]/40 to-transparent" />
                         <div className="absolute bottom-3 left-4">
                           <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${c.bg} ${c.text}`}>
                             {service.icon}
                           </span>
                         </div>
                         <div className="absolute bottom-3 right-4 flex items-center gap-2">
-                          <span className="rounded-full border border-[--wr-gold]/30 bg-background/80 px-3 py-1.5 text-sm font-bold text-[--wr-gold] backdrop-blur-sm">
+                          <span className="rounded-full border border-[var(--wr-gold)]/30 bg-background/80 px-3 py-1.5 text-sm font-bold text-[var(--wr-gold)] backdrop-blur-sm">
                             {service.price}
                           </span>
                           <span className="rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm">
@@ -888,8 +934,8 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
             <Stagger className="space-y-4" staggerDelay={0.1}>
               {differentiators.map((d) => (
                 <StaggerItem key={d.title}>
-                  <div className="flex gap-4 rounded-2xl border border-border bg-card/40 p-5 backdrop-blur-sm transition-colors hover:border-[--wr-teal]/20">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[--wr-teal]/10 text-[--wr-teal]">
+                  <div className="flex gap-4 rounded-2xl border border-border bg-card/40 p-5 backdrop-blur-sm transition-colors hover:border-[var(--wr-teal)]/20">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--wr-teal)]/10 text-[var(--wr-teal)]">
                       {d.icon}
                     </div>
                     <div>
@@ -935,7 +981,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                   <div className="flex gap-4">
                     <div className="relative">
                       <motion.div
-                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal]"
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal)]"
                         initial={{ scale: 0 }}
                         whileInView={{ scale: 1 }}
                         viewport={{ once: true }}
@@ -944,11 +990,11 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                         {step.icon}
                       </motion.div>
                       {i < processSteps.length - 1 && (
-                        <div className="absolute left-1/2 top-14 h-[calc(100%-0.5rem)] w-px -translate-x-1/2 bg-gradient-to-b from-[--wr-teal]/20 to-transparent" />
+                        <div className="absolute left-1/2 top-14 h-[calc(100%-0.5rem)] w-px -translate-x-1/2 bg-gradient-to-b from-[var(--wr-teal)]/20 to-transparent" />
                       )}
                     </div>
                     <div className="pb-4">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-[--wr-teal]">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--wr-teal)]">
                         Step {i + 1}
                       </span>
                       <h3 className="mt-1 text-base font-bold text-foreground">{step.title}</h3>
@@ -1045,10 +1091,10 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                 <Stagger className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" staggerDelay={0.08}>
                   {publicProofStories.map((story) => (
                     <StaggerItem key={story.promiseId}>
-                      <div className="flex h-full flex-col rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm transition-colors hover:border-[--wr-gold]/20">
+                      <div className="flex h-full flex-col rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm transition-colors hover:border-[var(--wr-gold)]/20">
                         <div className="flex gap-0.5">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className="h-4 w-4 fill-[--wr-gold] text-[--wr-gold]" />
+                            <Star key={i} className="h-4 w-4 fill-[var(--wr-gold)] text-[var(--wr-gold)]" />
                           ))}
                         </div>
                         <h3 className="mt-3 text-sm font-bold text-foreground">{story.headline}</h3>
@@ -1056,7 +1102,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                           &ldquo;{story.quote}&rdquo;
                         </p>
                         <div className="mt-4 space-y-2 border-t border-border pt-3">
-                          <p className="text-xs font-medium uppercase tracking-[0.14em] text-[--wr-gold]">
+                          <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--wr-gold)]">
                             {story.promiseThatMatteredMost}
                           </p>
                           <p className="text-sm font-semibold text-foreground">{story.customerLabel}</p>
@@ -1076,7 +1122,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                 <div className="mt-8 flex justify-center">
                   <Link
                     href="/results"
-                    className="inline-flex items-center gap-2 rounded-full border border-[--wr-gold]/20 bg-[--wr-gold]/10 px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-[--wr-gold]/15"
+                    className="inline-flex items-center gap-2 rounded-full border border-[var(--wr-gold)]/20 bg-[var(--wr-gold)]/10 px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-[var(--wr-gold)]/15"
                   >
                     See More Real Results
                     <ArrowRight className="h-4 w-4" />
@@ -1093,8 +1139,8 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                     WrenchReady is now collecting recap-backed proof, approved photos, and real customer language directly from the promise record. Public stories only appear here when they are permission-safe.
                   </p>
                 </div>
-                <div className="rounded-3xl border border-[--wr-gold]/15 bg-[--wr-gold]/5 p-7">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[--wr-gold]">
+                <div className="rounded-3xl border border-[var(--wr-gold)]/15 bg-[var(--wr-gold)]/5 p-7">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--wr-gold)]">
                     Trust Standard
                   </p>
                   <ul className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
@@ -1139,7 +1185,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                     "Starter or electrical diagnosis when that is the real issue",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[--wr-teal]" />
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--wr-teal)]" />
                       {item}
                     </li>
                   ))}
@@ -1201,7 +1247,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                 <div className="mt-6">
                   <div className="inline-block rounded-xl border border-border bg-card/50 p-4 backdrop-blur-sm">
                     <span className="text-xs font-medium text-muted-foreground">Pads + Rotors</span>
-                    <p className="mt-1 text-lg font-bold text-[--wr-gold]">From $280/axle</p>
+                    <p className="mt-1 text-lg font-bold text-[var(--wr-gold)]">From $280/axle</p>
                   </div>
                 </div>
                 <div className="mt-8">
@@ -1242,8 +1288,8 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                 { icon: <Shield className="h-5 w-5" />, text: "Approval required before added work" },
               ].map((item) => (
                 <StaggerItem key={item.text}>
-                  <div className="rounded-2xl border border-[--wr-gold]/15 bg-[--wr-gold]/5 p-5 transition-colors hover:border-[--wr-gold]/30">
-                    <span className="text-[--wr-gold]">{item.icon}</span>
+                  <div className="rounded-2xl border border-[var(--wr-gold)]/15 bg-[var(--wr-gold)]/5 p-5 transition-colors hover:border-[var(--wr-gold)]/30">
+                    <span className="text-[var(--wr-gold)]">{item.icon}</span>
                     <p className="mt-3 text-sm font-medium text-foreground">{item.text}</p>
                   </div>
                 </StaggerItem>
@@ -1275,7 +1321,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                     "Clear service history and records",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-3 text-sm text-muted-foreground">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[--wr-blue-soft]" />
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--wr-blue-soft)]" />
                       {item}
                     </li>
                   ))}
@@ -1344,7 +1390,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                     { icon: <Shield />, text: "Licensed, insured, and fully transparent — price and scope explained before you commit" },
                   ].map((item) => (
                     <div key={item.text} className="flex items-start gap-3">
-                      <span className="mt-0.5 h-5 w-5 shrink-0 text-[--wr-teal]">{item.icon}</span>
+                      <span className="mt-0.5 h-5 w-5 shrink-0 text-[var(--wr-teal)]">{item.icon}</span>
                       <p className="text-sm text-muted-foreground">{item.text}</p>
                     </div>
                   ))}
@@ -1383,7 +1429,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
       {/* ── FINAL CTA ── */}
       <section className="shell section-space">
         <motion.div
-          className="relative overflow-hidden rounded-3xl border border-[--wr-gold]/15"
+          className="relative overflow-hidden rounded-3xl border border-[var(--wr-gold)]/15"
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -1417,7 +1463,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button
                   onClick={scrollToBook}
-                  className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[--wr-gold] to-[--wr-gold-soft] px-7 py-3.5 text-sm font-bold text-[--wr-surface] transition-all hover:shadow-lg hover:shadow-[--wr-gold]/20 hover:scale-[1.02]"
+                  className="btn-shimmer inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--wr-gold)] to-[var(--wr-gold-soft)] px-7 py-3.5 text-sm font-bold text-[var(--wr-surface)] transition-all hover:shadow-lg hover:shadow-[var(--wr-gold)]/20 hover:scale-[1.02]"
                 >
                   Request Service
                   <ArrowRight className="h-4 w-4" />
@@ -1427,7 +1473,7 @@ export function HomePage({ publicProofStories = [] }: HomePageProps) {
                   className="inline-flex items-center gap-2 rounded-full border border-border px-7 py-3.5 text-sm font-medium text-foreground transition-all hover:bg-secondary hover:border-transparent hover:scale-[1.02]"
                 >
                   <Phone className="h-4 w-4" />
-                  Call or Text {siteConfig.contact.phoneDisplay}
+                  Call {siteConfig.contact.phoneDisplay}
                 </a>
               </div>
             </div>

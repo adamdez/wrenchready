@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import schedulingEngine from "@/lib/scheduling/engine";
 import type { AvailabilityRequest } from "@/lib/scheduling/types";
 
@@ -13,6 +14,14 @@ function isAvailabilityRequest(body: unknown): body is AvailabilityRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimit = await enforceRateLimit(request, {
+      keyPrefix: "public:scheduling-availability",
+      limit: 20,
+      windowMs: 60_000,
+    });
+
+    if (rateLimit) return rateLimit;
+
     const body = await request.json();
 
     if (!isAvailabilityRequest(body)) {

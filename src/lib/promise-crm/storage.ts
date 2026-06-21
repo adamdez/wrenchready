@@ -153,6 +153,8 @@ type UpdateInboundInput = {
   readinessRisk?: InboundRecord["readinessRisk"];
   nextAction?: string;
   preferredWindowLabel?: string;
+  preferredWindowStartIso?: string | null;
+  preferredWindowEndIso?: string | null;
   noteToAdd?: string;
 };
 
@@ -163,6 +165,8 @@ type UpdatePromiseInput = {
   jobStage?: PromiseJobStage;
   serviceScope?: string;
   scheduledWindowLabel?: string;
+  scheduledWindowStartIso?: string | null;
+  scheduledWindowEndIso?: string | null;
   readinessSummary?: string;
   nextAction?: string;
   topRisks?: string[];
@@ -186,6 +190,7 @@ type UpdatePromiseInput = {
 type SupabaseInboundRow = {
   id: string;
   created_at: string;
+  updated_at?: string | null;
   source: InboundRecord["source"];
   customer_name: string;
   customer_phone: string;
@@ -265,6 +270,27 @@ function uniqueById<T extends { id: string }>(records: T[]) {
 function appendNoteList(existing: string[], noteToAdd?: string) {
   if (!noteToAdd) return existing;
   return [noteToAdd, ...existing];
+}
+
+class PromiseCrmConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PromiseCrmConflictError";
+  }
+}
+
+function staleUpdateError(entity: "inbound" | "promise") {
+  return new PromiseCrmConflictError(
+    `This ${entity} changed while you were editing it. Refresh the record and retry the update.`,
+  );
+}
+
+function isPromiseCrmConflictError(error: unknown) {
+  return error instanceof PromiseCrmConflictError;
+}
+
+function eqValue(value: string) {
+  return encodeURIComponent(value);
 }
 
 function normalizeStringList(values: unknown): string[] {
@@ -411,6 +437,7 @@ function mapInboundRow(row: SupabaseInboundRow): InboundRecord {
   return {
     id: row.id,
     createdAt: row.created_at,
+    updatedAt: row.updated_at || row.created_at,
     source: row.source,
     customer: {
       name: row.customer_name,
@@ -2160,12 +2187,21 @@ export async function updateInboundRecord(id: string, updates: UpdateInboundInpu
   }
 
   const patch = {
+    updated_at: new Date().toISOString(),
     owner: updates.owner ?? current.owner,
     qualification_status: updates.qualificationStatus ?? current.qualificationStatus,
     readiness_risk: updates.readinessRisk ?? current.readinessRisk,
     next_action: updates.nextAction ?? current.nextAction,
     preferred_window_label:
       updates.preferredWindowLabel ?? current.preferredWindow.label,
+    preferred_window_start:
+      updates.preferredWindowStartIso === undefined
+        ? current.preferredWindow.startIso || null
+        : updates.preferredWindowStartIso || null,
+    preferred_window_end:
+      updates.preferredWindowEndIso === undefined
+        ? current.preferredWindow.endIso || null
+        : updates.preferredWindowEndIso || null,
     notes: appendNoteList(current.notes, updates.noteToAdd),
   };
 
@@ -2177,6 +2213,7 @@ export async function updateInboundRecord(id: string, updates: UpdateInboundInpu
     }
     const updated: InboundRecord = {
       ...current,
+      updatedAt: patch.updated_at,
       owner: patch.owner,
       qualificationStatus: patch.qualification_status,
       readinessRisk: patch.readiness_risk,
@@ -2184,6 +2221,8 @@ export async function updateInboundRecord(id: string, updates: UpdateInboundInpu
       preferredWindow: {
         ...current.preferredWindow,
         label: patch.preferred_window_label,
+        startIso: patch.preferred_window_start || undefined,
+        endIso: patch.preferred_window_end || undefined,
       },
       notes: patch.notes,
     };
@@ -2193,21 +2232,27 @@ export async function updateInboundRecord(id: string, updates: UpdateInboundInpu
   }
 
   try {
+    const path = current.updatedAt
+      ? `wrenchready_inbound?id=eq.${eqValue(id)}&updated_at=eq.${eqValue(current.updatedAt)}`
+      : `wrenchready_inbound?id=eq.${eqValue(id)}`;
     const rows = await supabaseRestRequest<SupabaseInboundRow[]>(
-      `wrenchready_inbound?id=eq.${id}`,
+      path,
       {
         method: "PATCH",
         body: patch,
       },
     );
 
-    return rows[0] ? mapInboundRow(rows[0]) : current;
+    if (!rows[0]) throw staleUpdateError("inbound");
+    return mapInboundRow(rows[0]);
   } catch (error) {
+    if (isPromiseCrmConflictError(error)) throw error;
     if (!demoFallbackEnabled()) {
       throw crmUnavailable("Promise CRM live inbound update failed.", error);
     }
     const updated: InboundRecord = {
       ...current,
+      updatedAt: patch.updated_at,
       owner: patch.owner,
       qualificationStatus: patch.qualification_status,
       readinessRisk: patch.readiness_risk,
@@ -2215,6 +2260,8 @@ export async function updateInboundRecord(id: string, updates: UpdateInboundInpu
       preferredWindow: {
         ...current.preferredWindow,
         label: patch.preferred_window_label,
+        startIso: patch.preferred_window_start || undefined,
+        endIso: patch.preferred_window_end || undefined,
       },
       notes: patch.notes,
     };
@@ -2280,17 +2327,27 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
     current.recurringAccount,
     updates.recurringAccount,
   );
+  const updatedAt = new Date().toISOString();
+  const nextScheduledWindow = {
+    ...current.scheduledWindow,
+    label: updates.scheduledWindowLabel ?? current.scheduledWindow.label,
+    startIso:
+      updates.scheduledWindowStartIso === undefined
+        ? current.scheduledWindow.startIso
+        : updates.scheduledWindowStartIso || undefined,
+    endIso:
+      updates.scheduledWindowEndIso === undefined
+        ? current.scheduledWindow.endIso
+        : updates.scheduledWindowEndIso || undefined,
+  };
   const resolvedStatus = reconcilePromiseStatus({
     ...current,
-    updatedAt: new Date().toISOString(),
+    updatedAt,
     owner: updates.owner ?? current.owner,
     readinessRisk: updates.readinessRisk ?? current.readinessRisk,
     status: updates.status ?? current.status,
     serviceScope: updates.serviceScope ?? current.serviceScope,
-    scheduledWindow: {
-      ...current.scheduledWindow,
-      label: updates.scheduledWindowLabel ?? current.scheduledWindow.label,
-    },
+    scheduledWindow: nextScheduledWindow,
     readinessSummary: updates.readinessSummary ?? current.readinessSummary,
     nextAction: updates.nextAction ?? current.nextAction,
     topRisks: updates.topRisks ?? current.topRisks,
@@ -2323,12 +2380,15 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
   });
 
   const patch = {
+    updated_at: updatedAt,
     owner: updates.owner ?? current.owner,
     readiness_risk: updates.readinessRisk ?? current.readinessRisk,
     status: resolvedStatus,
     service_scope: updates.serviceScope ?? current.serviceScope,
     scheduled_window_label:
       updates.scheduledWindowLabel ?? current.scheduledWindow.label,
+    scheduled_window_start: nextScheduledWindow.startIso || null,
+    scheduled_window_end: nextScheduledWindow.endIso || null,
     readiness_summary: updates.readinessSummary ?? current.readinessSummary,
     next_action: updates.nextAction ?? current.nextAction,
     top_risks: updates.topRisks ?? current.topRisks,
@@ -2384,7 +2444,7 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
     }
     const updated: PromiseRecord = {
       ...current,
-      updatedAt: new Date().toISOString(),
+      updatedAt: patch.updated_at,
       owner: patch.owner,
       readinessRisk: patch.readiness_risk,
       status: patch.status,
@@ -2392,6 +2452,8 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
       scheduledWindow: {
         ...current.scheduledWindow,
         label: patch.scheduled_window_label,
+        startIso: patch.scheduled_window_start || undefined,
+        endIso: patch.scheduled_window_end || undefined,
       },
       readinessSummary: patch.readiness_summary,
       nextAction: patch.next_action,
@@ -2443,21 +2505,23 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
 
   try {
     const rows = await supabaseRestRequest<SupabasePromiseRow[]>(
-      `wrenchready_promise?id=eq.${id}`,
+      `wrenchready_promise?id=eq.${eqValue(id)}&updated_at=eq.${eqValue(current.updatedAt)}`,
       {
         method: "PATCH",
         body: patch,
       },
     );
 
-    return rows[0] ? mapPromiseRow(rows[0]) : current;
+    if (!rows[0]) throw staleUpdateError("promise");
+    return mapPromiseRow(rows[0]);
   } catch (error) {
+    if (isPromiseCrmConflictError(error)) throw error;
     if (!demoFallbackEnabled()) {
       throw crmUnavailable("Promise CRM live promise update failed.", error);
     }
     const updated: PromiseRecord = {
       ...current,
-      updatedAt: new Date().toISOString(),
+      updatedAt: patch.updated_at,
       owner: patch.owner,
       readinessRisk: patch.readiness_risk,
       status: patch.status,
@@ -2465,6 +2529,8 @@ export async function updatePromiseRecord(id: string, updates: UpdatePromiseInpu
       scheduledWindow: {
         ...current.scheduledWindow,
         label: patch.scheduled_window_label,
+        startIso: patch.scheduled_window_start || undefined,
+        endIso: patch.scheduled_window_end || undefined,
       },
       readinessSummary: patch.readiness_summary,
       nextAction: patch.next_action,

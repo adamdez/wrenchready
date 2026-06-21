@@ -2,7 +2,8 @@ import fal_client, json, sys, io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 import os
-os.environ["FAL_KEY"] = "2def44b9-e57c-4600-8370-ebf9d948787a:1f3138a0e84bcff05ca5e8c56ab2571d"
+if not os.environ.get("FAL_KEY"):
+    raise SystemExit("FAL_KEY is required. Set it in your shell or secret manager before polling fal.ai.")
 
 with open("fal-rotor-task.json") as f:
     tasks = json.load(f)

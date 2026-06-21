@@ -5,6 +5,7 @@ import {
   getPromiseRecordByCustomerToken,
   updatePromiseRecord,
 } from "@/lib/promise-crm/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
 
 type RouteContext = {
@@ -44,6 +45,15 @@ function getRecommendedServiceLabel(
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { token } = await context.params;
+    const rateLimit = await enforceRateLimit(request, {
+      keyPrefix: "public:status-next-step",
+      limit: 4,
+      windowMs: 60_000,
+      subject: token,
+    });
+
+    if (rateLimit) return rateLimit;
+
     const body = await request.json().catch(() => ({}));
 
     if (!isNextStepRequestPayload(body)) {

@@ -76,9 +76,9 @@ export function PromiseLiveStatus({
   }, [loadedUpdatedAt, promiseId]);
 
   const toneClass = useMemo(() => {
-    if (state === "stale") return "border-[--wr-gold]/30 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+    if (state === "stale") return "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
     if (state === "offline") return "border-red-500/30 bg-red-500/10 text-red-100";
-    return "border-[--wr-teal]/25 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
+    return "border-[var(--wr-teal)]/25 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
   }, [state]);
 
   return (

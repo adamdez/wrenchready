@@ -18,10 +18,11 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+const TOMORROW_DISPLAY_LIMIT = 12;
 
 function readinessClasses(score: number) {
-  if (score >= 82) return "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]";
-  if (score >= 55) return "border-[--wr-gold]/20 bg-[--wr-gold]/10 text-[--wr-gold-soft]";
+  if (score >= 82) return "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]";
+  if (score >= 55) return "border-[var(--wr-gold)]/20 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]";
   return "border-red-500/20 bg-red-500/10 text-red-200";
 }
 
@@ -54,6 +55,8 @@ function StatCard({
 
 export default async function TomorrowReadinessPage() {
   const snapshot = await getTomorrowReadinessSnapshot();
+  const visiblePromises = snapshot.promises.slice(0, TOMORROW_DISPLAY_LIMIT);
+  const hiddenPromiseCount = Math.max(0, snapshot.promises.length - visiblePromises.length);
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -115,8 +118,13 @@ export default async function TomorrowReadinessPage() {
       </section>
 
       <section className="mt-6 space-y-5">
-        {snapshot.promises.length > 0 ? (
-          snapshot.promises.map((item) => (
+        {hiddenPromiseCount > 0 ? (
+          <p className="rounded-2xl border border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10 px-4 py-3 text-sm text-[var(--wr-gold-soft)]">
+            Showing the first {visiblePromises.length} readiness risks of {snapshot.promises.length}. Open owner views for the full queue.
+          </p>
+        ) : null}
+        {visiblePromises.length > 0 ? (
+          visiblePromises.map((item) => (
             <div
               key={item.promiseId}
               className="rounded-3xl border border-border bg-card/50 p-5"
@@ -167,7 +175,7 @@ export default async function TomorrowReadinessPage() {
                         key={label as string}
                         className={`rounded-xl border px-3 py-3 text-sm ${
                           value
-                            ? "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+                            ? "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]"
                             : "border-red-500/20 bg-red-500/10 text-red-200"
                         }`}
                       >
@@ -195,7 +203,7 @@ export default async function TomorrowReadinessPage() {
                         key={label as string}
                         className={`rounded-xl border px-3 py-3 text-sm ${
                           value
-                            ? "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+                            ? "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]"
                             : "border-red-500/20 bg-red-500/10 text-red-200"
                         }`}
                       >
@@ -215,7 +223,7 @@ export default async function TomorrowReadinessPage() {
                   <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
                     {item.blockers.map((blocker) => (
                       <li key={blocker} className="flex gap-2">
-                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[--wr-gold]" />
+                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--wr-gold)]" />
                         {blocker}
                       </li>
                     ))}

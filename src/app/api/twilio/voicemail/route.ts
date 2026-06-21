@@ -4,6 +4,8 @@ import {
   buildVoicemailRecordingTwiml,
   TWILIO_XML_HEADERS,
 } from "@/lib/twilio-voice";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { validateTwilioWebhook } from "@/lib/twilio-webhook";
 
 /**
  * Twilio hits this endpoint after the <Dial> completes (via the action URL).
@@ -24,23 +26,28 @@ function handleDialResult(dialStatus: string) {
 }
 
 async function handler(req: NextRequest) {
-  const dialStatus = await getDialStatus(req);
+  const validation = await validateTwilioWebhook(req, { readFormData: true });
+  if (!validation.ok) return validation.response;
+
+  const rateLimit = await enforceRateLimit(req, {
+    keyPrefix: "twilio:voicemail",
+    limit: 40,
+    windowMs: 60_000,
+    subject: req.nextUrl.searchParams.get("From") || undefined,
+    responseKind: "twiml",
+  });
+
+  if (rateLimit) return rateLimit;
+
+  const dialStatus = getDialStatus(req, validation.formData);
   return handleDialResult(dialStatus);
 }
 
-async function getDialStatus(req: NextRequest) {
+function getDialStatus(req: NextRequest, formData?: FormData) {
   if (req.method === "GET") {
     return req.nextUrl.searchParams.get("DialCallStatus") ?? "";
   }
-
-  const contentType = req.headers.get("content-type") ?? "";
-
-  if (!contentType.includes("application/x-www-form-urlencoded") && !contentType.includes("multipart/form-data")) {
-    return req.nextUrl.searchParams.get("DialCallStatus") ?? "";
-  }
-
-  const formData = await req.formData();
-  return (formData.get("DialCallStatus") as string) ?? "";
+  return ((formData?.get("DialCallStatus") as string | null) ?? req.nextUrl.searchParams.get("DialCallStatus")) ?? "";
 }
 
 export { handler as GET, handler as POST };

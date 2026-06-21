@@ -122,7 +122,7 @@ export function InboundTriageForm({ inbound }: InboundTriageFormProps) {
         <div
           className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
             status === "success"
-              ? "border-[--wr-teal]/20 bg-[--wr-teal]/10 text-[--wr-teal-soft]"
+              ? "border-[var(--wr-teal)]/20 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]"
               : "border-red-500/20 bg-red-500/10 text-red-200"
           }`}
         >
