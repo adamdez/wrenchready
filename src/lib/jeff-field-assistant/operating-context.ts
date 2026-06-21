@@ -135,46 +135,15 @@ export function getJeffOperatingContextPacket(): JeffOperatingContextPacket {
   };
 }
 
+// Always-on operating context kept deliberately SHORT — only what Jeff needs on
+// every turn. The full packet (pricing posture, quote format, required fields,
+// $145 default, parts/vendor workflow, legacy/store doctrine) stays in
+// getJeffOperatingContextPacket() for on-demand retrieval via
+// search_wrenchready_knowledge / get_jeff_operating_context, so it never dilutes
+// the behavioral rules in the main prompt.
 export function buildJeffOperatingContextPrompt() {
-  const context = getJeffOperatingContextPacket();
   return [
-    "Forced WrenchReady operating context. Use this silently on every Jeff answer.",
-    `Version: ${context.version}. Sources: ${context.sourceFiles.join(", ")}.`,
-    "",
-    "Non-negotiables:",
-    ...context.nonNegotiables.map((item) => `- ${item}`),
-    "",
-    "Pricing posture:",
-    ...context.pricingPosture.map((item) => `- ${item}`),
-    "",
-    "Single source of truth:",
-    ...context.sourceOfTruthPolicy.map((item) => `- ${item}`),
-    "",
-    "Canonical stores:",
-    ...context.canonicalStores.map((item) => `- ${item}`),
-    "",
-    "Legacy WrenchReady Assistant folder policy:",
-    ...context.legacyAssistantPolicy.map((item) => `- ${item}`),
-    "",
-    "Estimate / quote workflow:",
-    ...context.estimateWorkflow.map((item) => `- ${item}`),
-    "",
-    "Parts finding, pricing, and margin workflow:",
-    ...context.partsPricingWorkflow.map((item) => `- ${item}`),
-    "",
-    "Imported legacy assistant rules now active in the canonical repo:",
-    ...context.importedLegacyRules.map((item) => `- ${item}`),
-    "",
-    "Required quote fields:",
-    ...context.requiredQuoteFields.map((item) => `- ${item}`),
-    "",
-    "Preferred parts vendor:",
-    `- ${context.defaultPartsVendor.name}, ${context.defaultPartsVendor.location}, ${context.defaultPartsVendor.phone}. ${context.defaultPartsVendor.policy}`,
-    "",
-    "Background worker / specialist agent policy:",
-    ...context.backgroundWorkerPolicy.map((item) => `- ${item}`),
-    "",
-    "Speech rules:",
-    ...context.jeffSpeechRules.map((item) => `- ${item}`),
+    "WrenchReady source of truth (use silently): the Promise CRM / job workspace is the truth for job history, approvals, parts, invoices, payments, and closeout — not your memory. When facts conflict, current CRM/job evidence and the newest Dez instruction win over older notes or assumptions.",
+    "You do NOT carry detailed pricing posture, quote-packet format, required quote fields, the standard $145 diagnostic default, or the parts/vendor workflow in this prompt — pull them with search_wrenchready_knowledge (or get_jeff_operating_context) only when you are actually building a quote, pricing parts, or answering a WrenchReady SOP question.",
   ].join("\n");
 }
