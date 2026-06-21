@@ -14,6 +14,8 @@ import { persistJeffMediaItems } from "@/lib/jeff-field-assistant/media";
 import { findNearbyPartsStoresForSimon } from "@/lib/jeff-field-assistant/location";
 import {
   analyzeFieldPhoto,
+  decodeVin,
+  lookupVehicleSpec,
   getFieldBrief,
   prepareQuoteDraftForReview,
   preparePartsCartForSimon,
@@ -626,6 +628,18 @@ function extractPartName(text: string) {
   return knownPart?.trim();
 }
 
+function extractVin(text: string): string | undefined {
+  // 17-char VIN (excludes I, O, Q), optionally introduced by "VIN".
+  const match = text.match(/\b(?:vin[:#\s]*)?([A-HJ-NPR-Za-hj-npr-z0-9]{17})\b/);
+  return match?.[1]?.toUpperCase();
+}
+
+function likelyWantsSpecLookup(text: string) {
+  return /\b(torque|ft-?lbs?|nm\b|wire colou?rs?|pin\s?out|relearn|reprogram(ming)?|fluid (capacity|type)|oil capacity|coolant capacity|refrigerant charge|tightening spec|gap (spec|setting)|factory spec)\b/i.test(
+    text,
+  );
+}
+
 function extractVehicleFromText(text: string) {
   const normalized = text.replace(/\s+/g, " ");
   const vehicle = normalized.match(
@@ -791,6 +805,24 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
     })));
   }
 
+  // Vehicle service-data sources: decode a VIN, then check the saved spec store for exact factory values.
+  const vin = extractVin(text);
+  let decodedVehicleLabel: string | undefined;
+  if (vin) {
+    const decodeResult = await decodeVin({ vin });
+    actions.push(messageActionFromResult(decodeResult, "decode_vin"));
+    const decodedVehicle = (decodeResult.data as { vehicle?: { make?: string; label?: string } } | undefined)?.vehicle;
+    if (decodedVehicle?.make) decodedVehicleLabel = decodedVehicle.label;
+  }
+
+  const specVehicle = decodedVehicleLabel || input.inferredVehicle || input.jobLabel;
+  if (likelyWantsSpecLookup(text) && specVehicle) {
+    actions.push(await runMessageTool("lookup_vehicle_spec", () => lookupVehicleSpec({
+      vehicle: specVehicle,
+      item: text,
+    })));
+  }
+
   const quoteDraftPayload = buildQuoteDraftPayloadFromText({
     text,
     jobId: input.jobId,
@@ -922,6 +954,21 @@ function knowledgeActionSummary(data: unknown) {
   return rows.length > 0 ? rows.join("\n") : "No strong WrenchReady knowledge match found.";
 }
 
+function vehicleSpecActionSummary(data: unknown) {
+  if (!isObject(data) || !Array.isArray(data.matches)) return undefined;
+  const rows = data.matches.slice(0, 6).flatMap((match) => {
+    if (!isObject(match)) return [];
+    const item = optionalString(match.item);
+    const value = optionalString(match.value);
+    if (!item || !value) return [];
+    const status = optionalString(match.status) || "?";
+    const source = optionalString(match.source);
+    return [`${item}: ${value}${source ? ` (source: ${source})` : ""} [${status}]`];
+  });
+  if (!rows.length) return undefined;
+  return `Saved specs — relay VERIFIED values EXACTLY/verbatim (no rounding, no unit conversion, nothing added): ${rows.join("; ")}`;
+}
+
 function buildActionContext(actions: MessageToolAction[]) {
   if (actions.length === 0) return "- No tool-backed action was run for this message.";
 
@@ -930,11 +977,13 @@ function buildActionContext(actions: MessageToolAction[]) {
       const partsSummary = action.tool === "find_nearby_parts_stores" ? partsStoreActionSummary(action.data) : undefined;
       const cartSummary = action.tool === "prepare_parts_cart" ? partsCartActionSummary(action.data) : undefined;
       const knowledgeSummary = action.tool === "search_wrenchready_knowledge" ? knowledgeActionSummary(action.data) : undefined;
+      const specSummary = action.tool === "lookup_vehicle_spec" ? vehicleSpecActionSummary(action.data) : undefined;
       return [
         `- ${action.tool}: ${action.success ? "success" : "blocked/failed"}${action.assistantSay ? ` - ${action.assistantSay}` : ""}${action.warning ? ` Warning: ${action.warning}` : ""}`,
         knowledgeSummary ? `  ${knowledgeSummary.replace(/\n/g, "\n  ")}` : undefined,
         partsSummary ? `  ${partsSummary.replace(/\n/g, "\n  ")}` : undefined,
         cartSummary ? `  ${cartSummary.replace(/\n/g, "\n  ")}` : undefined,
+        specSummary ? `  ${specSummary.replace(/\n/g, "\n  ")}` : undefined,
       ].filter(Boolean).join("\n");
     })
     .join("\n");

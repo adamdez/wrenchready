@@ -78,3 +78,7 @@ fal-*-task.json
 docs/evaluation/screenshots/
 # Throwaway tailwind test fixtures
 _twtest_*
+
+# Jeff eval JSON dumps (npm run eval:jeff -- --json / node scripts/rejudge-jeff.mjs) — generated, local only
+eval-jeff-results.json
+eval-jeff-results.rejudged.json

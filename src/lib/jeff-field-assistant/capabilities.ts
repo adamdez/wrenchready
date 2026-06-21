@@ -185,6 +185,20 @@ export async function getJeffCapabilityReport(): Promise<JeffCapabilityReport> {
       },
     }),
     capability({
+      id: "vehicle-specs",
+      label: "VIN decode + capture-as-you-go spec store",
+      area: "diagnostics",
+      state: "ready",
+      reason: "Jeff decodes VINs via the free NHTSA vPIC database and checks/saves human-verified vehicle specs (torque, wire colors, relearn, capacities) in the WrenchReady store. Local pilot store today; Supabase mirror for team durability is the follow-up.",
+      whatJeffCanDo: "Decode a VIN to year/make/model/engine instead of asking Simon; look up a saved verified spec before routing to source; and save a value once Simon reads it from licensed/OEM data so it's instant next time.",
+      whatJeffShouldSay: "Give me the VIN and I'll pull the exact vehicle. I don't have that torque on file yet — read it off the service data and I'll save it so we've got it next time.",
+      operatorAction: "Review needs-review specs (no cited source) before they're treated as verified; add a wrenchready_vehicle_specs Supabase table for multi-device durability.",
+      details: {
+        sources: ["NHTSA vPIC (VIN decode, free)", "WrenchReady verified spec store (capture-as-you-go)"],
+        gradeRule: "A value with a named source = verified; without one = needs-review (Jeff never treats needs-review as fact).",
+      },
+    }),
+    capability({
       id: "email-send",
       label: "Send recap email",
       area: "communication",

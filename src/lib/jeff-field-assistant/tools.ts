@@ -16,6 +16,11 @@ import { getJeffCapabilityReport } from "@/lib/jeff-field-assistant/capabilities
 import { searchWrenchReadyKnowledgeFiles } from "@/lib/jeff-field-assistant/knowledge";
 import { getJeffOperatingContextPacket } from "@/lib/jeff-field-assistant/operating-context";
 import { buildDiagnosticTreeSummary } from "@/lib/promise-crm/diagnostic-tree";
+import {
+  decodeVinViaNhtsa,
+  lookupVehicleSpecRecords,
+  recordVehicleSpecRecord,
+} from "@/lib/jeff-field-assistant/vehicle-specs";
 import { getPromiseRecords, updatePromiseRecord, upsertPromiseQuoteDraftForReview } from "@/lib/promise-crm/server";
 import { buildPromiseQuotePacket } from "@/lib/promise-crm/quote-packet";
 import { upsertOperatorTask } from "@/lib/promise-crm/operator-tasks";
@@ -5339,6 +5344,99 @@ export async function purchaseOrReservePartBlocked(payload: unknown) {
   );
 }
 
+export async function decodeVin(payload: unknown = {}) {
+  const input = isObject(payload) ? payload : {};
+  const vin = optionalString(input.vin) || optionalString(input.VIN) || optionalString(input.vinNumber);
+  if (!vin) {
+    return blocked("decode_vin", "I need a VIN to decode the vehicle.", { vehicle: null });
+  }
+  try {
+    const decoded = await decodeVinViaNhtsa(vin);
+    if (!decoded.make && !decoded.model) {
+      return blocked(
+        "decode_vin",
+        "That VIN did not resolve to a vehicle — ask Simon for year/make/model/engine and keep going.",
+        { vehicle: decoded },
+        decoded.warnings,
+      );
+    }
+    return result(
+      "decode_vin",
+      `Decoded to ${decoded.label}. Use it silently as the vehicle for this job — don't read the VIN back unless Simon asks.`,
+      { vehicle: decoded },
+      decoded.warnings,
+    );
+  } catch (error) {
+    return blocked(
+      "decode_vin",
+      "VIN lookup didn't come back — ask Simon for year/make/model/engine and keep moving.",
+      { vehicle: null },
+      [error instanceof Error ? error.message : "decode failed"],
+    );
+  }
+}
+
+export async function lookupVehicleSpec(payload: unknown = {}) {
+  const input = isObject(payload) ? payload : {};
+  const vehicle =
+    optionalString(input.vehicle) ||
+    optionalString(input.vehicleLabel) ||
+    [optionalString(input.year), optionalString(input.make), optionalString(input.model), optionalString(input.engine)]
+      .filter(Boolean)
+      .join(" ");
+  if (!vehicle) {
+    return blocked("lookup_vehicle_spec", "I need the vehicle (year/make/model/engine or VIN-decoded) before I can check saved specs.", { matches: [] });
+  }
+  const specType = optionalString(input.specType);
+  const item = optionalString(input.item) || optionalString(input.spec);
+  const { matches } = await lookupVehicleSpecRecords({ vehicle, specType, item });
+  const verified = matches.filter((match) => match.status === "verified");
+  if (matches.length) {
+    const lines = matches
+      .map((m) => `${m.item}: ${m.value}${m.source ? ` (source: ${m.source})` : ""} [${m.status}]`)
+      .join("; ");
+    return result(
+      "lookup_vehicle_spec",
+      `Saved spec${matches.length === 1 ? "" : "s"} on file for ${vehicle} — relay any VERIFIED value EXACTLY as written, verbatim: do NOT round it, do NOT convert units, do NOT add a value or unit that isn't listed. ${lines}. Any value marked [needs-review] is NOT proven — say it still needs source confirmation before precision work.`,
+      { matches },
+    );
+  }
+  return result(
+    "lookup_vehicle_spec",
+    `No saved spec on file for ${vehicle}. Don't invent it — name what must be verified, route Simon to OEM/licensed service data, and offer to save the value with record_vehicle_spec once he reads it back.`,
+    { matches: [] },
+  );
+}
+
+export async function recordVehicleSpec(payload: unknown = {}) {
+  const input = isObject(payload) ? payload : {};
+  const vehicle =
+    optionalString(input.vehicle) ||
+    optionalString(input.vehicleLabel) ||
+    [optionalString(input.year), optionalString(input.make), optionalString(input.model), optionalString(input.engine)]
+      .filter(Boolean)
+      .join(" ");
+  const item = optionalString(input.item) || optionalString(input.spec);
+  const value = optionalString(input.value) || optionalString(input.specValue);
+  if (!vehicle || !item || !value) {
+    return blocked("record_vehicle_spec", "I need the vehicle, the spec item, and the value to save it.", { record: null });
+  }
+  const source = optionalString(input.source);
+  const record = await recordVehicleSpecRecord({
+    vehicle,
+    specType: optionalString(input.specType) || "other",
+    item,
+    value,
+    source,
+    recordedBy: optionalString(input.recordedBy) || "Simon",
+  });
+  return result(
+    "record_vehicle_spec",
+    `Saved ${item} for ${vehicle}${source ? ` from ${source}` : " (needs source confirmation — flagged for Dez)"}. It's on file for next time.`,
+    { record },
+  );
+}
+
 export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
   return [
     {
@@ -5378,6 +5476,52 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
           limit: { type: "number" },
         },
         required: ["query"],
+      },
+    },
+    {
+      name: "decode_vin",
+      description: "Decode a VIN via the free NHTSA vPIC database into year/make/model/engine/drivetrain. Use this instead of asking Simon to confirm the year or engine when he gives a VIN.",
+      endpoint: `${BASE_ROUTE}/decode-vin`,
+      method: "POST",
+      parameters: {
+        type: "object",
+        properties: {
+          vin: { type: "string", description: "The 17-character VIN (partial VINs are tolerated)." },
+        },
+        required: ["vin"],
+      },
+    },
+    {
+      name: "lookup_vehicle_spec",
+      description: "Check the WrenchReady saved spec store for a human-verified vehicle service value (torque, wire color, pinout, relearn, fluid capacity) before routing Simon to the source. Returns verified specs to state plainly, or nothing if not on file yet.",
+      endpoint: `${BASE_ROUTE}/lookup-vehicle-spec`,
+      method: "POST",
+      parameters: {
+        type: "object",
+        properties: {
+          vehicle: { type: "string", description: "Year/make/model/engine or a VIN-decoded label, e.g. '2014 Jeep Grand Cherokee 3.6L'." },
+          specType: { type: "string", description: "torque | wire-color | pinout | relearn | capacity | fitment | other" },
+          item: { type: "string", description: "The specific item, e.g. 'front axle nut', 'BCM relearn', 'engine oil capacity'." },
+        },
+        required: ["vehicle"],
+      },
+    },
+    {
+      name: "record_vehicle_spec",
+      description: "Save a vehicle service spec to the WrenchReady store so it's instant next time. Use AFTER Simon reads a value from OEM/licensed service data. A value with a named source is saved verified; without one it is saved needs-review for Dez. Never invent the value.",
+      endpoint: `${BASE_ROUTE}/record-vehicle-spec`,
+      method: "POST",
+      parameters: {
+        type: "object",
+        properties: {
+          vehicle: { type: "string", description: "Year/make/model/engine or a VIN-decoded label." },
+          specType: { type: "string", description: "torque | wire-color | pinout | relearn | capacity | fitment | other" },
+          item: { type: "string", description: "The specific item the value is for." },
+          value: { type: "string", description: "The exact value Simon read from the source." },
+          source: { type: "string", description: "Where the value came from, e.g. 'AllData', 'Ford service info'. Omit if Simon could not cite a source (saved needs-review)." },
+          recordedBy: { type: "string" },
+        },
+        required: ["vehicle", "item", "value"],
       },
     },
     {
