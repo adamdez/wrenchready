@@ -22,7 +22,8 @@
     "sync:jeff": "node scripts/sync-jeff-local-mirror.mjs",
     "sync:jeff:vapi": "node scripts/sync-jeff-vapi-assistant.mjs",
     "call:jeff:orientation": "node scripts/call-jeff-orientation.mjs",
-    "ui:shots": "node scripts/ui-shots.mjs"
+    "ui:shots": "node scripts/ui-shots.mjs",
+    "eval:jeff": "node scripts/eval-jeff-behavior.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
