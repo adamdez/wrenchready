@@ -102,7 +102,15 @@ function currentLabel(pathname: string) {
   return match?.label ?? "Operations";
 }
 
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function NavLinks({
+  pathname,
+  counts,
+  onNavigate,
+}: {
+  pathname: string;
+  counts: Record<string, number>;
+  onNavigate?: () => void;
+}) {
   return (
     <nav className="flex flex-col gap-6">
       {NAV.map((group) => (
@@ -113,6 +121,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
           <div className="mt-2 flex flex-col gap-0.5">
             {group.items.map((item) => {
               const active = isActive(pathname, item.href);
+              const count = counts[item.href] ?? 0;
               const Icon = item.icon;
               return (
                 <Link
@@ -132,7 +141,17 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                     }`}
                   />
                   <span className="truncate">{item.label}</span>
-                  {active ? (
+                  {count > 0 ? (
+                    <span
+                      className={`ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                        item.href === "/ops/jeff"
+                          ? "bg-[var(--wr-amber)]/15 text-[var(--wr-gold-soft)]"
+                          : "bg-[var(--wr-blue)]/15 text-[var(--wr-blue-soft)]"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  ) : active ? (
                     <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--wr-blue)]" />
                   ) : null}
                 </Link>
@@ -161,7 +180,13 @@ function Wordmark() {
   );
 }
 
-export function OpsShell({ children }: { children: React.ReactNode }) {
+export function OpsShell({
+  children,
+  counts = {},
+}: {
+  children: React.ReactNode;
+  counts?: Record<string, number>;
+}) {
   const pathname = usePathname() ?? "";
   const [drawerOpen, setDrawerOpen] = useState(false);
   const sectionLabel = currentLabel(pathname);
@@ -174,7 +199,7 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
           <Wordmark />
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-5 scrollbar-none">
-          <NavLinks pathname={pathname} />
+          <NavLinks pathname={pathname} counts={counts} />
         </div>
       </aside>
 
@@ -199,7 +224,7 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-5 scrollbar-none">
-              <NavLinks pathname={pathname} onNavigate={() => setDrawerOpen(false)} />
+              <NavLinks pathname={pathname} counts={counts} onNavigate={() => setDrawerOpen(false)} />
             </div>
           </aside>
         </div>
