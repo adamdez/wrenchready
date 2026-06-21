@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Archive,
   BarChart3,
   BookOpen,
   Building2,
@@ -81,6 +82,7 @@ const NAV: NavGroup[] = [
       { href: "/ops/management", label: "Management", icon: BarChart3 },
       { href: "/ops/wedges", label: "Wedges", icon: Zap },
       { href: "/ops/systems", label: "Systems", icon: Settings },
+      { href: "/ops/promises/archived", label: "Archived", icon: Archive },
     ],
   },
 ];
@@ -89,7 +91,9 @@ const ALL_ITEMS = NAV.flatMap((group) => group.items);
 
 function isActive(pathname: string, href: string) {
   if (href === "/ops/promises") {
-    // Board owns the index redirect and the promise detail pages.
+    // Board owns the index redirect and the promise detail pages — but not the
+    // separate Archived view.
+    if (pathname.startsWith("/ops/promises/archived")) return false;
     return pathname === "/ops" || pathname === href || pathname.startsWith("/ops/promises");
   }
   return pathname === href || pathname.startsWith(`${href}/`);

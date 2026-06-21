@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { OpsPaymentLinkForm } from "@/components/ops-payment-link-form";
 import { QuoteSendActionForm } from "@/components/quote-send-action-form";
+import { PromiseArchiveButton } from "@/components/promise-archive-button";
+import { isPromiseArchived } from "@/lib/promise-crm/promise-archive";
 import { OutboundResultForm } from "@/components/outbound-result-form";
 import { PromiseLiveStatus } from "@/components/promise-live-status";
 import { PromiseStatusForm } from "@/components/promise-status-form";
@@ -1117,7 +1119,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
 
   return (
     <div className="bg-background pb-12">
-      <div className="shell pt-6 sm:pt-8">
+      <div className="shell flex items-center justify-between gap-3 pt-6 sm:pt-8">
         <Link
           href="/ops/promises"
           className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -1125,6 +1127,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
           <ArrowLeft className="h-4 w-4" />
           Promise Board
         </Link>
+        <PromiseArchiveButton promiseId={promise.id} archived={isPromiseArchived(promise)} />
       </div>
 
       <header className="relative z-30 mt-4 border-y border-border bg-background/95 backdrop-blur lg:sticky lg:top-0">

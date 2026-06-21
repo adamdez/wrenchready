@@ -1,3 +1,4 @@
+import { isPromiseArchived } from "@/lib/promise-crm/promise-archive";
 import {
   extractPromiseCloseout,
   getNextProbableVisit,
@@ -851,7 +852,7 @@ function isOperatorQueuePromise(record: PromiseRecord, now: Date) {
     isRecentForOperatorQueue(record.updatedAt, now) ||
     isRecentForOperatorQueue(record.followThroughDueAt, now);
 
-  return isCurrent && !hasNonOperatorMarker(promiseOperatorText(record));
+  return isCurrent && !isPromiseArchived(record) && !hasNonOperatorMarker(promiseOperatorText(record));
 }
 
 function getOperatorQueueRecords(
@@ -3787,7 +3788,7 @@ export async function getRecurringAccountStarterSnapshot(): Promise<RecurringAcc
 export async function getFieldExecutionSnapshot(): Promise<FieldExecutionSnapshot> {
   const promises = await getPromiseRecords();
   const tasks = promises
-    .filter((record) => record.status !== "completed")
+    .filter((record) => record.status !== "completed" && !isPromiseArchived(record))
     .map((record) => {
       const completeness = getExecutionPacketCompleteness(record);
       const taskPriority: "high" | "medium" | "low" =
@@ -3861,7 +3862,7 @@ export async function getFieldExecutionSnapshot(): Promise<FieldExecutionSnapsho
 
 export async function getPartsPlanningSnapshot(): Promise<PartsPlanningSnapshot> {
   const promises = await getPromiseRecords();
-  const activePromises = promises.filter((record) => record.status !== "completed");
+  const activePromises = promises.filter((record) => record.status !== "completed" && !isPromiseArchived(record));
 
   const tasks = activePromises
     .map((record) => {
