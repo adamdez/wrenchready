@@ -47,6 +47,7 @@ import {
   listPersistedJeffMedia,
   persistJeffMediaItems,
 } from "@/lib/jeff-field-assistant/media";
+import { buildJeffFieldFactLedgerForEvent } from "@/lib/jeff-field-assistant/fact-ledger";
 import { jeffFieldAssistantSystemPrompt } from "@/lib/jeff-field-assistant/prompt";
 import {
   attachPhotoToJeffLiveSession,
@@ -4165,6 +4166,7 @@ export async function recordFieldNote(payload: unknown) {
     `Saved. Next safe action: ${nextAction}`,
     {
       event,
+      factLedger: buildJeffFieldFactLedgerForEvent(event),
       jobRecordUpdateStatus: noteStatus,
       fieldEventStorageStatus: fieldEventStorage.status,
       nextAction,
@@ -4655,6 +4657,8 @@ export async function startCloseout(payload: unknown) {
 
   const workCompleted = optionalString(input.workCompleted);
   const partsUsed = stringList(input.partsUsed);
+  const provedFactIds = stringList(input.provedFactIds);
+  const suspectedFactIds = stringList(input.suspectedFactIds);
   const finalAmountIfKnown = optionalNumber(input.finalAmountIfKnown);
   const paymentStatus = optionalString(input.paymentStatus) || job.paymentCollection?.status;
   const missing = [
@@ -4731,6 +4735,11 @@ export async function startCloseout(payload: unknown) {
       closeout: {
         workCompleted,
         partsUsed,
+        factProvenance: {
+          provedFactIds,
+          suspectedFactIds,
+          missingProvenance: workCompleted && provedFactIds.length === 0 && suspectedFactIds.length === 0,
+        },
         finalAmountIfKnown,
         paymentStatus,
         missing,

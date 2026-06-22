@@ -11,6 +11,7 @@ Purpose: identify fragile Jeff wiring before Simon does more live field testing,
 - Usage entries are written to the Jeff local data store as `openai-usage.json`.
 - Jeff tool results now carry a typed action state (`pending`, `drafted`, `sent`, `blocked`, `failed`, `verified`) through `src/lib/jeff-field-assistant/action-state.ts`.
 - Message Jeff renders state-backed action phrases and guards against unsupported claims like sent/booked/charged/ordered when no backend state proves them.
+- `npm run verify:jeff:proof-loop -- http://localhost:3001` replays one fixture field job through the real Jeff tool API and verifies raw request persistence, proved-fact evidence, suspected-fact separation, photo linkage, blocked purchase state, closeout fact provenance, and context retrieval.
 - Each Message Jeff conversation now carries usage and budget metadata in `sourcePayload` and summary metadata.
 - Budget checks are warning-first by default and only block calls when `JEFF_OPENAI_BUDGET_MODE=block` and a daily token or call budget is configured.
 - `npm run eval:jeff` is deterministic-only by default. The LLM judge is now opt-in with `npm run eval:jeff:judge` or `npm run eval:jeff -- --judge`.
@@ -51,6 +52,7 @@ Recommended pilot posture: set a daily token or call budget before Simon tests. 
 ## Before More Simon Live Testing
 
 - Run `npm run audit:jeff:live`.
+- Start fixtures with `npm run dev:jeff:fixtures -- --port 3001`, then run `npm run verify:jeff:proof-loop -- http://localhost:3001`.
 - Run `npm run eval:jeff -- --quick` for cheap behavior smoke testing.
 - Use `npm run eval:jeff:judge -- --quick` only when an LLM judge is worth the spend.
 - Set at least one daily budget env var before live testing; set `JEFF_OPENAI_BUDGET_MODE=block` when you want a hard local cap.

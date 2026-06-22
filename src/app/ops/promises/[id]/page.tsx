@@ -31,6 +31,9 @@ import { OutboundResultForm } from "@/components/outbound-result-form";
 import { PromiseLiveStatus } from "@/components/promise-live-status";
 import { PromiseStatusForm } from "@/components/promise-status-form";
 import { QuickCloseoutForm } from "@/components/quick-closeout-form";
+import { buildJeffFieldFactLedger } from "@/lib/jeff-field-assistant/fact-ledger";
+import { listPersistedJeffMedia } from "@/lib/jeff-field-assistant/media";
+import { listPersistedJeffFieldEvents } from "@/lib/jeff-field-assistant/persistence";
 import {
   DIAGNOSTIC_SOURCE_STATUS_META,
   buildDiagnosticTreeSummary,
@@ -42,6 +45,12 @@ import { getPromiseOutboundSnapshot } from "@/lib/promise-crm/outbound-drafts";
 import { getPlaybookRecommendation } from "@/lib/promise-crm/playbooks";
 import { getProofDisciplineForPromise } from "@/lib/promise-crm/proof-discipline";
 import { getOperatorTaskQueue, getPromiseRecord, updateOperatorTaskStatus } from "@/lib/promise-crm/server";
+import type {
+  JeffFieldEvent,
+  JeffFieldFact,
+  JeffFieldFactLedger,
+  JeffMediaItem,
+} from "@/lib/jeff-field-assistant/types";
 import type {
   CommercialOutcomeStatus,
   FollowThroughResolutionAction,
@@ -75,6 +84,7 @@ const primaryCommandButtonClass =
 
 const navItems = [
   ["#promise-file", "File"],
+  ["#jeff-handoff", "Jeff"],
   ["#open-tasks", "Tasks"],
   ["#workflow", "Workflow"],
   ["#diagnostic-tree", "Diag"],
@@ -298,6 +308,73 @@ function timelineToneClasses(tone: TimelineItem["tone"] = "default") {
   if (tone === "warning") return "border-[var(--wr-gold)]/40 bg-[var(--wr-gold)]/15 text-[var(--wr-gold-soft)]";
   if (tone === "danger") return "border-red-500/40 bg-red-500/15 text-red-200";
   return "border-primary/30 bg-primary/10 text-primary";
+}
+
+type JeffHandoffSnapshot = {
+  events: JeffFieldEvent[];
+  media: JeffMediaItem[];
+  factLedger: JeffFieldFactLedger;
+  provedFacts: JeffFieldFact[];
+  suspectedFacts: JeffFieldFact[];
+  blockedEvents: JeffFieldEvent[];
+  closeoutEvents: JeffFieldEvent[];
+  warnings: string[];
+  storageStatus: string;
+  mediaStorageStatus: string;
+  hasActivity: boolean;
+};
+
+function eventTypeLabel(value: JeffFieldEvent["type"]) {
+  return value.replace(/_/g, " ");
+}
+
+function mediaHref(item: JeffMediaItem) {
+  return item.driveWebViewLink || item.driveWebContentLink || item.externalUrl;
+}
+
+function buildJeffHandoffSnapshot({
+  events,
+  media,
+  warnings,
+  storageStatus,
+  mediaStorageStatus,
+}: {
+  events: JeffFieldEvent[];
+  media: JeffMediaItem[];
+  warnings: string[];
+  storageStatus: string;
+  mediaStorageStatus: string;
+}): JeffHandoffSnapshot {
+  const sortedEvents = events
+    .slice()
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const sortedMedia = media
+    .slice()
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+  const factLedger = buildJeffFieldFactLedger(sortedEvents, sortedMedia);
+  const provedFacts = factLedger.facts.filter((fact) => fact.status === "proved");
+  const suspectedFacts = factLedger.facts.filter((fact) => fact.status === "suspected");
+  const blockedEvents = sortedEvents.filter((event) =>
+    event.type === "purchase_blocked" ||
+    event.type === "conflict_flagged" ||
+    event.type === "approval_requested" ||
+    event.needsReview,
+  );
+  const closeoutEvents = sortedEvents.filter((event) => event.type === "closeout_started");
+
+  return {
+    events: sortedEvents,
+    media: sortedMedia,
+    factLedger,
+    provedFacts,
+    suspectedFacts,
+    blockedEvents,
+    closeoutEvents,
+    warnings,
+    storageStatus,
+    mediaStorageStatus,
+    hasActivity: sortedEvents.length > 0 || sortedMedia.length > 0,
+  };
 }
 
 function buildTimeline(promise: PromiseDetailRecord): TimelineItem[] {
@@ -1058,6 +1135,242 @@ function OperatorTaskCard({ task, promiseId }: { task: OperatorTask; promiseId: 
   );
 }
 
+function JeffFactList({
+  facts,
+  empty,
+  tone = "default",
+}: {
+  facts: JeffFieldFact[];
+  empty: string;
+  tone?: "default" | "warning";
+}) {
+  const dotClass = tone === "warning" ? "bg-[var(--wr-gold)]" : "bg-[var(--wr-teal)]";
+
+  if (facts.length === 0) {
+    return <p className="mt-3 text-sm text-muted-foreground">{empty}</p>;
+  }
+
+  return (
+    <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+      {facts.slice(0, 6).map((fact) => (
+        <li className="flex min-w-0 gap-2" key={fact.id}>
+          <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`} />
+          <span className="break-words">
+            <span className="font-semibold text-foreground">{fact.label}:</span> {fact.value}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function JeffHandoffPanel({
+  handoff,
+  promiseId,
+}: {
+  handoff: JeffHandoffSnapshot;
+  promiseId: string;
+}) {
+  const needsAdmin = handoff.blockedEvents.length > 0 || handoff.suspectedFacts.length > 0;
+  const latestCloseout = handoff.closeoutEvents[0];
+
+  return (
+    <section id="jeff-handoff" className="mb-6 rounded-2xl border border-border bg-card/65 p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            Jeff handoff
+          </p>
+          <h2 className="mt-1 text-2xl font-bold text-foreground">Field truth on this job</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            {handoff.hasActivity
+              ? "Structured facts, photos, blocked actions, and closeout signals Jeff attached to this CRM record."
+              : "No Jeff field activity is attached to this CRM record yet."}
+          </p>
+        </div>
+        <div className="flex min-w-0 gap-2 overflow-x-auto pb-1 lg:flex-wrap lg:justify-end lg:overflow-visible lg:pb-0">
+          <StatusPill
+            className={
+              needsAdmin
+                ? "border-[var(--wr-gold)]/30 bg-[var(--wr-gold)]/10 text-[var(--wr-gold-soft)]"
+                : handoff.hasActivity
+                  ? "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]"
+                  : "border-border bg-background/60 text-muted-foreground"
+            }
+          >
+            {needsAdmin ? "needs admin" : handoff.hasActivity ? "reviewable" : "no Jeff data"}
+          </StatusPill>
+          <StatusPill>{handoff.provedFacts.length} proved</StatusPill>
+          <StatusPill>{handoff.suspectedFacts.length} suspected</StatusPill>
+          <StatusPill>{handoff.media.length} photos</StatusPill>
+        </div>
+      </div>
+
+      {!handoff.hasActivity ? (
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <ActionPanel
+            title="Simple rule"
+            detail="When Simon sends a field note, photo, blocked purchase, or closeout through Jeff, it will appear here on this CRM job."
+            action={
+              <div className="grid grid-cols-2 gap-2">
+                <CommandLink href={`/jeff/messages?jobId=${promiseId}`} icon={<Sparkles className="h-4 w-4" />} primary>
+                  Ask Jeff
+                </CommandLink>
+                <CommandLink href={`/jeff/photo-drop?jobId=${promiseId}`} icon={<ImagePlus className="h-4 w-4" />}>
+                  Upload
+                </CommandLink>
+              </div>
+            }
+          />
+          <ActionPanel
+            title="Admin outcome"
+            detail="The admin should open this CRM job and see the field handoff without watching Jeff Ops."
+            tone="success"
+          />
+        </div>
+      ) : (
+        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-xl border border-border bg-background/55 p-4">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--wr-teal-soft)]">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Proved facts
+              </div>
+              <JeffFactList
+                facts={handoff.provedFacts}
+                empty="No proved symptoms, tests, or readings have been captured yet."
+              />
+            </div>
+
+            <div className="rounded-xl border border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10 p-4">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--wr-gold-soft)]">
+                <CircleAlert className="h-3.5 w-3.5" />
+                Suspected, not proven
+              </div>
+              <JeffFactList
+                facts={handoff.suspectedFacts}
+                empty="No suspected causes or part needs are attached."
+                tone="warning"
+              />
+            </div>
+
+            <div className="rounded-xl border border-border bg-background/55 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                Proof photos
+              </p>
+              {handoff.media.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {handoff.media.slice(0, 4).map((item) => {
+                    const href = mediaHref(item);
+                    const label = item.label || item.fileName || "Field photo";
+                    return href ? (
+                      <a
+                        className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-border bg-card/50 p-2 text-sm text-muted-foreground transition-colors hover:bg-secondary"
+                        href={href}
+                        key={item.id}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        <span className="min-w-0 truncate">{label}</span>
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      </a>
+                    ) : (
+                      <div
+                        className="rounded-lg border border-border bg-card/50 p-2 text-sm text-muted-foreground"
+                        key={item.id}
+                      >
+                        {label}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">No proof photos are attached yet.</p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-border bg-background/55 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                Closeout
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {latestCloseout
+                  ? latestCloseout.summary
+                  : "No Jeff closeout draft has been started for this job."}
+              </p>
+              {latestCloseout ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {formatDateTime(latestCloseout.timestamp)} / {latestCloseout.confidence} confidence
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <aside className="space-y-4">
+            <div className="rounded-xl border border-border bg-background/55 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                Needs admin
+              </p>
+              {handoff.blockedEvents.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {handoff.blockedEvents.slice(0, 4).map((event) => (
+                    <div className="rounded-lg border border-[var(--wr-gold)]/25 bg-[var(--wr-gold)]/10 p-3" key={event.id}>
+                      <StatusPill className="border-[var(--wr-gold)]/30 bg-background/40 text-[var(--wr-gold-soft)]">
+                        {eventTypeLabel(event.type)}
+                      </StatusPill>
+                      <p className="mt-2 text-sm leading-relaxed text-[var(--wr-gold-soft)]">
+                        {event.summary}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">No blocked Jeff action is attached.</p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-border bg-background/55 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                Latest field events
+              </p>
+              <div className="mt-3 space-y-2">
+                {handoff.events.slice(0, 4).map((event) => (
+                  <div className="rounded-lg border border-border bg-card/50 p-3" key={event.id}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusPill>{eventTypeLabel(event.type)}</StatusPill>
+                      <span className="text-xs text-muted-foreground">{formatDateTime(event.timestamp)}</span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                      {event.summary}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <CommandLink href={`/jeff/messages?jobId=${promiseId}`} icon={<Sparkles className="h-4 w-4" />} primary>
+                Ask Jeff
+              </CommandLink>
+              <CommandLink href={`/jeff/photo-drop?jobId=${promiseId}`} icon={<ImagePlus className="h-4 w-4" />}>
+                Upload Proof
+              </CommandLink>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {handoff.warnings.length > 0 ? (
+        <p className="mt-4 text-xs text-[var(--wr-gold-soft)]">{handoff.warnings[0]}</p>
+      ) : (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Events: {handoff.storageStatus} / Media: {handoff.mediaStorageStatus}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export const metadata: Metadata = {
   title: "Promise CRM Record",
   robots: {
@@ -1079,7 +1392,11 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
   const economics = computePromiseEconomics(promise.economics);
   const nextProbableVisit = getNextProbableVisit(promise);
   const proof = getProofDisciplineForPromise(promise);
-  const taskQueue = await getOperatorTaskQueue({ promiseId: id, limit: 12 });
+  const [taskQueue, jeffEvents, jeffMedia] = await Promise.all([
+    getOperatorTaskQueue({ promiseId: id, limit: 12 }),
+    listPersistedJeffFieldEvents(id),
+    listPersistedJeffMedia({ jobId: id, limit: 12 }),
+  ]);
   const outbound = getPromiseOutboundSnapshot(promise);
   const playbook = getPlaybookRecommendation(
     `${promise.serviceScope} ${promise.commercialOutcome?.convertedService || ""} ${promise.nextAction}`,
@@ -1116,6 +1433,13 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
   const latestTimeline = timeline.slice(0, 3);
   const openTasks = taskQueue.tasks;
   const topOpenTasks = openTasks.slice(0, 1);
+  const jeffHandoff = buildJeffHandoffSnapshot({
+    events: jeffEvents.events,
+    media: jeffMedia.media,
+    warnings: [...jeffEvents.warnings, ...jeffMedia.warnings],
+    storageStatus: jeffEvents.storageStatus,
+    mediaStorageStatus: jeffMedia.storageStatus,
+  });
 
   return (
     <div className="bg-background pb-12">
@@ -1244,6 +1568,8 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
             </div>
           </section>
         ) : null}
+
+        <JeffHandoffPanel handoff={jeffHandoff} promiseId={promise.id} />
 
         <section id="promise-file" className="rounded-2xl border border-border bg-card/65 p-4 shadow-sm sm:p-5">
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">

@@ -108,6 +108,7 @@ function main() {
   const vapiServer = "src/lib/jeff-field-assistant/vapi-server.ts";
   const usageModule = "src/lib/jeff-field-assistant/openai-usage.ts";
   const actionStateModule = "src/lib/jeff-field-assistant/action-state.ts";
+  const proofLoopScript = "scripts/verify-jeff-single-job-proof-loop.mjs";
 
   if (existsSync(resolve(ROOT, usageModule))) {
     add(checks, "pass", "OpenAI usage module exists", usageModule);
@@ -123,6 +124,17 @@ function main() {
       "blocker",
       "Jeff action-state integrity layer is missing",
       "Tool outcomes need typed DRAFTED/SENT/BLOCKED/FAILED/VERIFIED states before live testing.",
+    );
+  }
+
+  if (existsSync(resolve(ROOT, proofLoopScript))) {
+    add(checks, "pass", "Single-job proof-loop verifier exists", proofLoopScript);
+  } else {
+    add(
+      checks,
+      "blocker",
+      "Single-job proof-loop verifier is missing",
+      "Jeff needs an executable one-job gate before expanding field testing.",
     );
   }
 

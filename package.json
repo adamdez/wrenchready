@@ -11,6 +11,7 @@
     "verify:jeff": "node scripts/verify-jeff-field-assistant.mjs",
     "verify:jeff:vapi": "node scripts/verify-jeff-vapi-server.mjs",
     "verify:jeff:scenarios": "node scripts/verify-jeff-scenarios.mjs",
+    "verify:jeff:proof-loop": "node scripts/verify-jeff-single-job-proof-loop.mjs",
     "verify:jeff:red-team": "node scripts/verify-jeff-red-team.mjs",
     "verify:jeff:production-workspace": "node scripts/verify-jeff-production-workspace.mjs",
     "verify:field-live": "node scripts/verify-diagnostic-tree-live.mjs",

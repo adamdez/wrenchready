@@ -86,6 +86,41 @@ export type JeffExtractedFacts = {
   paymentStatus?: string;
 };
 
+export type JeffFieldFactStatus = "proved" | "suspected";
+
+export type JeffFieldFactEvidenceType =
+  | "technician-report"
+  | "test-performed"
+  | "reading"
+  | "photo"
+  | "tool-result"
+  | "field-event";
+
+export type JeffFieldFactEvidence = {
+  id: string;
+  type: JeffFieldFactEvidenceType;
+  label: string;
+  sourceEventId?: string;
+  sourcePhotoId?: string;
+  value?: string;
+  capturedAt: string;
+};
+
+export type JeffFieldFact = {
+  id: string;
+  status: JeffFieldFactStatus;
+  category: "symptom" | "test" | "reading" | "diagnosis" | "part" | "payment" | "other";
+  label: string;
+  value: string;
+  evidenceIds: string[];
+  sourceEventId?: string;
+};
+
+export type JeffFieldFactLedger = {
+  facts: JeffFieldFact[];
+  evidence: JeffFieldFactEvidence[];
+};
+
 export type JeffFieldEvent = {
   id: string;
   jobId: string;
