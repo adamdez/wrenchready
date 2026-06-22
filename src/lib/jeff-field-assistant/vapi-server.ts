@@ -1717,7 +1717,7 @@ export function reviewJeffTranscript(input: {
     });
   }
 
-  if (hasAny(normalized, ["safe to drive", "keep driving", "drive it anyway"])) {
+  if (hasUnsafeDriveReassurance(transcript)) {
     issues.push({
       severity: "fix-before-field",
       summary: "Transcript may include unsafe drivability reassurance.",
@@ -1763,6 +1763,21 @@ function shouldReviewTranscript(message: VapiServerMessage) {
 
 export function getJeffPilotTranscriptReviews() {
   return getPilotState().transcriptReviews;
+}
+
+function hasUnsafeDriveReassurance(transcript: string) {
+  const sentences = transcript
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((sentence) => sentence.trim().toLowerCase())
+    .filter(Boolean);
+
+  return sentences.some((sentence) => {
+    if (!/(safe to drive|keep driving|drive it anyway|fine to drive|good to drive|ok to drive|okay to drive|it'?ll make it|it will make it)/i.test(sentence)) {
+      return false;
+    }
+
+    return !/(not|isn'?t|ain'?t|don'?t|do not|wouldn'?t|unsafe|no)\b.{0,50}\b(safe to drive|drive|move|keep driving|fine to drive|good to drive|ok to drive|okay to drive|make it)/i.test(sentence);
+  });
 }
 
 export async function handleJeffVapiServerPayload(payload: unknown) {

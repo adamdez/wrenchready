@@ -52,6 +52,14 @@ import {
   resolveJeffLiveSession,
 } from "@/lib/jeff-field-assistant/session";
 import {
+  checkOpenAiBudget,
+  estimateOpenAiRequestTokens,
+  extractOpenAiTokenUsage,
+  recordOpenAiUsage,
+  summarizeOpenAiBudget,
+  summarizeOpenAiUsage,
+} from "@/lib/jeff-field-assistant/openai-usage";
+import {
   listApprovedJeffDurableMemories,
   listPersistedJeffFieldEvents,
   listPersistedJeffDurableMemories,
@@ -2188,6 +2196,37 @@ async function analyzePhotoWithOpenAI(job: JeffFieldJob, photo: JeffFieldPhoto, 
   if (modelSupportsReasoning(model)) {
     requestBody.reasoning = { effort: getJeffReasoningEffort() };
   }
+  const estimatedInputTokens = estimateOpenAiRequestTokens(requestBody);
+  const budget = await checkOpenAiBudget({
+    channel: "jeff-vision",
+    purpose: "field-photo-analysis",
+    model,
+    estimatedInputTokens,
+    estimatedOutputTokens: 700,
+  });
+
+  if (!budget.allowed) {
+    const usageLog = await recordOpenAiUsage({
+      channel: "jeff-vision",
+      purpose: "field-photo-analysis",
+      model,
+      status: "blocked",
+      estimatedInputTokens,
+      estimatedOutputTokens: 700,
+      jobId: job.id,
+      warning: budget.warnings.join(" "),
+      metadata: { photoId: photo.id, storageStatus: photo.storageStatus },
+    });
+
+    return {
+      ok: false,
+      model,
+      analysis: "",
+      warning: [budget.warnings.join(" "), usageLog.warning].filter(Boolean).join(" "),
+      usage: summarizeOpenAiUsage(usageLog.record),
+      budget: summarizeOpenAiBudget(budget),
+    };
+  }
 
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: "POST",
@@ -2199,13 +2238,32 @@ async function analyzePhotoWithOpenAI(job: JeffFieldJob, photo: JeffFieldPhoto, 
   });
 
   const responseBody = await response.json().catch(() => ({}));
+  const usageLog = await recordOpenAiUsage({
+    channel: "jeff-vision",
+    purpose: "field-photo-analysis",
+    model,
+    status: response.ok ? "success" : "error",
+    usage: extractOpenAiTokenUsage(responseBody),
+    estimatedInputTokens,
+    estimatedOutputTokens: 700,
+    requestId: response.headers.get("x-request-id") || undefined,
+    responseId: optionalString(isObject(responseBody) ? responseBody.id : undefined),
+    jobId: job.id,
+    warning: response.ok ? undefined : extractOpenAIErrorMessage(responseBody),
+    metadata: { photoId: photo.id, storageStatus: photo.storageStatus },
+  });
   if (!response.ok) {
     const message = extractOpenAIErrorMessage(responseBody);
     return {
       ok: false,
       model,
       analysis: "",
-      warning: message || `OpenAI photo analysis failed with status ${response.status}.`,
+      warning: [
+        message || `OpenAI photo analysis failed with status ${response.status}.`,
+        usageLog.warning,
+      ].filter(Boolean).join(" "),
+      usage: summarizeOpenAiUsage(usageLog.record),
+      budget: summarizeOpenAiBudget(budget),
     };
   }
 
@@ -2213,7 +2271,9 @@ async function analyzePhotoWithOpenAI(job: JeffFieldJob, photo: JeffFieldPhoto, 
     ok: true,
     model,
     analysis: extractOpenAIText(responseBody),
-    warning: undefined,
+    warning: [...budget.warnings, usageLog.warning].filter(Boolean).join(" ") || undefined,
+    usage: summarizeOpenAiUsage(usageLog.record),
+    budget: summarizeOpenAiBudget(budget),
   };
 }
 
@@ -2270,6 +2330,36 @@ async function analyzeSessionPhotoWithOpenAI(photo: JeffFieldPhoto, question?: s
   if (modelSupportsReasoning(model)) {
     requestBody.reasoning = { effort: getJeffReasoningEffort() };
   }
+  const estimatedInputTokens = estimateOpenAiRequestTokens(requestBody);
+  const budget = await checkOpenAiBudget({
+    channel: "jeff-vision",
+    purpose: "session-photo-analysis",
+    model,
+    estimatedInputTokens,
+    estimatedOutputTokens: 700,
+  });
+
+  if (!budget.allowed) {
+    const usageLog = await recordOpenAiUsage({
+      channel: "jeff-vision",
+      purpose: "session-photo-analysis",
+      model,
+      status: "blocked",
+      estimatedInputTokens,
+      estimatedOutputTokens: 700,
+      warning: budget.warnings.join(" "),
+      metadata: { photoId: photo.id, storageStatus: photo.storageStatus },
+    });
+
+    return {
+      ok: false,
+      model,
+      analysis: "",
+      warning: [budget.warnings.join(" "), usageLog.warning].filter(Boolean).join(" "),
+      usage: summarizeOpenAiUsage(usageLog.record),
+      budget: summarizeOpenAiBudget(budget),
+    };
+  }
 
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: "POST",
@@ -2281,13 +2371,31 @@ async function analyzeSessionPhotoWithOpenAI(photo: JeffFieldPhoto, question?: s
   });
 
   const responseBody = await response.json().catch(() => ({}));
+  const usageLog = await recordOpenAiUsage({
+    channel: "jeff-vision",
+    purpose: "session-photo-analysis",
+    model,
+    status: response.ok ? "success" : "error",
+    usage: extractOpenAiTokenUsage(responseBody),
+    estimatedInputTokens,
+    estimatedOutputTokens: 700,
+    requestId: response.headers.get("x-request-id") || undefined,
+    responseId: optionalString(isObject(responseBody) ? responseBody.id : undefined),
+    warning: response.ok ? undefined : extractOpenAIErrorMessage(responseBody),
+    metadata: { photoId: photo.id, storageStatus: photo.storageStatus },
+  });
   if (!response.ok) {
     const message = extractOpenAIErrorMessage(responseBody);
     return {
       ok: false,
       model,
       analysis: "",
-      warning: message || `OpenAI photo analysis failed with status ${response.status}.`,
+      warning: [
+        message || `OpenAI photo analysis failed with status ${response.status}.`,
+        usageLog.warning,
+      ].filter(Boolean).join(" "),
+      usage: summarizeOpenAiUsage(usageLog.record),
+      budget: summarizeOpenAiBudget(budget),
     };
   }
 
@@ -2295,7 +2403,9 @@ async function analyzeSessionPhotoWithOpenAI(photo: JeffFieldPhoto, question?: s
     ok: true,
     model,
     analysis: extractOpenAIText(responseBody),
-    warning: undefined,
+    warning: [...budget.warnings, usageLog.warning].filter(Boolean).join(" ") || undefined,
+    usage: summarizeOpenAiUsage(usageLog.record),
+    budget: summarizeOpenAiBudget(budget),
   };
 }
 
@@ -3820,7 +3930,12 @@ export async function analyzeFieldPhoto(payload: unknown) {
             model: analysisResult.model,
             prompt: buildSessionPhotoAnalysisPrompt(sessionPhoto, question),
             analysis: analysisResult.analysis,
-            warnings: persistedMedia.warnings,
+            warnings: [
+              ...persistedMedia.warnings,
+              analysisResult.warning,
+            ].filter((warning): warning is string => Boolean(warning)),
+            usage: analysisResult.usage,
+            budget: analysisResult.budget,
             attachmentStatus: "session-inbox",
           },
           photo: summarizePhoto(sessionPhoto),
@@ -3888,7 +4003,11 @@ export async function analyzeFieldPhoto(payload: unknown) {
       model: analysisResult.model,
       prompt: buildPhotoAnalysisPrompt(job, photo, question),
       analysis: analysisResult.analysis,
-      warnings,
+      warnings: [
+        ...warnings,
+        analysisResult.warning,
+      ].filter((warning): warning is string => Boolean(warning)),
+      usage: analysisResult.usage,
     };
     getRuntimeState().photoAnalyses = [
       analysis,
@@ -5390,7 +5509,6 @@ export async function lookupVehicleSpec(payload: unknown = {}) {
   const specType = optionalString(input.specType);
   const item = optionalString(input.item) || optionalString(input.spec);
   const { matches } = await lookupVehicleSpecRecords({ vehicle, specType, item });
-  const verified = matches.filter((match) => match.status === "verified");
   if (matches.length) {
     const lines = matches
       .map((m) => `${m.item}: ${m.value}${m.source ? ` (source: ${m.source})` : ""} [${m.status}]`)

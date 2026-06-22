@@ -290,6 +290,7 @@ export type JeffFieldPhotoAnalysis = {
   prompt: string;
   analysis: string;
   warnings: string[];
+  usage?: Record<string, unknown>;
 };
 
 export type JeffMediaItem = {

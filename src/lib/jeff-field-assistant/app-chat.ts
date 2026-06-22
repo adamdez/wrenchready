@@ -33,6 +33,14 @@ import {
   buildJeffCapabilityPromptContext,
   getJeffCapabilityReport,
 } from "@/lib/jeff-field-assistant/capabilities";
+import {
+  checkOpenAiBudget,
+  estimateOpenAiRequestTokens,
+  extractOpenAiTokenUsage,
+  recordOpenAiUsage,
+  summarizeOpenAiBudget,
+  summarizeOpenAiUsage,
+} from "@/lib/jeff-field-assistant/openai-usage";
 import { jeffFieldAssistantSystemPrompt } from "@/lib/jeff-field-assistant/prompt";
 import {
   fieldSafeJeffNotice,
@@ -1298,8 +1306,45 @@ async function askJeffTextModel(
       },
     ],
   };
+  const estimatedInputTokens = estimateOpenAiRequestTokens(requestBody);
+  const budget = await checkOpenAiBudget({
+    channel: "jeff-text",
+    purpose: "message-reply",
+    model,
+    estimatedInputTokens,
+    estimatedOutputTokens: 500,
+  });
+
+  if (!budget.allowed) {
+    const usageLog = await recordOpenAiUsage({
+      channel: "jeff-text",
+      purpose: "message-reply",
+      model,
+      status: "blocked",
+      estimatedInputTokens,
+      estimatedOutputTokens: 500,
+      jobId: input.jobId,
+      warning: budget.warnings.join(" "),
+      metadata: {
+        contextMode: input.contextMode,
+        actionCount: actions.length,
+        budgetMode: budget.mode,
+      },
+    });
+
+    return {
+      reply:
+        actionFallback ||
+        "I saved that. Jeff hit today's OpenAI budget guard, so keep working from field notes or have Dez raise the limit.",
+      model,
+      warning: [budget.warnings.join(" "), usageLog.warning].filter(Boolean).join(" "),
+      usage: summarizeOpenAiUsage(usageLog.record),
+      budget: summarizeOpenAiBudget(budget),
+    };
+  }
 
   let response: Response;
+  let usageLog: Awaited<ReturnType<typeof recordOpenAiUsage>> | undefined;
   try {
     response = await fetch(OPENAI_RESPONSES_URL, {
       method: "POST",
@@ -1310,27 +1355,71 @@ async function askJeffTextModel(
       body: JSON.stringify(requestBody),
     });
   } catch (error) {
+    usageLog = await recordOpenAiUsage({
+      channel: "jeff-text",
+      purpose: "message-reply",
+      model,
+      status: "error",
+      estimatedInputTokens,
+      estimatedOutputTokens: 500,
+      jobId: input.jobId,
+      warning: error instanceof Error ? error.message : "OpenAI text response failed before Jeff could answer.",
+      metadata: {
+        contextMode: input.contextMode,
+        actionCount: actions.length,
+      },
+    });
     return {
       reply: actionFallback || "I saved your message, but I could not get a live answer from Jeff's text brain yet.",
       model,
-      warning: error instanceof Error ? error.message : "OpenAI text response failed before Jeff could answer.",
+      warning: [
+        error instanceof Error ? error.message : "OpenAI text response failed before Jeff could answer.",
+        usageLog.warning,
+      ].filter(Boolean).join(" "),
+      usage: summarizeOpenAiUsage(usageLog.record),
+      budget: summarizeOpenAiBudget(budget),
     };
   }
   const responseBody = await response.json().catch(() => ({}));
+  usageLog = await recordOpenAiUsage({
+    channel: "jeff-text",
+    purpose: "message-reply",
+    model,
+    status: response.ok ? "success" : "error",
+    usage: extractOpenAiTokenUsage(responseBody),
+    estimatedInputTokens,
+    estimatedOutputTokens: 500,
+    requestId: response.headers.get("x-request-id") || undefined,
+    responseId: optionalString(isObject(responseBody) ? responseBody.id : undefined),
+    jobId: input.jobId,
+    warning: response.ok ? undefined : extractOpenAIErrorMessage(responseBody),
+    metadata: {
+      contextMode: input.contextMode,
+      actionCount: actions.length,
+      fieldContextStatus: fieldContext.status,
+    },
+  });
 
   if (!response.ok) {
     const message = extractOpenAIErrorMessage(responseBody);
     return {
       reply: actionFallback || "I saved your message, but I could not get a live answer from Jeff's text brain yet.",
       model,
-      warning: message || `OpenAI text response failed with status ${response.status}.`,
+      warning: [
+        message || `OpenAI text response failed with status ${response.status}.`,
+        usageLog.warning,
+      ].filter(Boolean).join(" "),
+      usage: summarizeOpenAiUsage(usageLog.record),
+      budget: summarizeOpenAiBudget(budget),
     };
   }
 
   return {
     reply: extractOpenAIText(responseBody) || "I saved that. Tell me what you want me to do next.",
     model,
-    warning: undefined,
+    warning: [...budget.warnings, usageLog.warning].filter(Boolean).join(" ") || undefined,
+    usage: summarizeOpenAiUsage(usageLog.record),
+    budget: summarizeOpenAiBudget(budget),
   };
 }
 
@@ -1429,6 +1518,8 @@ export async function sendJeffAppMessage(payload: unknown) {
       fieldContextWarning: fieldContext.warning,
       attachments: input.attachments,
       warning: answer.warning,
+      usage: answer.usage,
+      budget: answer.budget,
       attachmentStorage: savedAttachments.warnings.length > 0 ? "mixed-or-local" : "google-drive-or-none",
       fieldPhotoStatus: photoRegistration.status,
       mediaStorageStatus: mediaStorage.status,
@@ -1483,6 +1574,8 @@ export async function sendJeffAppMessage(payload: unknown) {
       fieldContextSummary: fieldContext.summary,
       fieldContextWarning: fieldContext.warning,
       warning: answer.warning,
+      usage: answer.usage,
+      budget: answer.budget,
       attachmentStorageWarnings: savedAttachments.warnings,
       fieldPhotoRegistrationWarnings: photoRegistration.warnings,
       mediaStorageWarning: mediaStorage.warning,
