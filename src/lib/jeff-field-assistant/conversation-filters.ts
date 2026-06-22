@@ -22,6 +22,7 @@ const EVALUATION_TEXT_PATTERNS = [
   /\bwrong[- ]secret\b/i,
   /\bwebhook test\b/i,
   /\bverification passed\b/i,
+  /\bpersonal-call-email\b/i,
 ];
 
 function sourceValueText(value: unknown) {

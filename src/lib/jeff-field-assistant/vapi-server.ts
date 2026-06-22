@@ -1269,16 +1269,21 @@ async function upsertOperatorTasksFromVoiceCall(input: {
     },
   };
   const taskWrites: Array<Promise<unknown>> = [];
+  const unresolvedJobBlocker =
+    input.conversation.jobMatchStatus === "unresolved" &&
+    input.conversation.callType !== "personal" &&
+    input.conversation.callType !== "admin" &&
+    input.conversation.callType !== "test";
 
-  if (input.conversation.needsReview || input.conversation.jobMatchStatus === "unresolved") {
+  if (input.conversation.needsReview || unresolvedJobBlocker) {
     taskWrites.push(upsertOperatorTask({
       id: `operator-task-jeff-call-${input.conversation.id}-review`,
       title: `Review Jeff call: ${input.conversation.subjectLabel || input.conversation.jobLabel || "unmatched call"}`,
       detail: input.conversation.reviewReason || input.summary.recommendationSummary || input.summary.summary,
       type: "jeff-review",
-      priority: input.conversation.callType === "admin" || input.conversation.jobMatchStatus === "unresolved" ? "high" : "normal",
+      priority: input.conversation.callType === "admin" || unresolvedJobBlocker ? "high" : "normal",
       owner: "Adam",
-      blocker: input.conversation.jobMatchStatus === "unresolved" ? "Call is not attached to a confirmed CRM job." : undefined,
+      blocker: unresolvedJobBlocker ? "Call is not attached to a confirmed CRM job." : undefined,
       ...common,
     }));
   }

@@ -427,7 +427,7 @@ async function listPersistedTasks(promiseId?: string) {
   const promiseFilter = promiseId ? `&promise_id=eq.${encodeURIComponent(promiseId)}` : "";
   try {
     const rows = await supabaseRestRequest<OperatorTaskRow[]>(
-      `wrenchready_operator_task?select=*&order=updated_at.desc&limit=200${promiseFilter}`,
+      `wrenchready_operator_task?select=*&order=updated_at.desc&limit=1000${promiseFilter}`,
       { method: "GET" },
     );
     return { tasks: rows.map(mapRow), warning: undefined };
@@ -486,13 +486,13 @@ export async function getOperatorTaskQueue(options: { promiseId?: string; limit?
     if (!persisted) combinedById.set(task.id, task);
   }
 
-  const active = sortTasks([...combinedById.values()].filter((task) => ACTIVE_TASK_STATUSES.has(task.status)))
-    .slice(0, Math.max(1, Math.min(options.limit || 60, 200)));
+  const active = sortTasks([...combinedById.values()].filter((task) => ACTIVE_TASK_STATUSES.has(task.status)));
+  const visible = active.slice(0, Math.max(1, Math.min(options.limit || 60, 200)));
   const now = Date.now();
 
   return {
     generatedAt: nowIso(),
-    tasks: active,
+    tasks: visible,
     counts: {
       open: active.filter((task) => task.status === "open").length,
       inProgress: active.filter((task) => task.status === "in-progress").length,

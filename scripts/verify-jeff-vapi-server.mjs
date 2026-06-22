@@ -290,7 +290,7 @@ const personalCall = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
     type: "end-of-call-report",
     call: {
-      id: `personal-call-email-${runId}`,
+      id: testCallId("personal-call-email"),
       assistantId: "assistant-test",
       customer: { number: "+15095550102" },
     },

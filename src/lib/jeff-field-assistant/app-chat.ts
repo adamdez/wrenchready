@@ -997,6 +997,16 @@ function vehicleSpecActionSummary(data: unknown) {
   return `Saved specs — relay VERIFIED values EXACTLY/verbatim (no rounding, no unit conversion, nothing added): ${rows.join("; ")}`;
 }
 
+function routineFieldLimitAction(action: MessageToolAction) {
+  return action.tool === "purchase_or_reserve_part" || action.tool === "find_nearby_parts_stores";
+}
+
+function actionNeedsSystemBlocker(action: MessageToolAction) {
+  if (action.actionState.state === "failed") return true;
+  if (action.actionState.state !== "blocked") return false;
+  return !routineFieldLimitAction(action);
+}
+
 function buildActionContext(actions: MessageToolAction[]) {
   if (actions.length === 0) return "- No tool-backed action was run for this message.";
 
@@ -1051,9 +1061,21 @@ async function upsertOperatorTasksFromMessage(input: JeffAppMessageInput, params
     },
   };
   const taskWrites: Array<Promise<unknown>> = [];
-  const blockedAction = params.actions.find((action) => !action.success || action.warning);
+  const systemBlockedAction = params.actions.find(actionNeedsSystemBlocker);
+  const hasUnattachedAttachment = Boolean(input.attachments?.length);
+  const shouldReviewUnattachedMessage =
+    !input.jobId &&
+    input.contextMode !== "parts-only" &&
+    (
+      input.contextMode === "admin" ||
+      input.contextMode === "different-job" ||
+      hasUnattachedAttachment
+    );
 
-  if (!input.jobId && input.contextMode !== "parts-only") {
+  if (shouldReviewUnattachedMessage) {
+    const reviewBlocker = input.contextMode === "different-job" || hasUnattachedAttachment
+      ? "Message needs a confirmed CRM job before Jeff can save it to a job file."
+      : undefined;
     taskWrites.push(upsertOperatorTask({
       id: `operator-task-jeff-message-${params.conversationId}-review`,
       title: `Review Jeff message: ${input.inferredVehicle || input.inferredPartName || "unmatched message"}`,
@@ -1061,7 +1083,7 @@ async function upsertOperatorTasksFromMessage(input: JeffAppMessageInput, params
       type: "jeff-review",
       priority: input.contextMode === "admin" || input.contextMode === "different-job" ? "high" : "normal",
       owner: "Adam",
-      blocker: "Message is not attached to a confirmed CRM job.",
+      blocker: reviewBlocker,
       ...common,
     }));
   }
@@ -1078,30 +1100,31 @@ async function upsertOperatorTasksFromMessage(input: JeffAppMessageInput, params
     }));
   }
 
-  if (params.actions.some((action) => ["prepare_parts_cart", "find_nearby_parts_stores", "purchase_or_reserve_part"].includes(action.tool))) {
+  if (params.actions.some((action) => ["prepare_parts_cart", "purchase_or_reserve_part"].includes(action.tool))) {
+    const purchaseBlocked = params.actions.some((action) => action.tool === "purchase_or_reserve_part");
     taskWrites.push(upsertOperatorTask({
       id: `operator-task-jeff-message-${params.conversationId}-parts`,
       title: "Parts follow-up from Simon",
-      detail: params.summary.recommendationSummary || input.text || "Simon asked Jeff for parts support.",
+      detail: [
+        params.summary.recommendationSummary || input.text || "Simon asked Jeff for parts support.",
+        purchaseBlocked ? "Manual step: verify fitment, availability, price, and pay/reserve outside Jeff." : undefined,
+      ].filter(Boolean).join(" "),
       type: "parts",
       priority: "high",
       owner: "Simon",
-      blocker: blockedAction?.tool === "purchase_or_reserve_part"
-        ? "Jeff can help find stores and inventory questions, but purchasing/reserving is blocked."
-        : undefined,
       ...common,
     }));
   }
 
-  if (blockedAction) {
+  if (systemBlockedAction) {
     taskWrites.push(upsertOperatorTask({
       id: `operator-task-jeff-message-${params.conversationId}-blocked`,
-      title: `Unblock Jeff: ${blockedAction.tool}`,
-      detail: blockedAction.warning || blockedAction.assistantSay || input.text || "Jeff reported a blocked or partial tool action.",
+      title: `Unblock Jeff: ${systemBlockedAction.tool}`,
+      detail: systemBlockedAction.warning || systemBlockedAction.assistantSay || input.text || "Jeff reported a blocked or partial tool action.",
       type: "system",
       priority: "high",
       owner: "Adam",
-      blocker: blockedAction.warning || "Tool action was blocked or partial.",
+      blocker: systemBlockedAction.warning || "Tool action was blocked or partial.",
       ...common,
     }));
   }

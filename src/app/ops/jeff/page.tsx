@@ -391,6 +391,9 @@ function OperatorTaskWorkbenchCard({ task }: { task: OperatorTask }) {
 }
 
 function OperatorTaskQueueSection({ queue }: { queue: OperatorTaskQueue }) {
+  const totalActive = queue.counts.open + queue.counts.inProgress + queue.counts.blocked;
+  const hiddenActive = Math.max(0, totalActive - queue.tasks.length);
+
   return (
     <section id="jeff-open-tasks" className="mt-6 scroll-mt-6 rounded-3xl border border-border bg-card/50 p-5 sm:p-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -406,6 +409,9 @@ function OperatorTaskQueueSection({ queue }: { queue: OperatorTaskQueue }) {
         <div className="flex flex-wrap gap-2 text-[11px]">
           <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-red-100">
             blocked: {queue.counts.blocked}
+          </span>
+          <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-sky-100">
+            open: {queue.counts.open + queue.counts.inProgress}
           </span>
           <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-amber-100">
             critical: {queue.counts.critical}
@@ -426,7 +432,8 @@ function OperatorTaskQueueSection({ queue }: { queue: OperatorTaskQueue }) {
       </div>
       {queue.tasks.length > 0 ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          {queue.tasks.length} active task{queue.tasks.length === 1 ? "" : "s"}. Complete or dismiss reviewed items to keep Jeff moving fast.
+          Showing {queue.tasks.length} of {totalActive} active task{totalActive === 1 ? "" : "s"}
+          {hiddenActive ? `; ${hiddenActive} more are outside this view.` : "."} Complete or dismiss reviewed items to keep Jeff moving fast.
         </p>
       ) : null}
     </section>
