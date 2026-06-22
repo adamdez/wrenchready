@@ -34,7 +34,7 @@ Stray repo artifacts: 6 Python media-generation scripts (`gen-favicons.py`, `com
 **Live FAL API key hardcoded in committed Python scripts**
 - **Severity: Critical**
 - **Location:** `composite-and-submit.py:44`, `gen-rotor-clip.py:6`, `poll-rotor.py:5` (and confirmed in committed `HEAD`)
-- **Evidence:** `FAL_KEY = "2def44b9-e57c-4600-8370-ebf9d948787a:1f3138a0e84bcff05ca5e8c56ab2571d"` appears verbatim in three tracked files. `git show HEAD:poll-rotor.py | grep 2def44b9` returns a match — it is in version history, not just the working tree.
+- **Evidence:** `FAL_KEY = "<REDACTED — exposed fal.ai key; revoke/delete it on fal.ai>"` appeared verbatim in three tracked files (now read from `process.env`). The literal value was also committed to version history, not just the working tree. Key value redacted from this doc 2026-06-21; it remains valid until revoked on fal.ai.
 - **Why it matters:** This is a real, active fal.ai credential committed to the repo. Anyone with repo access (or anyone the repo is ever shared/published to) can run paid video-generation jobs on this account. Unlike the `.env*` files, these `.py` files are *not* gitignored and *not* in `.vercelignore`, so they also ship into the Vercel build context.
 - **Recommendation:** Rotate the FAL key immediately. Remove it from the files, read it from `process.env`/an env var, and purge it from git history (`git filter-repo`). Add a secret scanner (gitleaks/trufflehog) to a pre-commit hook and CI.
 
