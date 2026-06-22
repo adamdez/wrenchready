@@ -1,4 +1,7 @@
 import type {
+  JeffActionStateSnapshot,
+} from "@/lib/jeff-field-assistant/action-state";
+import type {
   PromiseFieldExecutionPacket,
   PromisePaymentCollection,
   PromiseRecord,
@@ -398,6 +401,7 @@ export type JeffToolResult<T> = {
   assistantSay: string;
   data: T;
   warnings: string[];
+  actionState: JeffActionStateSnapshot;
 };
 
 export type JeffVapiToolSchema = {

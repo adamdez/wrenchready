@@ -9,10 +9,13 @@ Purpose: identify fragile Jeff wiring before Simon does more live field testing,
 - Message Jeff text replies log backend-owned OpenAI usage through `src/lib/jeff-field-assistant/openai-usage.ts`.
 - Field/session photo analysis logs backend-owned OpenAI usage through the same path.
 - Usage entries are written to the Jeff local data store as `openai-usage.json`.
+- Jeff tool results now carry a typed action state (`pending`, `drafted`, `sent`, `blocked`, `failed`, `verified`) through `src/lib/jeff-field-assistant/action-state.ts`.
+- Message Jeff renders state-backed action phrases and guards against unsupported claims like sent/booked/charged/ordered when no backend state proves them.
 - Each Message Jeff conversation now carries usage and budget metadata in `sourcePayload` and summary metadata.
 - Budget checks are warning-first by default and only block calls when `JEFF_OPENAI_BUDGET_MODE=block` and a daily token or call budget is configured.
 - `npm run eval:jeff` is deterministic-only by default. The LLM judge is now opt-in with `npm run eval:jeff:judge` or `npm run eval:jeff -- --judge`.
 - `npm run audit:jeff:live` inspects the local wiring without calling OpenAI, Vapi, Twilio, or Stripe.
+- `npm run audit:jeff:actions` checks that the action-state integrity layer is wired into tool results, Message Jeff, and Vapi failures.
 
 ## Budget Environment
 

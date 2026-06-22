@@ -49,6 +49,7 @@ import {
   getJeffLiveSession,
   upsertJeffLiveSession,
 } from "@/lib/jeff-field-assistant/session";
+import { makeJeffActionState } from "@/lib/jeff-field-assistant/action-state";
 import { upsertOperatorTask } from "@/lib/promise-crm/operator-tasks";
 import type {
   JeffConversation,
@@ -848,12 +849,19 @@ async function handleToolCalls(message: VapiServerMessage) {
     const toolCallId = call.id || makeId("tool-call");
 
     if (!handler || !call.name) {
+      const assistantSay = "Unknown Jeff field assistant tool.";
       results.push({
         name: call.name || "unknown_tool",
         toolCallId,
         result: JSON.stringify({
           success: false,
-          error: "Unknown Jeff field assistant tool.",
+          error: assistantSay,
+          actionState: makeJeffActionState({
+            tool: call.name || "unknown_tool",
+            success: false,
+            assistantSay,
+            warnings: [assistantSay],
+          }),
         }),
       });
       continue;
@@ -886,6 +894,13 @@ async function handleToolCalls(message: VapiServerMessage) {
           warnings: [
             "One tool failed, but the rest of the Vapi tool turn stayed isolated.",
           ],
+          actionState: makeJeffActionState({
+            tool: call.name,
+            success: false,
+            assistantSay:
+              "That Jeff tool failed. Keep helping from the visible job context and ask Simon to retry the action if it still matters.",
+            warnings: [messageText],
+          }),
         }),
       });
     }

@@ -107,11 +107,23 @@ function main() {
   const tools = "src/lib/jeff-field-assistant/tools.ts";
   const vapiServer = "src/lib/jeff-field-assistant/vapi-server.ts";
   const usageModule = "src/lib/jeff-field-assistant/openai-usage.ts";
+  const actionStateModule = "src/lib/jeff-field-assistant/action-state.ts";
 
   if (existsSync(resolve(ROOT, usageModule))) {
     add(checks, "pass", "OpenAI usage module exists", usageModule);
   } else {
     add(checks, "blocker", "OpenAI usage module is missing", "Backend-owned OpenAI calls cannot be traced.");
+  }
+
+  if (existsSync(resolve(ROOT, actionStateModule)) && codeContains(appChat, /enforceJeffActionClaims/)) {
+    add(checks, "pass", "Jeff action-state integrity layer exists", actionStateModule);
+  } else {
+    add(
+      checks,
+      "blocker",
+      "Jeff action-state integrity layer is missing",
+      "Tool outcomes need typed DRAFTED/SENT/BLOCKED/FAILED/VERIFIED states before live testing.",
+    );
   }
 
   if (codeContains(appChat, /recordOpenAiUsage/) && codeContains(appChat, /checkOpenAiBudget/)) {

@@ -34,6 +34,12 @@ import {
   getJeffCapabilityReport,
 } from "@/lib/jeff-field-assistant/capabilities";
 import {
+  describeJeffActionState,
+  enforceJeffActionClaims,
+  normalizeJeffActionState,
+  type JeffActionStateSnapshot,
+} from "@/lib/jeff-field-assistant/action-state";
+import {
   checkOpenAiBudget,
   estimateOpenAiRequestTokens,
   extractOpenAiTokenUsage,
@@ -95,6 +101,7 @@ type MessageToolAction = {
   assistantSay?: string;
   warning?: string;
   data?: unknown;
+  actionState: JeffActionStateSnapshot;
 };
 
 type MessageFieldContext = {
@@ -522,6 +529,13 @@ function messageActionFromResult(result: unknown, fallbackTool = "jeff_tool"): M
     assistantSay: optionalString(value.assistantSay),
     warning: warnings[0],
     data: isObject(value.data) ? value.data : value,
+    actionState: normalizeJeffActionState(value.actionState, {
+      tool: optionalString(value.tool) || fallbackTool,
+      success: value.success === true,
+      assistantSay: optionalString(value.assistantSay),
+      data: isObject(value.data) ? value.data : value,
+      warnings,
+    }),
   };
 }
 
@@ -541,6 +555,12 @@ async function runMessageTool(
       assistantSay:
         "That Jeff action failed. I can still help from the message and visible context, but retry the action if it matters.",
       warning: message,
+      actionState: normalizeJeffActionState(undefined, {
+        tool,
+        success: false,
+        assistantSay: "That Jeff action failed. I can still help from the message and visible context, but retry the action if it matters.",
+        warnings: [message],
+      }),
     };
   }
 }
@@ -986,8 +1006,13 @@ function buildActionContext(actions: MessageToolAction[]) {
       const cartSummary = action.tool === "prepare_parts_cart" ? partsCartActionSummary(action.data) : undefined;
       const knowledgeSummary = action.tool === "search_wrenchready_knowledge" ? knowledgeActionSummary(action.data) : undefined;
       const specSummary = action.tool === "lookup_vehicle_spec" ? vehicleSpecActionSummary(action.data) : undefined;
+      const stateSummary = describeJeffActionState({
+        category: action.actionState.category,
+        state: action.actionState.state,
+        data: action.data,
+      });
       return [
-        `- ${action.tool}: ${action.success ? "success" : "blocked/failed"}${action.assistantSay ? ` - ${action.assistantSay}` : ""}${action.warning ? ` Warning: ${action.warning}` : ""}`,
+        `- ${action.tool}: ${action.actionState.state.toUpperCase()} - ${stateSummary}${action.assistantSay ? ` Assistant-facing result: ${action.assistantSay}` : ""}${action.warning ? ` Warning: ${action.warning}` : ""}`,
         knowledgeSummary ? `  ${knowledgeSummary.replace(/\n/g, "\n  ")}` : undefined,
         partsSummary ? `  ${partsSummary.replace(/\n/g, "\n  ")}` : undefined,
         cartSummary ? `  ${cartSummary.replace(/\n/g, "\n  ")}` : undefined,
@@ -1021,6 +1046,7 @@ async function upsertOperatorTasksFromMessage(input: JeffAppMessageInput, params
         tool: action.tool,
         success: action.success,
         warning: action.warning,
+        actionState: action.actionState,
       })),
     },
   };
@@ -1414,10 +1440,20 @@ async function askJeffTextModel(
     };
   }
 
+  const rawReply = extractOpenAIText(responseBody) || "I saved that. Tell me what you want me to do next.";
+  const claimGuard = enforceJeffActionClaims(
+    rawReply,
+    actions.map((action) => action.actionState),
+  );
+
   return {
-    reply: extractOpenAIText(responseBody) || "I saved that. Tell me what you want me to do next.",
+    reply: claimGuard.reply,
     model,
-    warning: [...budget.warnings, usageLog.warning].filter(Boolean).join(" ") || undefined,
+    warning: [
+      ...budget.warnings,
+      usageLog.warning,
+      ...claimGuard.warnings.map((warning) => `Action-state guard: ${warning}`),
+    ].filter(Boolean).join(" ") || undefined,
     usage: summarizeOpenAiUsage(usageLog.record),
     budget: summarizeOpenAiBudget(budget),
   };

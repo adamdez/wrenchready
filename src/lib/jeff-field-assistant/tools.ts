@@ -15,6 +15,7 @@ import {
 import { getJeffCapabilityReport } from "@/lib/jeff-field-assistant/capabilities";
 import { searchWrenchReadyKnowledgeFiles } from "@/lib/jeff-field-assistant/knowledge";
 import { getJeffOperatingContextPacket } from "@/lib/jeff-field-assistant/operating-context";
+import { makeJeffActionState } from "@/lib/jeff-field-assistant/action-state";
 import { buildDiagnosticTreeSummary } from "@/lib/promise-crm/diagnostic-tree";
 import {
   decodeVinViaNhtsa,
@@ -2048,6 +2049,13 @@ function result<T>(tool: string, assistantSay: string, data: T, warnings: string
     assistantSay,
     data,
     warnings,
+    actionState: makeJeffActionState({
+      tool,
+      success: true,
+      assistantSay,
+      data,
+      warnings,
+    }),
   };
 }
 
@@ -2058,6 +2066,13 @@ function blocked<T>(tool: string, assistantSay: string, data: T, warnings: strin
     assistantSay,
     data,
     warnings,
+    actionState: makeJeffActionState({
+      tool,
+      success: false,
+      assistantSay,
+      data,
+      warnings,
+    }),
   };
 }
 
