@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendHighRiskInboundAlert } from "@/lib/promise-crm/alerts";
+import { sendNewAppointmentAlert } from "@/lib/promise-crm/alerts";
 import { createInboundRecord } from "@/lib/promise-crm/server";
 import { sendOpsWebhook } from "@/lib/promise-crm/webhooks";
 import { readEnv } from "@/lib/env";
@@ -153,7 +153,7 @@ async function handler(request: NextRequest) {
   });
 
   if (inbound) {
-    await sendHighRiskInboundAlert(inbound).catch(() => false);
+    await sendNewAppointmentAlert(inbound).catch(() => false);
   }
 
   const relayTarget = normalizePhone(readEnv("TWILIO_FORWARD_TO_PHONE"));

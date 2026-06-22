@@ -3,6 +3,7 @@ import { readEnv } from "@/lib/env";
 
 type AlertInbound = Pick<
   InboundRecord,
+  | "source"
   | "id"
   | "customer"
   | "vehicle"
@@ -37,8 +38,13 @@ function vehicleLabel(vehicle: AlertInbound["vehicle"]) {
 }
 
 export function buildNewAppointmentAlertText(inbound: AlertInbound) {
+  const header = inbound.source === "text"
+    ? "NEW WrenchReady text - screen now"
+    : inbound.source === "voicemail" || inbound.source === "phone"
+      ? "New WrenchReady call/voicemail - screen now"
+      : "New WrenchReady request - not promised yet";
   const lines = [
-    "New WrenchReady request - not promised yet",
+    header,
     `Customer: ${inbound.customer.name}`,
     `Phone: ${inbound.customer.phone}`,
     inbound.customer.email ? `Email: ${inbound.customer.email}` : null,

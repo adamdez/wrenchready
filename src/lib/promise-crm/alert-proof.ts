@@ -7,6 +7,7 @@ import { getIntegrationSnapshot } from "@/lib/promise-crm/integrations";
 
 const sampleInbound = {
   id: "sample-inbound-001",
+  source: "text" as const,
   customer: {
     name: "Sample Customer",
     phone: "(509) 000-0000",
