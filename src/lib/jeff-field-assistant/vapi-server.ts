@@ -203,6 +203,102 @@ function stringListFromTranscript(transcript: string, patterns: string[], limit 
   return values;
 }
 
+const SPOKEN_NUMBER_VALUES: Record<string, number> = {
+  oh: 0,
+  zero: 0,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+  twenty: 20,
+  thirty: 30,
+  forty: 40,
+  fifty: 50,
+  sixty: 60,
+  seventy: 70,
+  eighty: 80,
+  ninety: 90,
+};
+
+const SPOKEN_YEAR_WORD_PATTERN =
+  "(?:oh|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)";
+
+function spokenNumberValue(words: string) {
+  const tokens = words
+    .toLowerCase()
+    .replace(/\band\b/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (tokens.length === 0) return 0;
+  if (tokens.length === 1) return SPOKEN_NUMBER_VALUES[tokens[0]];
+  if (tokens.every((token) => SPOKEN_NUMBER_VALUES[token] !== undefined)) {
+    return tokens.reduce((sum, token) => sum + SPOKEN_NUMBER_VALUES[token], 0);
+  }
+  return undefined;
+}
+
+function spokenYearToDigits(match: string) {
+  const text = match.toLowerCase().replace(/\s+/g, " ").trim();
+
+  if (text.startsWith("nineteen ")) {
+    const suffix = spokenNumberValue(text.replace(/^nineteen\s+/, ""));
+    return suffix === undefined ? match : String(1900 + suffix);
+  }
+
+  if (text === "two thousand") return "2000";
+  if (text.startsWith("two thousand ")) {
+    const suffix = spokenNumberValue(text.replace(/^two thousand\s+(?:and\s+)?/, ""));
+    return suffix === undefined ? match : String(2000 + suffix);
+  }
+
+  if (text.startsWith("twenty ")) {
+    const suffix = spokenNumberValue(text.replace(/^twenty\s+/, ""));
+    if (suffix === undefined) return match;
+    return String(suffix < 10 ? 2020 + suffix : 2000 + suffix);
+  }
+
+  return match;
+}
+
+function normalizeSpokenVehicleText(transcript: string) {
+  const normalizedYears = transcript
+    .replace(
+      new RegExp(`\\bnineteen\\s+${SPOKEN_YEAR_WORD_PATTERN}(?:\\s+${SPOKEN_YEAR_WORD_PATTERN})?\\b`, "gi"),
+      spokenYearToDigits,
+    )
+    .replace(
+      new RegExp(`\\btwo thousand(?:\\s+and)?(?:\\s+${SPOKEN_YEAR_WORD_PATTERN}(?:\\s+${SPOKEN_YEAR_WORD_PATTERN})?)?\\b`, "gi"),
+      spokenYearToDigits,
+    )
+    .replace(
+      new RegExp(`\\btwenty\\s+${SPOKEN_YEAR_WORD_PATTERN}(?:\\s+${SPOKEN_YEAR_WORD_PATTERN})?\\b`, "gi"),
+      spokenYearToDigits,
+    );
+
+  return normalizedYears
+    .replace(/\bFord\s+f\s*(?:minus\s*)?one\s+hundred\s+fifty\b/gi, "Ford F-150")
+    .replace(/\bFord\s+f\s*(?:minus\s*)?one\s+fifty\b/gi, "Ford F-150")
+    .replace(/\bFord\s+f[-\s]?150\b/gi, "Ford F-150")
+    .replace(/\s+/g, " ");
+}
+
 function transcriptReadings(transcript: string) {
   const readings = transcript.match(/\b\d+(?:\.\d+)?\s?(?:v|volts|volt|amps|amp|ohms|ohm|psi|%)\b/gi) || [];
   return [...new Set(readings.map((reading) => reading.trim()))].slice(0, 8);
@@ -264,7 +360,8 @@ function subjectLabelFromTranscript(
 ) {
   if (jobLabel) return jobLabel;
 
-  const normalized = transcript.replace(/\s+/g, " ");
+  const normalized = normalizeSpokenVehicleText(transcript);
+
   const fordMatch = normalized.match(/\b(?:19|20)\d{2}\s+Ford\s+(?:F[-\s]?150|F one fifty|F150|truck|pickup)\b/i);
   if (fordMatch) return fordMatch[0].replace(/\bf one fifty\b/i, "F-150");
 
@@ -276,20 +373,37 @@ function subjectLabelFromTranscript(
 }
 
 function emailRequestedFromTranscript(transcript: string) {
-  const normalized = transcript.toLowerCase();
+  const normalized = (simonOnlyTranscript(transcript) || transcript).toLowerCase().replace(/\s+/g, " ");
   return hasAny(normalized, [
     "send it to me in an email",
     "send me an email",
     "email it to me",
-    "compile all of that information and send it",
+    "to my email",
+    "over email",
+    "by email",
+    "via email",
+    "email the diagnostic tree",
+    "email the yes",
     "email me",
-  ]);
+    "compile all of that information and send it",
+  ]) ||
+    /\bsend\b.{0,90}\b(email|e-mail)\b/i.test(normalized) ||
+    /\b(email|e-mail)\b.{0,90}\b(me|simon|tree|recap|summary)\b/i.test(normalized);
+}
+
+function writtenDiagnosticTreeRequestedFromTranscript(transcript: string) {
+  const normalized = (simonOnlyTranscript(transcript) || transcript).toLowerCase().replace(/\s+/g, " ");
+  return /\b(send|sent|then|email|text)\b.{0,80}\b(diagnostic\s+tree|diag\s+tree|yes[,/\s-]*no\s+tree|yes\s+or\s+no\s+tree)\b/i.test(normalized) ||
+    /\b(diagnostic\s+tree|diag\s+tree|yes[,/\s-]*no\s+tree|yes\s+or\s+no\s+tree)\b.{0,80}\b(to me|my email|over email|by email|via email|text me|send it)\b/i.test(normalized);
 }
 
 function requestedFollowUpsFromTranscript(transcript: string) {
   const followUps: string[] = [];
   if (emailRequestedFromTranscript(transcript)) {
     followUps.push("Email Simon a recap of the diagnostic notes and next tests.");
+  }
+  if (!followUps.length && writtenDiagnosticTreeRequestedFromTranscript(transcript)) {
+    followUps.push("Send Simon the requested yes/no diagnostic tree recap.");
   }
   if (hasAny(transcript.toLowerCase(), ["send me a link", "text me", "send it by text"])) {
     followUps.push("Send Simon a text recap or link.");
@@ -335,7 +449,23 @@ function officeSentences(text: string, patterns: string[], limit = 8) {
 
 function isOfficeJobIntakeTranscript(transcript: string, callType?: ReturnType<typeof classifyCallType>) {
   const text = (simonOnlyTranscript(transcript) || transcript).toLowerCase();
-  if (callType !== "admin" && !hasAny(text, ["schedule", "quote", "estimate", "store some data", "customer"])) {
+  const officeIntent =
+    hasAny(text, [
+      "schedule",
+      "quote",
+      "estimate",
+      "store some data",
+      "previous client",
+      "past job",
+      "not an active job",
+      "send the details",
+      "send it to dez",
+      "send it to des",
+      "send it to diaz",
+    ]) ||
+    /\bsend\b.{0,80}\b(details|information|info|quote|estimate)\b.{0,40}\b(dez|des|diaz|adam)\b/i.test(text);
+
+  if (callType !== "admin" && !officeIntent) {
     return false;
   }
 
@@ -343,7 +473,6 @@ function isOfficeJobIntakeTranscript(transcript: string, callType?: ReturnType<t
     "schedule",
     "quote",
     "estimate",
-    "customer",
     "previous client",
     "past job",
     "not an active job",
@@ -421,11 +550,11 @@ function compactOfficeJobIntake(input: {
     "Schedule must be confirmed against CRM, calendar, route, parts/worksite constraints, and customer availability before promising a window.",
   ].filter((entry): entry is string => Boolean(entry));
   const nextActions = [
-    "Create or attach the live Tammy Wilson job workspace.",
+    `Create or attach the live CRM job workspace${label ? ` for ${label}` : " for this customer/vehicle"}.`,
     "Turn Simon's request into a Dez quote/schedule handoff, not a raw transcript.",
     "Draft the quote as a two-hour diagnostic/exploration block with explicit additional-quote caveat unless Dez changes the billing rule.",
-    "Confirm Monday as an exact calendar date/window before customer-facing scheduling.",
-    "Carry forward the prior parasitic-draw diagnostic recap if this is the same Tammy Chrysler job.",
+    "Confirm the requested calendar date/window before customer-facing scheduling.",
+    "Carry forward prior diagnostic context only after matching the actual customer and vehicle.",
   ];
   const summary = input.rawSummary?.trim() ||
     `Office job intake${label ? ` for ${label}` : ""}: Simon asked Jeff to preserve job context and/or prepare quote/schedule follow-up. Needs a live CRM job before customer-facing promises.`;
@@ -451,6 +580,7 @@ function compactOfficeJobIntake(input: {
     requestedFollowUps,
     emailRequested: emailRequestedFromTranscript(transcript),
     emailStatus: emailRequestedFromTranscript(transcript) ? "requested" as const : "none" as const,
+    writtenDiagnosticTreeRequested: writtenDiagnosticTreeRequestedFromTranscript(transcript),
     blockers,
     customerSafeRecap: undefined,
     confidence: "low" as const,
@@ -481,8 +611,8 @@ function compactTranscript(input: {
     shortOrMissed
       ? "Short or unanswered Jeff call. No usable Simon request was captured."
       : rawSummary ||
-        (transcript
-          ? transcript.replace(/\s+/g, " ").slice(0, 420)
+        (extractionTranscript || transcript
+          ? (extractionTranscript || transcript).replace(/\s+/g, " ").slice(0, 420)
           : "No transcript was captured for this Jeff call.");
   const knownFacts = shortOrMissed
     ? []
@@ -492,15 +622,27 @@ function compactTranscript(input: {
         "customer",
         "vehicle",
         "job",
+        "rough",
+        "idle",
+        "shift",
+        "mph",
+        "miles per hour",
+        "start",
+        "dies",
+        "gas",
         "battery",
         "starter",
         "no-start",
         "no start",
         "part",
+        "fuel filter",
+        "distributor",
+        "cap",
+        "rotor",
         "fuel pump",
       ], 5),
     ].filter((entry): entry is string => Boolean(entry));
-  const testsPerformed = shortOrMissed ? [] : stringListFromTranscript(transcript, [
+  const testsPerformed = shortOrMissed ? [] : stringListFromTranscript(extractionTranscript, [
     "test",
     "checked",
     "check",
@@ -510,11 +652,16 @@ function compactTranscript(input: {
     "scan",
     "code",
   ]);
-  const readings = shortOrMissed ? [] : transcriptReadings(transcript);
-  const suspectedIssues = shortOrMissed ? [] : stringListFromTranscript(transcript, [
+  const readings = shortOrMissed ? [] : transcriptReadings(extractionTranscript);
+  const suspectedIssues = shortOrMissed ? [] : stringListFromTranscript(extractionTranscript, [
     "suspect",
+    "suspicion",
     "likely",
     "points to",
+    "rough",
+    "misfire",
+    "shift",
+    "idle",
     "starter",
     "battery",
     "cable",
@@ -524,12 +671,13 @@ function compactTranscript(input: {
     "pump",
   ], 5);
   const unprovenAssumptions = shortOrMissed ? [] : [
-    ...stringListFromTranscript(transcript, ["not proved", "verify", "confirm", "uncertain", "need to"], 5),
+    ...stringListFromTranscript(extractionTranscript, ["not proved", "verify", "confirm", "uncertain", "need to"], 5),
   ];
-  const proofNeeded = shortOrMissed ? [] : stringListFromTranscript(transcript, ["photo", "evidence", "scan report", "vin", "odometer", "label"], 5);
-  const nextActions = shortOrMissed ? [] : stringListFromTranscript(transcript, ["next", "do this", "check", "verify", "send", "upload"], 6);
+  const proofNeeded = shortOrMissed ? [] : stringListFromTranscript(extractionTranscript, ["photo", "evidence", "scan report", "vin", "odometer", "label"], 5);
+  const nextActions = shortOrMissed ? [] : stringListFromTranscript(extractionTranscript, ["next", "do this", "check", "verify", "send", "upload", "diagnostic tree", "yes", "email"], 6);
   const requestedFollowUps = shortOrMissed ? [] : requestedFollowUpsFromTranscript(transcript);
   const emailRequested = shortOrMissed ? false : emailRequestedFromTranscript(transcript);
+  const writtenDiagnosticTreeRequested = shortOrMissed ? false : writtenDiagnosticTreeRequestedFromTranscript(transcript);
   const blockers = [
     !input.jobId &&
       !shortOrMissed &&
@@ -574,6 +722,7 @@ function compactTranscript(input: {
     requestedFollowUps,
     emailRequested,
     emailStatus: emailRequested ? "requested" as const : "none" as const,
+    writtenDiagnosticTreeRequested,
     blockers,
     customerSafeRecap: shortOrMissed ? undefined : rawSummary,
     confidence: transcript && input.jobId ? "medium" as const : "low" as const,
@@ -1140,11 +1289,13 @@ async function upsertOperatorTasksFromVoiceCall(input: {
       title: `Finish Jeff follow-up: ${input.conversation.subjectLabel || input.conversation.jobLabel || "call recap"}`,
       detail: input.summary.requestedFollowUps[0] || input.summary.recommendationSummary || "Simon asked Jeff for a follow-up.",
       type: "customer-follow-up",
+      status: input.summary.emailStatus === "sent" ? "done" : undefined,
       priority: input.summary.emailStatus === "failed" || input.summary.emailStatus === "blocked" ? "high" : "normal",
       owner: "Adam",
       blocker: input.summary.emailStatus === "failed" || input.summary.emailStatus === "blocked"
         ? `Email status is ${input.summary.emailStatus}.`
         : undefined,
+      completionSummary: input.summary.emailStatus === "sent" ? "Jeff recap email was sent." : undefined,
       ...common,
     }));
   }
@@ -1211,6 +1362,13 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
   const existingSummary = existingWorkspace?.summaries.find((entry) => entry.conversationId === conversationId);
   const compactedFollowUpStatus =
     compacted.requestedFollowUps.length > 0 ? "requested" as const : compacted.emailStatus;
+  const preservedEmailRequested = Boolean(existingSummary?.emailRequested === true ||
+    existingConversation?.sourcePayload?.emailRequested === true ||
+    existingConversation?.followUpRequested === true && existingSummary?.emailStatus && existingSummary.emailStatus !== "none");
+  const mergedRequestedFollowUps = [
+    ...compacted.requestedFollowUps,
+    ...(existingSummary?.requestedFollowUps || []),
+  ].filter((entry, index, values) => values.indexOf(entry) === index);
   const followUpStatus =
     existingConversation?.followUpStatus && existingConversation.followUpStatus !== "none"
       ? existingConversation.followUpStatus
@@ -1219,6 +1377,7 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
     existingSummary?.emailStatus && existingSummary.emailStatus !== "none"
       ? existingSummary.emailStatus
       : compacted.emailStatus;
+  const emailRequested = compacted.emailRequested || preservedEmailRequested || emailStatus !== "none";
   const emailTo = existingSummary?.emailTo;
   const createdAt = nowIso();
   const conversation: JeffConversation = {
@@ -1239,7 +1398,7 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
     transcript: transcript || undefined,
     rawSummary,
     recordingUrl: message.artifact?.recordingUrl,
-    followUpRequested: compacted.requestedFollowUps.length > 0 || existingConversation?.followUpRequested === true,
+    followUpRequested: mergedRequestedFollowUps.length > 0 || existingConversation?.followUpRequested === true,
     followUpStatus,
     needsReview,
     reviewReason,
@@ -1249,8 +1408,10 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
       conversationMode,
       shortOrMissed,
       subjectLabel,
-      emailRequested: compacted.emailRequested,
-      requestedFollowUps: compacted.requestedFollowUps,
+      emailRequested,
+      emailRequestedFromTranscript: compacted.emailRequested,
+      writtenDiagnosticTreeRequested: compacted.writtenDiagnosticTreeRequested,
+      requestedFollowUps: mergedRequestedFollowUps,
     },
     createdAt,
     updatedAt: createdAt,
@@ -1273,8 +1434,8 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
     proofNeeded: compacted.proofNeeded,
     nextActions: compacted.nextActions,
     recommendationSummary: compacted.recommendationSummary,
-    requestedFollowUps: compacted.requestedFollowUps,
-    emailRequested: compacted.emailRequested,
+    requestedFollowUps: mergedRequestedFollowUps,
+    emailRequested,
     emailStatus,
     emailTo,
     blockers: compacted.blockers,
@@ -1287,6 +1448,8 @@ async function persistWorkspaceFromEndOfCall(message: VapiServerMessage) {
       conversationMode,
       shortOrMissed,
       subjectLabel,
+      emailRequestedFromTranscript: compacted.emailRequested,
+      writtenDiagnosticTreeRequested: compacted.writtenDiagnosticTreeRequested,
       preservedFollowUpStatus: existingConversation?.followUpStatus,
       preservedEmailStatus: existingSummary?.emailStatus,
     },

@@ -397,8 +397,26 @@ function recapLineGroup(title: string, lines: string[]) {
   ].join("\n");
 }
 
-function buildRecapSubject(summary?: JeffConversationSummary) {
+function cleanRecapSubject(value?: string) {
+  return optionalString(value)
+    ?.replace(/\bdiagnostic\s+treat\b/gi, "diagnostic tree")
+    .replace(/\bdiag\s+treat\b/gi, "diag tree")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildRecapSubject(summary?: JeffConversationSummary, explicitSubject?: string) {
+  const cleanSubject = cleanRecapSubject(explicitSubject);
+  if (cleanSubject) return cleanSubject;
+
   const subjectLabel = optionalString(summary?.metadata?.subjectLabel);
+  const requestedTree = [
+    summary?.summary,
+    summary?.recommendationSummary,
+    ...(summary?.nextActions || []),
+    ...(summary?.requestedFollowUps || []),
+  ].some((entry) => /\b(diagnostic|diag)\s+tree\b/i.test(entry || ""));
+  if (subjectLabel && requestedTree) return `Diagnostic tree - ${subjectLabel}`;
   if (subjectLabel) return `Jeff recap: ${subjectLabel}`;
   if (summary?.jobId) return `Jeff recap for job ${summary.jobId}`;
   return "Jeff recap";
@@ -4781,7 +4799,7 @@ export async function sendSimonRecapEmail(payload: unknown) {
   const configuredEmail = getSimonEmailAddress();
   const requestedEmail = configuredEmail || body.recipientEmail;
   const ccEmails = getJeffRecapCcEmails();
-  const subject = body.subject || buildRecapSubject(summary);
+  const subject = buildRecapSubject(summary, body.subject);
   const recapBody = buildRecapBody(summary, body.body);
   const shouldSend = body.sendNow !== false;
   const warnings = [...workspace.warnings];

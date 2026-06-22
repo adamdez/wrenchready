@@ -307,4 +307,95 @@ assert(personalCall.workspace?.emailRequested === true, "personal call should de
 assert(personalCall.workspace?.emailStatus === "requested", "personal email recap should start as requested");
 assert(personalCall.review?.passed, "personal diagnostic call should not fail for missing job context");
 
+const subaruEmailTree = await request("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "end-of-call-report",
+    call: {
+      id: testCallId("subaru-email-tree"),
+      assistantId: "assistant-test",
+      customer: { number: "+15095550102" },
+    },
+    artifact: {
+      transcript:
+        "User: Jack. I need you to send me a diagnostic tree for a rough shift at forty miles an hour on a two thousand one Subaru Outback. Then the diag tree for me for that vehicle to my email. Immediately, as fast as possible. Thank you.\nAI: This'll just take a sec.\nAI: I emailed the diagnostic treat to Simon. Subject, two thousand one Subaru Outback Rough Shift at forty miles per hour. Diagnostic treat. If you want, I can also turn that into a cleaner yes slash no tree or a shorter text version.",
+    },
+  },
+});
+assert(
+  subaruEmailTree.workspace?.subjectLabel === "2001 Subaru Outback",
+  "spoken Subaru year should become a searchable subject label",
+);
+assert(subaruEmailTree.workspace?.emailRequested === true, "to-my-email phrasing should mark email requested");
+assert(subaruEmailTree.workspace?.emailStatus === "requested", "unsent email tree should stay requested, not sent");
+assert(
+  subaruEmailTree.workspace?.summary?.requestedFollowUps?.some((entry) => /email simon/i.test(entry)),
+  "email diagnostic tree request should create a follow-up",
+);
+assert(
+  !/diagnostic treat/i.test(subaruEmailTree.workspace?.summary?.summary || ""),
+  "fallback summary should not preserve Jeff's spoken typo as the durable summary",
+);
+
+const fordEmailTree = await request("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "end-of-call-report",
+    call: {
+      id: testCallId("ford-email-tree"),
+      assistantId: "assistant-test",
+      customer: { number: "+15095550102" },
+    },
+    artifact: {
+      transcript:
+        "AI: Ready.\nUser: Hey, Jeff. Do you remember the conversation we had about a nineteen eighty seven Ford f one fifty\nAI: I don't have that conversation in front of me right now.\nUser: Okay, Jeff. Uh, this was a nineteen eighty seven Ford f one fifty with a five liter v eight. Suspicion is old gas replaced the fuel filter, distributor cap, and rotor. The car will start up, run, and then the idle is hopping or will stay at a high idle and then just die off. And we'll only be able to start with some pumps to the gas pedal. Give me a yes, no diagnostic tree and send it to my email.\nAI: Yes. sent to your email.\nUser: Send it in a yes, no tree, uh, over email, and that's fine. Thank you, Joe.",
+    },
+  },
+});
+assert(
+  fordEmailTree.workspace?.subjectLabel === "1987 Ford F-150",
+  "spoken Ford F one fifty should become a searchable subject label",
+);
+assert(fordEmailTree.workspace?.emailRequested === true, "over-email phrasing should mark email requested");
+assert(
+  fordEmailTree.workspace?.summary?.knownFacts?.some((entry) => /fuel filter|distributor|idle/i.test(entry)),
+  "Simon's vehicle facts should survive compaction",
+);
+assert(
+  !fordEmailTree.workspace?.summary?.testsPerformed?.some((entry) => /vacuum hoses|physical test/i.test(entry)),
+  "Jeff's spoken recommendations should not be stored as tests performed",
+);
+
+const subaruWrittenTree = await request("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "end-of-call-report",
+    call: {
+      id: testCallId("subaru-written-tree"),
+      assistantId: "assistant-test",
+      customer: { number: "+15095550102" },
+    },
+    artifact: {
+      transcript:
+        "AI: Jeff here. What's the job, symptom, or office task?\nUser: Yeah. If I got a two thousand one Subaru Outback with a really rough idle. and it is not allowing the customer to go past thirty miles an hour before it it kinda gives it even more rough. It feels like a bad shift.\nAI: QuickTake, that sounds more like a severe misfire under load than a transmission problem.\nUser: Jeff, Then this to me in a diagnostic tree, yes and no, please.\nAI: Yep. Start here. One check for flashing CEL stored codes? Yes, go to two.",
+    },
+  },
+});
+assert(
+  subaruWrittenTree.workspace?.subjectLabel === "2001 Subaru Outback",
+  "second Subaru diagnostic call should still get a vehicle subject label",
+);
+assert(
+  subaruWrittenTree.workspace?.followUpStatus === "requested",
+  "written diagnostic tree request should create a follow-up even without the word email",
+);
+assert(
+  subaruWrittenTree.workspace?.summary?.requestedFollowUps?.some((entry) => /yes\/no diagnostic tree/i.test(entry)),
+  "written yes/no tree request should be visible in the summary",
+);
+const subaruWrittenSummaryText = [
+  subaruWrittenTree.workspace?.summary?.summary,
+  ...(subaruWrittenTree.workspace?.summary?.nextActions || []),
+  ...(subaruWrittenTree.workspace?.summary?.blockers || []),
+].join(" ");
+assert(!/office job intake/i.test(subaruWrittenSummaryText), "diagnostic call should not become office intake");
+assert(!/Tammy|Monday|quote\/schedule/i.test(subaruWrittenSummaryText), "diagnostic call should not leak fixture office actions");
+
 console.log("Jeff Vapi server smoke test passed.");
