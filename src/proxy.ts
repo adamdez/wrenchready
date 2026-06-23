@@ -122,6 +122,8 @@ export function proxy(request: NextRequest) {
   if (authorized.status === 401) return authorized;
 
   if (opsHost) {
+    if (pathname.startsWith("/api/")) return authorized;
+
     const url = request.nextUrl.clone();
     url.pathname = pathname.startsWith("/ops")
       ? pathname
