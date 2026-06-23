@@ -578,6 +578,24 @@ function likelyWantsEmail(text: string) {
   );
 }
 
+function likelyWantsFieldDeliverable(text: string) {
+  const scanReportOnly =
+    /\b(scan report|scanner report|diagnostic reader report|carfax|autocheck)\b/i.test(text) &&
+    !/\b(customer|dealer|dealership|handoff|work done|work performed|recap|summary|write[- ]?up|closeout)\b/i.test(text);
+  if (scanReportOnly) return false;
+
+  return (
+    /\b(customer[- ]?facing|customer copy|dealer copy|service report|field report|inspection report|work[- ]?done recap|work[- ]?performed recap|final recap|handoff recap)\b/i.test(text) ||
+    /\b(dealership|dealer|customer|office|adam|dez|service advisor|shop|warranty|insurance)\b.{0,55}\b(report|handoff|summary|recap|write[- ]?up|work done|work performed|receipt|work order|workorder|invoice note|document|pdf)\b/i.test(text) ||
+    /\b(report|handoff|summary|recap|write[- ]?up|receipt|work order|workorder|invoice note|document|pdf)\b.{0,55}\b(customer|dealership|dealer|office|adam|dez|service advisor|shop|warranty|insurance)\b/i.test(text) ||
+    (
+      /\b(make|create|draft|write|build|prepare|put together|add)\b.{0,55}\b(report|recap|summary|handoff|write[- ]?up|receipt|work order|workorder|invoice note|document|pdf)\b/i.test(text) &&
+      /\b(work|job|done|did|found|checked|customer|dealer|dealership|office)\b/i.test(text)
+    ) ||
+    /\b(done with|finished|wrapped up)\b.{0,55}\b(send|show|give|document|recap|summary|write|handoff)\b/i.test(text)
+  );
+}
+
 function likelyWantsGmailSync(text: string) {
   return (
     /\b(check|read|look at|pull|sync)\b.{0,45}\b(email|gmail|inbox|scan report|diagnostic reader|scanner)\b/i.test(text) ||
@@ -621,7 +639,7 @@ function likelyWantsPartsCartPrep(text: string) {
 }
 
 function likelyWantsFieldNote(text: string) {
-  return /\b(log|note|save this|record this|customer said|tech note|field note)\b/i.test(text);
+  return /\b(log|note|save this|record this|customer said|tech note|field note)\b/i.test(text) || likelyWantsFieldDeliverable(text);
 }
 
 function likelyWantsMemory(text: string) {
@@ -629,7 +647,7 @@ function likelyWantsMemory(text: string) {
 }
 
 function likelyWantsCloseout(text: string) {
-  return /\b(closeout|close out|wrap up|finish(ed)? job|done with|complete(d)?)\b/i.test(text);
+  return /\b(closeout|close out|wrap up|finish(ed)? job|done with|complete(d)?)\b/i.test(text) || likelyWantsFieldDeliverable(text);
 }
 
 function extractPartName(text: string) {
@@ -789,6 +807,7 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
   if (!text.trim() && !input.attachments?.length) return [];
 
   const actions: MessageToolAction[] = [];
+  const fieldDeliverableRequested = likelyWantsFieldDeliverable(text);
 
   if (likelyWantsKnowledgeSearch(text)) {
     actions.push(await runMessageTool("search_wrenchready_knowledge", () => searchWrenchReadyKnowledge({
@@ -809,6 +828,9 @@ async function runMessageActionTools(input: JeffAppMessageInput): Promise<Messag
       note: text,
       channel: input.attachments?.length ? "mms" : "sms",
       sender: input.sender || "Simon",
+      deliverableType: fieldDeliverableRequested ? "field-deliverable" : undefined,
+      needsCustomerHandoff: fieldDeliverableRequested || undefined,
+      nextAction: fieldDeliverableRequested ? "Review and convert into the requested receipt, work order, report, or customer/dealer handoff." : undefined,
     })));
   }
 
@@ -1038,6 +1060,7 @@ async function upsertOperatorTasksFromMessage(input: JeffAppMessageInput, params
   actions: MessageToolAction[];
 }) {
   const sourceUrl = input.jobId ? `/ops/promises/${input.jobId}` : "/ops/field-assistant#jeff-call-workspace";
+  const fieldDeliverableRequested = likelyWantsFieldDeliverable(input.text || "");
   const common = {
     promiseId: input.jobId,
     customerName: input.jobLabel,
@@ -1052,6 +1075,7 @@ async function upsertOperatorTasksFromMessage(input: JeffAppMessageInput, params
       selectedJobLabel: input.selectedJobLabel,
       inferredVehicle: input.inferredVehicle,
       inferredPartName: input.inferredPartName,
+      fieldDeliverableRequested,
       actions: params.actions.map((action) => ({
         tool: action.tool,
         success: action.success,
@@ -1069,19 +1093,24 @@ async function upsertOperatorTasksFromMessage(input: JeffAppMessageInput, params
     (
       input.contextMode === "admin" ||
       input.contextMode === "different-job" ||
-      hasUnattachedAttachment
+      hasUnattachedAttachment ||
+      fieldDeliverableRequested
     );
 
   if (shouldReviewUnattachedMessage) {
-    const reviewBlocker = input.contextMode === "different-job" || hasUnattachedAttachment
-      ? "Message needs a confirmed CRM job before Jeff can save it to a job file."
-      : undefined;
+    const reviewBlocker = fieldDeliverableRequested
+      ? "Field deliverable needs a confirmed CRM job before office/customer handoff."
+      : input.contextMode === "different-job" || hasUnattachedAttachment
+        ? "Message needs a confirmed CRM job before Jeff can save it to a job file."
+        : undefined;
     taskWrites.push(upsertOperatorTask({
       id: `operator-task-jeff-message-${params.conversationId}-review`,
-      title: `Review Jeff message: ${input.inferredVehicle || input.inferredPartName || "unmatched message"}`,
+      title: fieldDeliverableRequested
+        ? `Review field deliverable: ${input.inferredVehicle || input.inferredPartName || "unmatched job"}`
+        : `Review Jeff message: ${input.inferredVehicle || input.inferredPartName || "unmatched message"}`,
       detail: input.text || params.summary.summary,
       type: "jeff-review",
-      priority: input.contextMode === "admin" || input.contextMode === "different-job" ? "high" : "normal",
+      priority: fieldDeliverableRequested || input.contextMode === "admin" || input.contextMode === "different-job" ? "high" : "normal",
       owner: "Adam",
       blocker: reviewBlocker,
       ...common,

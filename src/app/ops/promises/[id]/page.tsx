@@ -1184,7 +1184,7 @@ function JeffHandoffPanel({
           <h2 className="mt-1 text-2xl font-bold text-foreground">Field truth on this job</h2>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             {handoff.hasActivity
-              ? "Structured facts, photos, blocked actions, and closeout signals Jeff attached to this CRM record."
+              ? "Structured facts, photos, field deliverables, blocked actions, and closeout signals Jeff attached to this CRM record."
               : "No Jeff field activity is attached to this CRM record yet."}
           </p>
         </div>
@@ -1210,7 +1210,7 @@ function JeffHandoffPanel({
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           <ActionPanel
             title="Simple rule"
-            detail="When Simon sends a field note, photo, blocked purchase, or closeout through Jeff, it will appear here on this CRM job."
+            detail="When Simon sends a field note, work-done recap, handoff, photo, blocked purchase, or closeout through Jeff, it will appear here on this CRM job."
             action={
               <div className="grid grid-cols-2 gap-2">
                 <CommandLink href={`/jeff/messages?jobId=${promiseId}`} icon={<Sparkles className="h-4 w-4" />} primary>

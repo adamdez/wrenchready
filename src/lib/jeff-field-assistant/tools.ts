@@ -4093,6 +4093,8 @@ export async function recordFieldNote(payload: unknown) {
   const input = isObject(payload) ? payload : {};
   const jobId = optionalString(input.jobId);
   const note = optionalString(input.note);
+  const deliverableType = optionalString(input.deliverableType);
+  const needsCustomerHandoff = input.needsCustomerHandoff === true || deliverableType === "field-deliverable";
 
   if (!jobId || !note) {
     return blocked(
@@ -4155,10 +4157,12 @@ export async function recordFieldNote(payload: unknown) {
   try {
     await upsertOperatorTask({
       id: `operator-task-field-note-${event.id}`,
-      title: `Review field note: ${noteCustomerName}`,
+      title: needsCustomerHandoff
+        ? `Review field deliverable: ${noteCustomerName}`
+        : `Review field note: ${noteCustomerName}`,
       detail: noteTaskDetail,
       type: "jeff-review",
-      priority: noteHasDiagnosticSignal ? "high" : "normal",
+      priority: needsCustomerHandoff || noteHasDiagnosticSignal ? "high" : "normal",
       owner: "Adam",
       promiseId: noteIsCrmJob ? jobId : undefined,
       customerName: noteCustomerName,
@@ -4171,6 +4175,8 @@ export async function recordFieldNote(payload: unknown) {
         eventType: event.type,
         sender: event.sender,
         confidence: event.confidence,
+        deliverableType,
+        needsCustomerHandoff,
       },
     });
   } catch {
@@ -5772,7 +5778,7 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
     },
     {
       name: "record_field_note",
-      description: "Save Simon's spoken field note, tests, readings, suspected cause, and next action.",
+      description: "Save Simon's spoken field note, work-done recap, handoff details, tests, readings, suspected cause, and next action.",
       endpoint: `${BASE_ROUTE}/record-field-note`,
       method: "POST",
       parameters: {
@@ -6081,7 +6087,7 @@ export function getJeffVapiToolSchemas(): JeffVapiToolSchema[] {
     },
     {
       name: "start_closeout",
-      description: "Start a field closeout draft and identify missing invoice, proof, parts, or payment facts.",
+      description: "Start a field closeout or work-done handoff draft and identify missing invoice, proof, parts, customer-recap, or payment facts.",
       endpoint: `${BASE_ROUTE}/start-closeout`,
       method: "POST",
       parameters: {
