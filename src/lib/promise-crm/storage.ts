@@ -841,6 +841,7 @@ function promiseOperatorText(record: PromiseRecord) {
 function isOperatorQueueInbound(record: InboundRecord, now: Date) {
   return (
     record.qualificationStatus !== "promoted" &&
+    record.qualificationStatus !== "disqualified" &&
     isRecentForOperatorQueue(record.createdAt, now) &&
     !hasNonOperatorMarker(inboundOperatorText(record))
   );
@@ -1256,7 +1257,10 @@ export async function getOwnerExecutionSnapshot(
   ]);
 
   const inboundOwned = inbound.filter(
-    (record) => record.owner === owner && record.qualificationStatus !== "promoted",
+    (record) =>
+      record.owner === owner &&
+      record.qualificationStatus !== "promoted" &&
+      record.qualificationStatus !== "disqualified",
   );
   const ownedPromises = promises.filter((record) => record.owner === owner);
   const promisesWaiting = ownedPromises.filter(
@@ -1569,7 +1573,15 @@ export async function getPromiseBoardSnapshot() {
     getPromiseRecords(),
     getPromiseEconomicsRollup(),
   ]);
-  const queues = getOperatorQueueRecords(inbound, promises);
+  // Leads closed as lost (declined outcome) drop off the active board so the queues
+  // only show live work. They stay available via the `lost` list for a closed view.
+  const lost = promises.filter(
+    (record) => record.commercialOutcome?.outcomeStatus === "declined",
+  );
+  const activePromises = promises.filter(
+    (record) => record.commercialOutcome?.outcomeStatus !== "declined",
+  );
+  const queues = getOperatorQueueRecords(inbound, activePromises);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -1579,6 +1591,7 @@ export async function getPromiseBoardSnapshot() {
     promisesWaiting: queues.promisesWaiting,
     tomorrowAtRisk: queues.tomorrowAtRisk,
     followThroughDue: queues.followThroughDue,
+    lost,
   };
 }
 

@@ -513,7 +513,7 @@ export type InboundRecord = {
   symptomSummary: string;
   owner: RecordOwner;
   readinessRisk: ReadinessRisk;
-  qualificationStatus: "new" | "screening" | "promoted";
+  qualificationStatus: "new" | "screening" | "promoted" | "disqualified";
   preferredWindow: TimeWindow;
   nextAction: string;
   notes: string[];

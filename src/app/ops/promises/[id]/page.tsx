@@ -26,6 +26,7 @@ import {
 import { OpsPaymentLinkForm } from "@/components/ops-payment-link-form";
 import { QuoteSendActionForm } from "@/components/quote-send-action-form";
 import { PromiseArchiveButton } from "@/components/promise-archive-button";
+import { PromiseLostControls } from "@/components/promise-lost-controls";
 import { isPromiseArchived } from "@/lib/promise-crm/promise-archive";
 import { OutboundResultForm } from "@/components/outbound-result-form";
 import { PromiseLiveStatus } from "@/components/promise-live-status";
@@ -40,6 +41,7 @@ import {
 } from "@/lib/promise-crm/diagnostic-tree";
 import { getNextProbableVisit } from "@/lib/promise-crm/closeout-recapture";
 import { isQuoteScheduleReview, promiseBoardStatusLabel } from "@/lib/promise-crm/display-state";
+import { resolvePromiseState, type ResolvedPromiseState } from "@/lib/promise-crm/promise-state";
 import { computePromiseEconomics } from "@/lib/promise-crm/economics";
 import { getPromiseOutboundSnapshot } from "@/lib/promise-crm/outbound-drafts";
 import { getPlaybookRecommendation } from "@/lib/promise-crm/playbooks";
@@ -509,28 +511,63 @@ function buildTimeline(promise: PromiseDetailRecord): TimelineItem[] {
   });
 }
 
+function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+        {eyebrow}
+      </p>
+      <h2 className="mt-1 text-2xl font-bold text-foreground">{title}</h2>
+    </div>
+  );
+}
+
 function Section({
   id,
   title,
   eyebrow,
   action,
   children,
+  collapsible = false,
+  defaultOpen = false,
 }: {
   id: string;
   title: string;
   eyebrow: string;
   action?: ReactNode;
   children: ReactNode;
+  /** Render as a native <details> so secondary sections don't dump everything at once. */
+  collapsible?: boolean;
+  /** Open by default — set true for the section that matches the job's active stage. */
+  defaultOpen?: boolean;
 }) {
+  if (collapsible) {
+    return (
+      <details
+        id={id}
+        open={defaultOpen}
+        className="group scroll-mt-6 border-t border-border pt-6 lg:scroll-mt-32"
+      >
+        <summary className="flex cursor-pointer list-none items-end justify-between gap-3 [&::-webkit-details-marker]:hidden">
+          <SectionHeading eyebrow={eyebrow} title={title} />
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-background/70 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+            <span className="group-open:hidden">Show</span>
+            <span className="hidden group-open:inline">Hide</span>
+            <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+          </span>
+        </summary>
+        <div className="mt-4">
+          {action ? <div className="mb-4 flex justify-end">{action}</div> : null}
+          {children}
+        </div>
+      </details>
+    );
+  }
+
   return (
     <section id={id} className="scroll-mt-6 border-t border-border pt-6 lg:scroll-mt-32">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-            {eyebrow}
-          </p>
-          <h2 className="mt-1 text-2xl font-bold text-foreground">{title}</h2>
-        </div>
+        <SectionHeading eyebrow={eyebrow} title={title} />
         {action}
       </div>
       {children}
@@ -898,35 +935,21 @@ function funnelStepClasses(state: FunnelStepState) {
   return "border-border bg-background/50 text-muted-foreground";
 }
 
-function quoteIsBlocked(promise: PromiseDetailRecord) {
-  return Boolean(promise.quotePacket?.blockers.length || promise.quotePacket?.status === "blocked");
-}
-
-function buildFunnelSteps(promise: PromiseDetailRecord, quoteReview: boolean): FunnelStep[] {
-  const quoteBlocked = quoteIsBlocked(promise);
-  const paymentPaid = promise.paymentCollection?.status === "paid" || promise.jobStage === "collected";
+function buildFunnelSteps(promise: PromiseDetailRecord): FunnelStep[] {
+  // State comes from the single canonical resolver so the funnel can never show two
+  // "current" steps (the previous per-step derivation could light Schedule AND
+  // Follow-up at once, and a past-due follow-up next to a future schedule).
+  const { stepStates } = resolvePromiseState(promise);
   const closeoutDone = Boolean(promise.closeout?.completedAt || promise.followThroughResolution);
-  const scheduled = Boolean(promise.scheduledWindow.startIso) || ["scheduled", "confirmed", "en-route", "on-site", "completed", "collected"].includes(promise.jobStage);
-  const fieldStarted = ["en-route", "on-site", "waiting-approval", "completed", "collected"].includes(promise.jobStage);
-  const fieldDone = ["completed", "collected"].includes(promise.jobStage);
-  const quoteDone = promise.customerApproval.status === "approved" || ["scheduled", "confirmed", "en-route", "on-site", "completed", "collected"].includes(promise.jobStage);
 
-  return [
+  const steps: Omit<FunnelStep, "state">[] = [
     {
       label: "Intake",
-      state: "done",
       detail: promise.inboundId ? "Lead promoted" : "Record created",
       href: "#promise-file",
     },
     {
       label: "Quote",
-      state: quoteBlocked
-        ? "blocked"
-        : quoteDone
-          ? "done"
-          : promise.quotePacket || quoteReview || promise.jobStage === "quoted"
-            ? "current"
-            : "upcoming",
       detail: promise.quotePacket
         ? `${quotePacketStatusLabel(promise.quotePacket.status)} / ${customerSendLabel(promise.quotePacket.customerSendStatus)}`
         : customerApprovalLabel(promise.customerApproval.status),
@@ -934,41 +957,27 @@ function buildFunnelSteps(promise: PromiseDetailRecord, quoteReview: boolean): F
     },
     {
       label: "Schedule",
-      state: scheduled
-        ? fieldStarted
-          ? "done"
-          : "current"
-        : quoteReview
-          ? "blocked"
-          : "upcoming",
       detail: promise.scheduledWindow.label,
       href: "#schedule-summary",
     },
     {
       label: "Field",
-      state: fieldDone ? "done" : fieldStarted ? "current" : "upcoming",
       detail: promise.fieldExecution ? "Field plan exists" : "Needs field packet",
       href: "#field-summary",
     },
     {
       label: "Payment",
-      state: paymentPaid
-        ? "done"
-        : promise.paymentCollection?.status && promise.paymentCollection.status !== "not-requested"
-          ? "current"
-          : promise.quotePacket?.paymentLinkStatus === "blocked"
-            ? "blocked"
-            : "upcoming",
       detail: `${paymentStatusLabel(promise.paymentCollection?.status)} / ${formatCurrency(quoteAmount(promise))}`,
       href: "#payment-summary",
     },
     {
       label: "Follow-up",
-      state: closeoutDone ? "done" : fieldDone || promise.followThroughDueAt ? "current" : "upcoming",
       detail: closeoutDone ? "Closed loop" : nextFollowUpDetail(promise),
       href: "#record-drawers",
     },
   ];
+
+  return steps.map((step, index) => ({ ...step, state: stepStates[index] }));
 }
 
 function nextFollowUpDetail(promise: PromiseDetailRecord) {
@@ -1028,6 +1037,80 @@ function ActionPanel({
       <p className="text-sm font-semibold text-foreground">{title}</p>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{detail}</p>
       {action ? <div className="mt-4">{action}</div> : null}
+    </div>
+  );
+}
+
+// Maps the resolver's single next-action to the on-page section that performs it.
+const NEXT_ACTION_ANCHORS: Record<string, string> = {
+  "build-quote": "#quote",
+  "send-quote": "#quote",
+  "review-quote": "#quote",
+  "resolve-blockers": "#quote-summary",
+  schedule: "#schedule",
+  field: "#field-plan",
+  "collect-payment": "#payment",
+  closeout: "#record-drawers",
+  complete: "#record-drawers",
+};
+
+/** The one "what do I do now" card — a thin projection of resolvePromiseState().
+ *  Names the single primary action for the current stage, surfaces blockers inline,
+ *  and links to the section that performs it. */
+function NextActionCard({ state }: { state: ResolvedPromiseState }) {
+  const blocked = state.blockers.length > 0;
+  const lost = state.terminal === "lost";
+  const won = state.terminal === "won";
+  const href = NEXT_ACTION_ANCHORS[state.nextAction.id] ?? "#promise-file";
+
+  return (
+    <div
+      className={`rounded-2xl border p-4 sm:p-5 ${
+        lost
+          ? "border-red-500/35 bg-red-500/10"
+          : blocked
+            ? "border-[var(--wr-gold)]/35 bg-[var(--wr-gold)]/10"
+            : won
+              ? "border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10"
+              : "border-primary/30 bg-primary/10"
+      }`}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+            {lost ? "Lead status" : "Next action"} · {state.label}
+          </p>
+          <p className="mt-1 text-lg font-bold text-foreground sm:text-xl">
+            {lost ? "Closed — Lost" : state.nextAction.label}
+          </p>
+          {lost && state.lostReason ? (
+            <p className="mt-1 text-sm text-red-200">Reason: {state.lostReason}</p>
+          ) : null}
+          {blocked ? (
+            <ul className="mt-2 space-y-1 text-sm text-[var(--wr-gold-soft)]">
+              {state.blockers.map((blocker, index) => (
+                <li className="flex items-start gap-1.5" key={index}>
+                  <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{blocker}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        {lost ? (
+          <StatusPill className="border-red-500/30 bg-red-500/10 text-red-200">
+            Reopen from the header
+          </StatusPill>
+        ) : won ? (
+          <StatusPill className="border-[var(--wr-teal)]/30 bg-[var(--wr-teal)]/10 text-[var(--wr-teal-soft)]">
+            Completed &amp; paid
+          </StatusPill>
+        ) : (
+          <CommandLink href={href} icon={<ChevronRight className="h-4 w-4" />} primary>
+            {state.nextAction.label}
+          </CommandLink>
+        )}
+      </div>
     </div>
   );
 }
@@ -1425,11 +1508,8 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
       promise.paymentCollection.status !== "paid",
   );
   const quoteReview = isQuoteScheduleReview(promise);
-  const funnelSteps = buildFunnelSteps(promise, quoteReview);
-  const activeBlockers = [
-    ...(promise.quotePacket?.blockers || []),
-    ...promise.topRisks.slice(0, 3),
-  ];
+  const promiseState = resolvePromiseState(promise);
+  const funnelSteps = buildFunnelSteps(promise);
   const latestTimeline = timeline.slice(0, 3);
   const openTasks = taskQueue.tasks;
   const topOpenTasks = openTasks.slice(0, 1);
@@ -1451,7 +1531,10 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
           <ArrowLeft className="h-4 w-4" />
           Promise Board
         </Link>
-        <PromiseArchiveButton promiseId={promise.id} archived={isPromiseArchived(promise)} />
+        <div className="flex items-center gap-2">
+          <PromiseLostControls promiseId={promise.id} lost={promiseState.terminal === "lost"} />
+          <PromiseArchiveButton promiseId={promise.id} archived={isPromiseArchived(promise)} />
+        </div>
       </div>
 
       <header className="relative z-30 mt-4 border-y border-border bg-background/95 backdrop-blur lg:sticky lg:top-0">
@@ -1466,7 +1549,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                       : "border-primary/25 bg-primary/10 text-primary"
                   }
                 >
-                  {quoteReview ? "Quote / schedule review" : "CRM Record"}
+                  {promiseBoardStatusLabel(promise)}
                 </StatusPill>
                 <StatusPill>{jobStageLabel(promise.jobStage)}</StatusPill>
                 <StatusPill className={riskClasses(promise.readinessRisk)}>
@@ -1477,13 +1560,10 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 </StatusPill>
               </div>
               <div className="mt-2 flex min-w-0 flex-col gap-1 lg:flex-row lg:items-baseline lg:gap-3">
-                <h1 className="overflow-hidden text-ellipsis whitespace-nowrap text-xl font-bold tracking-tight text-foreground sm:text-3xl">
+                <h1 className="min-w-0 text-xl font-bold tracking-tight text-foreground sm:text-3xl">
                   {promise.customer.name}
                 </h1>
-                <p
-                  className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-muted-foreground sm:text-base"
-                  style={{ whiteSpace: "nowrap" }}
-                >
+                <p className="min-w-0 text-sm text-muted-foreground sm:text-base">
                   {formatVehicle(promise)} / {promise.serviceScope}
                 </p>
               </div>
@@ -1574,21 +1654,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
         <section id="promise-file" className="rounded-2xl border border-border bg-card/65 p-4 shadow-sm sm:p-5">
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
             <div className="min-w-0">
-              <div className="hidden flex-wrap items-center gap-2 sm:flex">
-                <StatusPill className={riskClasses(promise.readinessRisk)}>
-                  {promise.readinessRisk} risk
-                </StatusPill>
-                <StatusPill>{promiseBoardStatusLabel(promise)}</StatusPill>
-                <StatusPill>{jobStageLabel(promise.jobStage)}</StatusPill>
-                <StatusPill>Owner: {promise.owner}</StatusPill>
-              </div>
-              <h2 className="mt-3 text-xl font-bold text-foreground sm:mt-4 sm:text-2xl">
-                {promise.customer.name}
-              </h2>
-              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                {formatVehicle(promise)} / {promise.serviceScope}
-              </p>
-
+              <NextActionCard state={promiseState} />
               <div className="mt-5">
                 <FunnelRail steps={funnelSteps} />
               </div>
@@ -1631,22 +1697,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                 ) : null}
               </div>
 
-              <div id="next-actions" className="mt-5 grid gap-3 lg:grid-cols-3">
-                <ActionPanel
-                  title="Next move"
-                  detail={topOpenTasks[0]?.detail || promise.nextAction}
-                  tone={activeBlockers.length > 0 ? "warning" : "default"}
-                  action={
-                    <div className="grid grid-cols-2 gap-2">
-                      <CommandLink href="#open-tasks" icon={<ClipboardCheck className="h-4 w-4" />} primary>
-                        Tasks
-                      </CommandLink>
-                      <CommandLink href="#quote-summary" icon={<FileText className="h-4 w-4" />} primary>
-                        Quote
-                      </CommandLink>
-                    </div>
-                  }
-                />
+              <div id="next-actions" className="mt-5 grid gap-3 lg:grid-cols-2">
                 <ActionPanel
                   title="Customer promise"
                   detail={`${customerApprovalLabel(promise.customerApproval.status)} / ${formatCurrency(promise.customerApproval.requestedAmount)} / ${customerSendLabel(promise.quotePacket?.customerSendStatus)}`}
@@ -1668,7 +1719,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
                   tone={promise.quotePacket?.paymentLinkStatus === "blocked" ? "danger" : "default"}
                   action={
                     <div className="grid grid-cols-2 gap-2">
-                      <CommandLink href="#payment-summary" icon={<ReceiptText className="h-4 w-4" />}>
+                      <CommandLink href="#payment" icon={<ReceiptText className="h-4 w-4" />}>
                         Invoice
                       </CommandLink>
                       <CommandLink href="#record-drawers" icon={<ClipboardCheck className="h-4 w-4" />}>
@@ -1739,13 +1790,20 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
           </div>
         </section>
 
-        <section id="diagnostic-tree" className="mt-6 rounded-2xl border border-border bg-card/65 p-4 shadow-sm sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <details
+          id="diagnostic-tree"
+          open={promiseState.stage === "field"}
+          className="group mt-6 rounded-2xl border border-border bg-card/65 p-4 shadow-sm sm:p-5"
+        >
+          <summary className="flex cursor-pointer list-none flex-col gap-4 lg:flex-row lg:items-start lg:justify-between [&::-webkit-details-marker]:hidden">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
                 Field diagnostics
               </p>
-              <h2 className="mt-1 text-2xl font-bold text-foreground">Diagnostic tree</h2>
+              <h2 className="mt-1 flex items-center gap-1.5 text-2xl font-bold text-foreground">
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+                Diagnostic tree
+              </h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 {promise.fieldExecution?.serviceGoal || promise.serviceScope}
               </p>
@@ -1764,7 +1822,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               <StatusPill>{diagnosticTree.generatedFrom === "explicit-tree" ? "tree saved" : "derived tree"}</StatusPill>
               <StatusPill>field packet {fieldCoverage.complete}/{fieldCoverage.total}</StatusPill>
             </div>
-          </div>
+          </summary>
 
           <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="min-w-0 space-y-3">
@@ -1838,7 +1896,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               </div>
             </aside>
           </div>
-        </section>
+        </details>
 
         <details id="record-drawers" className="mt-6 rounded-2xl border border-border bg-card/45 p-4 sm:p-5">
           <summary className="cursor-pointer list-none">
@@ -1924,7 +1982,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               </div>
             </Section>
 
-            <Section id="timeline" eyebrow="Source of truth" title="Timeline">
+            <Section collapsible id="timeline" eyebrow="Source of truth" title="Timeline">
               <div className="space-y-3">
                 {timeline.slice(0, 14).map((item) => (
                   <div
@@ -2088,7 +2146,13 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               </div>
             </Section>
 
-            <Section id="parts" eyebrow="Procurement" title="Parts">
+            <Section
+              collapsible
+              defaultOpen={promiseState.stage === "field" || promiseState.stage === "schedule"}
+              id="parts"
+              eyebrow="Procurement"
+              title="Parts"
+            >
               {promise.fieldExecution ? (
                 <div className="space-y-4">
                   <div className="grid gap-4 lg:grid-cols-2">
@@ -2131,7 +2195,13 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               )}
             </Section>
 
-            <Section id="field-plan" eyebrow="Technician mode" title="Field Plan">
+            <Section
+              collapsible
+              defaultOpen={promiseState.stage === "field"}
+              id="field-plan"
+              eyebrow="Technician mode"
+              title="Field Plan"
+            >
               <div className="mb-4">
                 <QuickCloseoutForm promise={promise} />
               </div>
@@ -2386,7 +2456,7 @@ export default async function PromiseDetailPage({ params }: PromiseDetailPagePro
               </div>
             </Section>
 
-            <Section id="jeff" eyebrow="Assistant actions" title="Jeff Notes / Assistant Actions">
+            <Section collapsible id="jeff" eyebrow="Assistant actions" title="Jeff Notes / Assistant Actions">
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="rounded-xl border border-border bg-background/55 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">

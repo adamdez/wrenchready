@@ -23,7 +23,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
 type UpdateInboundPayload = {
   owner?: "Dez" | "Simon" | "Unassigned";
-  qualificationStatus?: "new" | "screening" | "promoted";
+  qualificationStatus?: "new" | "screening" | "promoted" | "disqualified";
   readinessRisk?: "low" | "medium" | "high";
   nextAction?: string;
   preferredWindowLabel?: string;

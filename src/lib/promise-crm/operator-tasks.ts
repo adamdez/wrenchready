@@ -63,6 +63,34 @@ type RuntimeOperatorTaskState = {
 };
 
 const ACTIVE_TASK_STATUSES = new Set<OperatorTaskStatus>(["open", "in-progress", "blocked"]);
+const OPERATOR_QUEUE_RECENCY_DAYS = 14;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const NON_OPERATOR_RECORD_MARKERS = [
+  "codex",
+  "mock customer",
+  "red team",
+  "red-team",
+  "system test",
+  "slack test",
+  "sms alert verification",
+  "alert verification",
+  "launch verification",
+  "webhook test",
+  "policy test",
+  "ops test",
+  "test lead",
+  "test sms",
+  "text lead",
+  "webhook@example.com",
+  "live ui probe",
+  "ui probe",
+  "adam/desjardin",
+];
+const OPERATOR_TASK_NOISE_MARKERS = [
+  "red-team",
+  "call-test",
+  "test or evaluation call captured",
+];
 
 function runtimeState(): RuntimeOperatorTaskState {
   const globalState = globalThis as typeof globalThis & {
@@ -107,6 +135,116 @@ function inboundVehicleLabel(record: InboundRecord) {
   return [record.vehicle.year || undefined, record.vehicle.make, record.vehicle.model]
     .filter(Boolean)
     .join(" ");
+}
+
+function textFromParts(parts: Array<string | string[] | number | undefined | null>) {
+  return parts.flat().filter((part) => part !== undefined && part !== null).join(" ").toLowerCase();
+}
+
+function hasNonOperatorMarker(text: string) {
+  return NON_OPERATOR_RECORD_MARKERS.some((marker) => text.includes(marker));
+}
+
+function hasTaskNoiseMarker(text: string) {
+  return OPERATOR_TASK_NOISE_MARKERS.some((marker) => text.includes(marker));
+}
+
+function isRecentForOperatorQueue(value: string | undefined, now: Date) {
+  if (!value) return false;
+  const time = new Date(value).getTime();
+  if (!Number.isFinite(time)) return false;
+
+  return now.getTime() - time <= OPERATOR_QUEUE_RECENCY_DAYS * MS_PER_DAY;
+}
+
+function inboundOperatorText(record: InboundRecord) {
+  return textFromParts([
+    record.id,
+    record.customer.name,
+    record.customer.email,
+    record.customer.phone,
+    record.vehicle.year,
+    record.vehicle.make,
+    record.vehicle.model,
+    record.requestedService,
+    record.normalizedService,
+    record.serviceLane,
+    record.symptomSummary,
+    record.location.label,
+    record.notes,
+  ]);
+}
+
+function isActionableInboundTask(record: InboundRecord, now = new Date()) {
+  const isActive =
+    record.qualificationStatus !== "promoted" &&
+    record.qualificationStatus !== "disqualified";
+  const isCurrent =
+    isRecentForOperatorQueue(record.createdAt, now) ||
+    isRecentForOperatorQueue(record.updatedAt, now);
+
+  return isActive && isCurrent && !hasNonOperatorMarker(inboundOperatorText(record));
+}
+
+function operatorTaskText(task: OperatorTask) {
+  return textFromParts([
+    task.id,
+    task.title,
+    task.detail,
+    task.blocker,
+    task.sourceKind,
+    task.sourceId,
+    task.customerName,
+    task.vehicleLabel,
+  ]);
+}
+
+function isRoutineAppMessageNoise(task: OperatorTask) {
+  if (task.sourceKind !== "jeff-app-message") return false;
+
+  const noConfirmedSubject = !task.promiseId && !task.inboundId && !task.customerName;
+  if (task.type === "jeff-review" && noConfirmedSubject && task.blocker === "Message is not attached to a confirmed CRM job.") {
+    return true;
+  }
+  if (task.type === "system" && task.title === "Unblock Jeff: find_nearby_parts_stores") {
+    return true;
+  }
+  if (task.type === "system" && task.title === "Unblock Jeff: purchase_or_reserve_part" && noConfirmedSubject) {
+    return true;
+  }
+  if (task.type === "parts" && noConfirmedSubject) {
+    return true;
+  }
+
+  return false;
+}
+
+function metadataString(task: OperatorTask, key: string) {
+  const value = task.metadata?.[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function isRoutineVoiceCallNoise(task: OperatorTask) {
+  if (task.sourceKind !== "jeff-voice-call") return false;
+
+  if (
+    task.type === "system" &&
+    task.title === "Clear Jeff blocker" &&
+    /\bnot attached to a confirmed\b/i.test(task.blocker || "")
+  ) {
+    return true;
+  }
+
+  return (
+    task.type === "jeff-review" &&
+    metadataString(task, "callType") === "personal" &&
+    task.blocker === "Call is not attached to a confirmed CRM job."
+  );
+}
+
+function isDisplayableOperatorTask(task: OperatorTask) {
+  if (hasTaskNoiseMarker(operatorTaskText(task))) return false;
+  return !isRoutineAppMessageNoise(task) && !isRoutineVoiceCallNoise(task);
 }
 
 function isMissingSchedule(label?: string) {
@@ -235,7 +373,7 @@ function derivedTask(input: UpsertOperatorTaskInput): OperatorTask {
 
 function deriveInboundTasks(inbound: InboundRecord[]) {
   return inbound
-    .filter((record) => record.qualificationStatus !== "promoted")
+    .filter((record) => isActionableInboundTask(record))
     .map((record) => derivedTask({
       id: `derived-inbound-${record.id}-screen`,
       title: `Screen ${record.customer.name}`,
@@ -477,6 +615,7 @@ export async function getOperatorTaskQueue(options: { promiseId?: string; limit?
   const combinedById = new Map<string, OperatorTask>();
 
   for (const task of persistedResult.tasks) {
+    if (!isDisplayableOperatorTask(task)) continue;
     combinedById.set(task.id, task);
   }
 
@@ -486,7 +625,9 @@ export async function getOperatorTaskQueue(options: { promiseId?: string; limit?
     if (!persisted) combinedById.set(task.id, task);
   }
 
-  const active = sortTasks([...combinedById.values()].filter((task) => ACTIVE_TASK_STATUSES.has(task.status)));
+  const active = sortTasks([...combinedById.values()].filter(
+    (task) => ACTIVE_TASK_STATUSES.has(task.status) && isDisplayableOperatorTask(task),
+  ));
   const visible = active.slice(0, Math.max(1, Math.min(options.limit || 60, 200)));
   const now = Date.now();
 

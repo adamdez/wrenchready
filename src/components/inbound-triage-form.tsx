@@ -12,9 +12,9 @@ type InboundTriageFormProps = {
 export function InboundTriageForm({ inbound }: InboundTriageFormProps) {
   const router = useRouter();
   const [owner, setOwner] = useState<"Dez" | "Simon" | "Unassigned">(inbound.owner);
-  const [qualificationStatus, setQualificationStatus] = useState<
-    "new" | "screening" | "promoted"
-  >(inbound.qualificationStatus);
+  const [qualificationStatus, setQualificationStatus] = useState<InboundRecord["qualificationStatus"]>(
+    inbound.qualificationStatus,
+  );
   const [readinessRisk, setReadinessRisk] = useState<"low" | "medium" | "high">(
     inbound.readinessRisk,
   );
@@ -151,15 +151,14 @@ export function InboundTriageForm({ inbound }: InboundTriageFormProps) {
           <select
             className="form-input"
             onChange={(event) =>
-              setQualificationStatus(
-                event.target.value as "new" | "screening" | "promoted",
-              )
+              setQualificationStatus(event.target.value as InboundRecord["qualificationStatus"])
             }
             value={qualificationStatus}
           >
             <option value="new">New</option>
             <option value="screening">Screening</option>
             <option value="promoted">Promoted</option>
+            <option value="disqualified">Disqualified</option>
           </select>
         </label>
 

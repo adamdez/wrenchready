@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InboundLostButton } from "@/components/inbound-lost-button";
 import {
   AlertTriangle,
   ArrowRight,
@@ -272,6 +273,9 @@ function InboundQueueItem({ record }: { record: InboundRecord }) {
           Open lead
           <ArrowRight className="h-4 w-4" />
         </Link>
+      </div>
+      <div className="mt-3">
+        <InboundLostButton inboundId={record.id} />
       </div>
     </article>
   );

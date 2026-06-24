@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "verify:promise-state": "npx --no-install tsx scripts/verify-promise-state.ts",
     "dev:jeff:fixtures": "env WR_ENABLE_JEFF_FIELD_DEMO_FIXTURES=true next dev",
     "verify:jeff": "node scripts/verify-jeff-field-assistant.mjs",
     "verify:jeff:vapi": "node scripts/verify-jeff-vapi-server.mjs",
