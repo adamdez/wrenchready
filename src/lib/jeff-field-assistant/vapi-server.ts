@@ -910,6 +910,78 @@ function normalizeToolCall(call: VapiToolCall, fallbackName?: string): VapiToolC
   };
 }
 
+const VAPI_VOICE_OMITTED =
+  "Omitted from the live voice result. Use assistantSay for the spoken answer and the saved workspace/email/tool record for full detail.";
+
+function sanitizeDiagnosticTreeForVoice(value: unknown) {
+  if (!isObject(value)) return { voiceSummary: VAPI_VOICE_OMITTED };
+  const steps = Array.isArray(value.steps) ? value.steps : [];
+  const firstStep = steps.find((step): step is Record<string, unknown> => isObject(step));
+
+  return {
+    voiceSummary: VAPI_VOICE_OMITTED,
+    firstStep: firstStep
+      ? {
+          title: optionalString(firstStep.title),
+          instruction: optionalString(firstStep.instruction),
+        }
+      : undefined,
+    stepCount: steps.length || undefined,
+    sourceGates: Array.isArray(value.sourceGates)
+      ? value.sourceGates.slice(0, 2)
+      : undefined,
+  };
+}
+
+function sanitizeVapiToolPayloadForVoice(value: unknown, key = "", depth = 0): unknown {
+  const normalizedKey = key.toLowerCase();
+  if (
+    [
+      "draftbody",
+      "body",
+      "recapbody",
+      "emailbody",
+      "messagebody",
+      "customerrecapbody",
+      "customermessagedraft",
+      "html",
+      "rawhtml",
+      "dataurl",
+      "imagedata",
+    ].includes(normalizedKey)
+  ) {
+    return undefined;
+  }
+
+  if (normalizedKey === "diagnostictree") return sanitizeDiagnosticTreeForVoice(value);
+
+  if (typeof value === "string") {
+    const compact = value.replace(/\s+/g, " ").trim();
+    return compact.length > 700 ? `${compact.slice(0, 700)}... [truncated for live voice]` : value;
+  }
+
+  if (Array.isArray(value)) {
+    if (depth > 4) return `[${value.length} items omitted from live voice result]`;
+    const limited = value.slice(0, 6).map((entry) => sanitizeVapiToolPayloadForVoice(entry, key, depth + 1));
+    return value.length > 6 ? [...limited, `[${value.length - 6} more omitted from live voice result]`] : limited;
+  }
+
+  if (!isObject(value)) return value;
+  if (depth > 5) return "[nested data omitted from live voice result]";
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [entryKey, entryValue] of Object.entries(value)) {
+    const nextValue = sanitizeVapiToolPayloadForVoice(entryValue, entryKey, depth + 1);
+    if (nextValue !== undefined) sanitized[entryKey] = nextValue;
+  }
+
+  return sanitized;
+}
+
+function sanitizeVapiToolResultForVoice(toolResult: unknown) {
+  return sanitizeVapiToolPayloadForVoice(toolResult);
+}
+
 export function getJeffVapiPilotConfig(baseUrl = getAppBaseUrl()) {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
   const tools = getJeffVapiToolSchemas();
@@ -917,7 +989,7 @@ export function getJeffVapiPilotConfig(baseUrl = getAppBaseUrl()) {
   return {
     name: "WrenchReady Simon Tech Expert",
     firstMessage:
-      "This is WrenchReady, my name is Jeff the robot, how can I help?",
+      "Jeff here. What are you working on?",
     serverUrl: `${normalizedBaseUrl}/api/al/wrenchready/jeff/vapi/server`,
     serverAuthHeader: "X-Vapi-Secret",
     startSpeakingPlan: {
@@ -1023,7 +1095,7 @@ async function handleToolCalls(message: VapiServerMessage) {
       results.push({
         name: call.name,
         toolCallId,
-        result: JSON.stringify(toolResult),
+        result: JSON.stringify(sanitizeVapiToolResultForVoice(toolResult)),
       });
     } catch (error) {
       const messageText =
@@ -1249,6 +1321,22 @@ async function upsertOperatorTasksFromVoiceCall(input: {
   shortOrMissed: boolean;
 }) {
   if (input.shortOrMissed) return;
+  const sourceText = [
+    input.conversation.id,
+    input.conversation.callId,
+    input.conversation.reviewReason,
+    input.conversation.subjectLabel,
+    input.summary.summary,
+    input.summary.recommendationSummary,
+    ...input.summary.requestedFollowUps,
+    input.conversation.sourcePayload ? JSON.stringify(input.conversation.sourcePayload) : undefined,
+  ].filter(Boolean).join(" ");
+  if (
+    input.conversation.callType === "test" ||
+    /\b(red-team|call-test|scenario-session|smoke-call|prod-workspace|personal-call-email|jeff-fixture|proof loop)\b/i.test(sourceText)
+  ) {
+    return;
+  }
 
   const sourceUrl = input.conversation.jobId
     ? `/ops/promises/${input.conversation.jobId}`
@@ -1272,10 +1360,12 @@ async function upsertOperatorTasksFromVoiceCall(input: {
   const unresolvedJobBlocker =
     input.conversation.jobMatchStatus === "unresolved" &&
     input.conversation.callType !== "personal" &&
-    input.conversation.callType !== "admin" &&
-    input.conversation.callType !== "test";
+    input.conversation.callType !== "admin";
+  const shouldCreateReviewTask =
+    input.conversation.needsReview &&
+    input.conversation.callType !== "personal";
 
-  if (input.conversation.needsReview || unresolvedJobBlocker) {
+  if (shouldCreateReviewTask || unresolvedJobBlocker) {
     taskWrites.push(upsertOperatorTask({
       id: `operator-task-jeff-call-${input.conversation.id}-review`,
       title: `Review Jeff call: ${input.conversation.subjectLabel || input.conversation.jobLabel || "unmatched call"}`,
@@ -1305,7 +1395,7 @@ async function upsertOperatorTasksFromVoiceCall(input: {
     }));
   }
 
-  if (input.summary.blockers.length > 0) {
+  if (input.summary.blockers.length > 0 && !unresolvedJobBlocker) {
     taskWrites.push(upsertOperatorTask({
       id: `operator-task-jeff-call-${input.conversation.id}-blocker`,
       title: `Clear Jeff blocker`,
@@ -1551,6 +1641,38 @@ function evidenceFor(transcript: string, patterns: string[]) {
   return stringListFromTranscript(transcript, patterns, 1)[0];
 }
 
+function assistantTranscriptTurns(transcript: string) {
+  return transcript
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => /^(ai|assistant|jeff)\s*:/i.test(line))
+    .map((line) => line.replace(/^(ai|assistant|jeff)\s*:\s*/i, "").trim())
+    .filter(Boolean);
+}
+
+function assistantToolWaitCount(turns: string[]) {
+  return turns.filter((turn) => (
+    /\b(one moment|just a sec|give me a second|this'?ll just take|checking|let me pull|while i look)\b/i.test(turn)
+  )).length;
+}
+
+function transcriptRequestsWrittenDelivery(transcript: string) {
+  const simonText = simonOnlyTranscript(transcript) || transcript;
+  return (
+    emailRequestedFromTranscript(transcript) ||
+    writtenDiagnosticTreeRequestedFromTranscript(transcript) ||
+    /\b(send|email|text|draft|write|compile)\b.{0,100}\b(tree|recap|summary|steps|that|everything|all of that|yes[,/\s-]*no)\b/i.test(simonText)
+  );
+}
+
+function assistantTurnLooksLikeWrittenReadback(turn: string) {
+  return (
+    turn.length > 500 &&
+    /\b(quick\s*take|quicktake|summary|known facts|tests and readings|likely suspects|next tests|proof still needed|follow-ups requested|one\b|two\b|three\b|yes\b|no\b|step\b|then\b|next\b)\b/i.test(turn)
+  );
+}
+
 function buildOrientationReadiness(input: {
   transcript: string;
   scenario?: string;
@@ -1714,6 +1836,9 @@ export function reviewJeffTranscript(input: {
   const transcript = input.transcript || "";
   const normalized = transcript.toLowerCase();
   const issues: JeffPilotReviewIssue[] = [];
+  const assistantTurns = assistantTranscriptTurns(transcript);
+  const longAssistantTurns = assistantTurns.filter((turn) => turn.length > 500);
+  const maxAssistantTurnChars = assistantTurns.reduce((max, turn) => Math.max(max, turn.length), 0);
   const orientationReadiness = buildOrientationReadiness({
     transcript,
     scenario: input.scenario,
@@ -1725,6 +1850,41 @@ export function reviewJeffTranscript(input: {
       severity: "fix-before-field",
       summary: "No transcript was available for review.",
       recommendedFix: "Confirm Vapi call recording/transcript artifacts are enabled for the pilot assistant.",
+    });
+  }
+
+  if (longAssistantTurns.length > 0) {
+    issues.push({
+      severity: "fix-before-field",
+      summary: "Jeff gave an overlong voice answer that can bury Simon in a list.",
+      recommendedFix: `Hard-limit live voice answers to one short takeaway, one reason, and one next action. Max Jeff turn in this transcript: ${maxAssistantTurnChars} characters.`,
+    });
+  }
+
+  if (
+    transcriptRequestsWrittenDelivery(transcript) &&
+    assistantTurns.some(assistantTurnLooksLikeWrittenReadback)
+  ) {
+    issues.push({
+      severity: "fix-before-field",
+      summary: "Jeff appears to have read written/email diagnostic content aloud.",
+      recommendedFix: "When Simon asks for an email/text/tree/recap, send or draft it through the tool path and say only sent, drafted, blocked, or the first test.",
+    });
+  }
+
+  if (assistantTurns.some((turn) => /\b(hash hash|quicktake|quick take|what matters|next physical test|bullet point)\b/i.test(turn))) {
+    issues.push({
+      severity: "watch",
+      summary: "Jeff used written headings or markdown-like speech on a voice call.",
+      recommendedFix: "Strip written headings from voice. Talk in plain field language instead of reading formatted notes.",
+    });
+  }
+
+  if (assistantToolWaitCount(assistantTurns) > 1) {
+    issues.push({
+      severity: "watch",
+      summary: "Jeff repeated tool-wait filler instead of staying useful while work ran.",
+      recommendedFix: "Say one short status at most, then keep helping from Simon's current facts until the tool result is ready.",
     });
   }
 

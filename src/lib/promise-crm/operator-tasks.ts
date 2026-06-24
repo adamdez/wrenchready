@@ -89,6 +89,12 @@ const NON_OPERATOR_RECORD_MARKERS = [
 const OPERATOR_TASK_NOISE_MARKERS = [
   "red-team",
   "call-test",
+  "scenario-session",
+  "smoke-call",
+  "prod-workspace",
+  "personal-call-email",
+  "jeff-fixture",
+  "proof loop",
   "test or evaluation call captured",
 ];
 
@@ -196,6 +202,7 @@ function operatorTaskText(task: OperatorTask) {
     task.sourceId,
     task.customerName,
     task.vehicleLabel,
+    task.metadata ? JSON.stringify(task.metadata) : undefined,
   ]);
 }
 

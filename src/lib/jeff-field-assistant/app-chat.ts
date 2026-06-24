@@ -596,6 +596,16 @@ function likelyWantsFieldDeliverable(text: string) {
   );
 }
 
+function likelyNeedsOfficeAction(text: string) {
+  return (
+    likelyWantsFieldDeliverable(text) ||
+    likelyWantsEmail(text) ||
+    likelyWantsGmailSync(text) ||
+    likelyWantsCalendarSync(text) ||
+    /\b(schedule|book|quote|estimate|invoice|payment|pay link|stripe|approval|approve|customer|dealer|dealership|send|text|call|closeout|work order|receipt)\b/i.test(text)
+  );
+}
+
 function likelyWantsGmailSync(text: string) {
   return (
     /\b(check|read|look at|pull|sync)\b.{0,45}\b(email|gmail|inbox|scan report|diagnostic reader|scanner)\b/i.test(text) ||
@@ -800,6 +810,24 @@ function applyMessageContext(input: JeffAppMessageInput): JeffAppMessageInput {
     inferredVehicle: extractVehicleFromText(input.text || ""),
     inferredPartName: extractPartName(input.text || ""),
   };
+}
+
+function shouldReviewUnattachedAppMessage(input: JeffAppMessageInput) {
+  if (input.jobId) return false;
+
+  const text = input.text || "";
+  const hasUnattachedAttachment = Boolean(input.attachments?.length);
+  const fieldDeliverableRequested = likelyWantsFieldDeliverable(text);
+  const officeActionRequested = likelyNeedsOfficeAction(text);
+
+  return (
+    hasUnattachedAttachment ||
+    fieldDeliverableRequested ||
+    (
+      (input.contextMode === "admin" || input.contextMode === "different-job") &&
+      officeActionRequested
+    )
+  );
 }
 
 async function runMessageActionTools(input: JeffAppMessageInput): Promise<MessageToolAction[]> {
@@ -1087,15 +1115,7 @@ async function upsertOperatorTasksFromMessage(input: JeffAppMessageInput, params
   const taskWrites: Array<Promise<unknown>> = [];
   const systemBlockedAction = params.actions.find(actionNeedsSystemBlocker);
   const hasUnattachedAttachment = Boolean(input.attachments?.length);
-  const shouldReviewUnattachedMessage =
-    !input.jobId &&
-    input.contextMode !== "parts-only" &&
-    (
-      input.contextMode === "admin" ||
-      input.contextMode === "different-job" ||
-      hasUnattachedAttachment ||
-      fieldDeliverableRequested
-    );
+  const shouldReviewUnattachedMessage = shouldReviewUnattachedAppMessage(input);
 
   if (shouldReviewUnattachedMessage) {
     const reviewBlocker = fieldDeliverableRequested
@@ -1129,7 +1149,10 @@ async function upsertOperatorTasksFromMessage(input: JeffAppMessageInput, params
     }));
   }
 
-  if (params.actions.some((action) => ["prepare_parts_cart", "purchase_or_reserve_part"].includes(action.tool))) {
+  if (
+    input.jobId &&
+    params.actions.some((action) => ["prepare_parts_cart", "purchase_or_reserve_part"].includes(action.tool))
+  ) {
     const purchaseBlocked = params.actions.some((action) => action.tool === "purchase_or_reserve_part");
     taskWrites.push(upsertOperatorTask({
       id: `operator-task-jeff-message-${params.conversationId}-parts`,
@@ -1589,7 +1612,7 @@ export async function sendJeffAppMessage(payload: unknown) {
     rawSummary: answer.reply,
     followUpRequested: false,
     followUpStatus: "none",
-    needsReview: !input.jobId && input.contextMode !== "parts-only",
+    needsReview: shouldReviewUnattachedAppMessage(input),
     reviewReason,
     sourcePayload: {
       source: "jeff-app-message",

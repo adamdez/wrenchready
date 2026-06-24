@@ -13,6 +13,10 @@ function testCallId(name) {
   return `call-test-${runId}-${name}`;
 }
 
+function personalCallId(name) {
+  return `personal-call-email-${runId}-${name}`;
+}
+
 function headers() {
   return {
     "Content-Type": "application/json",
@@ -134,6 +138,37 @@ assert(toolCalls.results.length === 2, "tool-calls response should include both 
 const activeLookupResult = JSON.parse(toolCalls.results[0].result);
 const purchaseResult = JSON.parse(toolCalls.results[1].result);
 assert(purchaseResult.success === false, "purchase tool should stay blocked");
+
+const recapVoiceToolCalls = await request("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "tool-calls",
+    call: {
+      id: testCallId("recap-redaction"),
+      customer: { number: "+15095550102" },
+    },
+    toolCallList: [
+      {
+        id: "tool-redact-recap",
+        name: "send_simon_recap_email",
+        parameters: {
+          conversationId: `jeff-conversation-${testCallId("recap-redaction")}`,
+          subject: "Voice redaction test",
+          body: "Sensitive draft line that belongs in email, not spoken voice. ".repeat(30),
+          sendNow: false,
+        },
+      },
+    ],
+  },
+});
+const recapVoiceResult = JSON.parse(recapVoiceToolCalls.results[0].result);
+assert(
+  !JSON.stringify(recapVoiceResult).includes("Sensitive draft line"),
+  "Vapi voice tool result should redact full recap draft bodies",
+);
+assert(
+  recapVoiceResult.data?.draftBody === undefined,
+  "Vapi voice tool result should omit data.draftBody",
+);
 
 if (isLocalBaseUrl) {
   const sessionsAfterTools = await request("/api/al/wrenchready/jeff/session");
@@ -290,7 +325,7 @@ const personalCall = await request("/api/al/wrenchready/jeff/vapi/server", {
   message: {
     type: "end-of-call-report",
     call: {
-      id: testCallId("personal-call-email"),
+      id: personalCallId("diagnostic-recap"),
       assistantId: "assistant-test",
       customer: { number: "+15095550102" },
     },
@@ -334,6 +369,31 @@ assert(
 assert(
   !/diagnostic treat/i.test(subaruEmailTree.workspace?.summary?.summary || ""),
   "fallback summary should not preserve Jeff's spoken typo as the durable summary",
+);
+
+const longReadbackReview = await request("/api/al/wrenchready/jeff/vapi/server", {
+  message: {
+    type: "end-of-call-report",
+    call: {
+      id: testCallId("long-readback"),
+      assistantId: "assistant-test",
+      customer: { number: "+15095550102" },
+    },
+    artifact: {
+      transcript: [
+        "User: Jeff, send me a yes no diagnostic tree for this two thousand one Subaru Outback over email.",
+        `AI: Email the yes slash no tree. QuickTake. ${"One, check codes. Two, check fluid. Three, check misfire. If yes, go here. If no, go there. ".repeat(12)}`,
+      ].join("\n"),
+    },
+  },
+});
+assert(
+  longReadbackReview.review?.issues?.some((issue) => /overlong voice answer/i.test(issue.summary)),
+  "transcript review should flag overlong Jeff voice turns",
+);
+assert(
+  longReadbackReview.review?.issues?.some((issue) => /read written\/email diagnostic content aloud/i.test(issue.summary)),
+  "transcript review should flag written diagnostic content read aloud",
 );
 
 const fordEmailTree = await request("/api/al/wrenchready/jeff/vapi/server", {
