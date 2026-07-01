@@ -3,6 +3,8 @@ import { ReviewRedirectCard } from "@/components/review-redirect-card";
 import { siteConfig } from "@/data/site";
 import { getGoogleReviewUrl } from "@/lib/review-destination";
 
+const reviewOgImageUrl = `${siteConfig.domain}/review/opengraph-image?v=logo-1`;
+
 export const metadata: Metadata = {
   title: "Leave a Google Review for WrenchReady Mobile",
   description:
@@ -19,7 +21,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: `${siteConfig.domain}/review/opengraph-image`,
+        url: reviewOgImageUrl,
         width: 1200,
         height: 630,
         alt: "Leave a Google Review for WrenchReady Mobile",
@@ -30,7 +32,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Leave a Google Review for WrenchReady Mobile",
     description: "Tap to open Google's star rating and review form for WrenchReady Mobile.",
-    images: [`${siteConfig.domain}/review/opengraph-image`],
+    images: [reviewOgImageUrl],
   },
   robots: {
     index: false,

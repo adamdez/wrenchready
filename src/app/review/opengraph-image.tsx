@@ -1,10 +1,15 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 export const alt = "Leave a Google Review for WrenchReady Mobile";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function ReviewOgImage() {
+export default async function ReviewOgImage() {
+  const logoSvg = await readFile(join(process.cwd(), "public/wr-logo-full.svg"), "utf8");
+  const logoSrc = `data:image/svg+xml;base64,${Buffer.from(logoSvg).toString("base64")}`;
+
   return new ImageResponse(
     (
       <div
@@ -19,25 +24,24 @@ export default function ReviewOgImage() {
           fontFamily: "system-ui, sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "28px" }}>
+          <img
+            alt="WrenchReady Mobile logo"
+            src={logoSrc}
+            style={{
+              width: "330px",
+              height: "174px",
+              objectFit: "contain",
+            }}
+          />
           <div
             style={{
-              width: "76px",
-              height: "76px",
+              width: "2px",
+              height: "86px",
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: "18px",
-              border: "2px solid #4ed6e8",
-              background: "rgba(78,214,232,0.10)",
-              color: "#4ed6e8",
-              fontSize: "24px",
-              fontWeight: 800,
-              letterSpacing: "0.16em",
+              background: "rgba(78,214,232,0.34)",
             }}
-          >
-            WR
-          </div>
+          />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span
               style={{
