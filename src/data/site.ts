@@ -62,7 +62,7 @@ export const siteConfig = {
     googleBusiness:
       "https://www.google.com/search?kgmid=/g/11nblfp_kv&q=WrenchReady+Mobile",
     googleReview:
-      "https://www.google.com/search?kgmid=/g/11nblfp_kv&q=WrenchReady+Mobile#lrd=0xa91da132a44e7325:0x5931ba3271921a7d,3,,,,",
+      "https://www.google.com/maps/place//data=!4m3!3m2!1s0xa91da132a44e7325:0x5931ba3271921a7d!12e1?g_mp=CiVnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLkdldFBsYWNlEAIYBCAA",
   },
   globalKeywords: [
     "mobile mechanic Spokane WA",
