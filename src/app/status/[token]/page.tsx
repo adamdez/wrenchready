@@ -8,9 +8,11 @@ import {
   Circle,
   CircleAlert,
   Clock3,
+  ExternalLink,
   MapPin,
   Phone,
   ShieldCheck,
+  Star,
   Wrench,
 } from "lucide-react";
 import { CustomerNextStepRequest } from "@/components/customer-next-step-request";
@@ -28,6 +30,7 @@ import {
 } from "@/lib/promise-crm/customer-view";
 import { computePromiseEconomics } from "@/lib/promise-crm/economics";
 import { getPromiseRecordByCustomerToken } from "@/lib/promise-crm/server";
+import { getGoogleReviewUrl } from "@/lib/review-destination";
 import { siteConfig } from "@/data/site";
 
 type CustomerStatusPageProps = {
@@ -103,6 +106,13 @@ export default async function CustomerStatusPage({
     typeof resolvedSearchParams.deposit === "string" ? resolvedSearchParams.deposit : undefined;
   const balanceState =
     typeof resolvedSearchParams.balance === "string" ? resolvedSearchParams.balance : undefined;
+  const reviewRequestStatus = promise.closeout?.reviewRequest?.status;
+  const reviewUrl = promise.closeout?.reviewRequest?.reviewUrl || getGoogleReviewUrl();
+  const showReviewButton =
+    Boolean(reviewUrl) &&
+    (reviewRequestStatus === "ready" ||
+      reviewRequestStatus === "sent" ||
+      reviewRequestStatus === "completed");
 
   return (
     <div className="shell py-10 sm:py-14">
@@ -491,18 +501,29 @@ export default async function CustomerStatusPage({
                       ? "Sent"
                       : "Not queued yet"}
                 </p>
-                {promise.closeout?.reviewRequest?.reviewUrl ? (
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Review link:{" "}
-                    <a
-                      className="text-primary underline-offset-4 hover:underline"
-                      href={promise.closeout.reviewRequest.reviewUrl}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      Open Google review
-                    </a>
-                  </p>
+                {showReviewButton && reviewUrl ? (
+                  <a
+                    aria-label="Leave a Google review for WrenchReady Mobile"
+                    className="mt-4 flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-[var(--wr-teal)]/40 bg-[var(--wr-teal)]/10 px-4 py-3 text-left transition-colors hover:bg-[var(--wr-teal)]/20"
+                    href={reviewUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--wr-teal)] text-background">
+                        <Star className="h-5 w-5" />
+                      </span>
+                      <span>
+                        <span className="block text-sm font-semibold text-foreground">
+                          Leave a Google review
+                        </span>
+                        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                          Opens Google&apos;s star rating and review form.
+                        </span>
+                      </span>
+                    </span>
+                    <ExternalLink className="h-4 w-4 shrink-0 text-[var(--wr-teal-soft)]" />
+                  </a>
                 ) : null}
                 <p className="mt-2 text-sm text-muted-foreground">
                   Reminder:{" "}

@@ -1,6 +1,7 @@
 import { readEnv } from "@/lib/env";
 import { getIntegrationSnapshot } from "@/lib/promise-crm/integrations";
 import type { SystemReadinessItem, SystemsReadinessSnapshot } from "@/lib/promise-crm/types";
+import { getGoogleReviewUrl } from "@/lib/review-destination";
 
 function directEmailProviderConfigured() {
   return Boolean(
@@ -50,11 +51,7 @@ function jeffPhotoDropConfigured() {
 
 export async function getSystemsReadinessSnapshot(): Promise<SystemsReadinessSnapshot> {
   const integrations = await getIntegrationSnapshot();
-  const reviewUrl = readEnv(
-    "WR_GOOGLE_REVIEW_URL",
-    "NEXT_PUBLIC_WR_GOOGLE_REVIEW_URL",
-    "GOOGLE_REVIEW_URL",
-  );
+  const reviewUrl = getGoogleReviewUrl();
   const textOutboundEnabled = readEnv("WR_ENABLE_TEXT_OUTBOUND") === "true";
   const emailProviderReady = directEmailProviderConfigured();
   const paymentsReady = directPaymentsConfigured();
